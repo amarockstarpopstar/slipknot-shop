@@ -67,7 +67,7 @@ const loadProduct = async (id: number) => {
 };
 
 const addToCart = (item: NonNullable<typeof product.value>) => {
-  cartStore.addToCart(item);
+  cartStore.addProduct(item.id);
 };
 
 onMounted(async () => {
