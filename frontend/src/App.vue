@@ -1,39 +1,22 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div class="logos">
-    <a href="https://vite.dev" target="_blank" rel="noreferrer">
-      <img src="/vite.svg" class="logo" alt="Логотип Vite" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank" rel="noreferrer">
-      <img src="./assets/vue.svg" class="logo vue" alt="Логотип Vue" />
-    </a>
+  <div class="bg-light min-vh-100 d-flex flex-column">
+    <AppNavbar />
+    <main class="flex-grow-1">
+      <RouterView />
+    </main>
+    <footer class="bg-dark text-white py-4 mt-auto">
+      <div class="container text-center">
+        <p class="mb-1">© {{ currentYear }} Slipknot Shop. Все права защищены.</p>
+        <p class="mb-0 small">Официальный мерч для настоящих маггтов.</p>
+      </div>
+    </footer>
   </div>
-  <HelloWorld msg="Стартовый интерфейс магазина Slipknot" />
 </template>
 
-<style scoped>
-.logos {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
+<script setup lang="ts">
+import { computed } from 'vue';
+import { RouterView } from 'vue-router';
+import AppNavbar from './components/AppNavbar.vue';
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+const currentYear = computed(() => new Date().getFullYear());
+</script>
