@@ -50,9 +50,13 @@ Codex должен действовать как ведущий разработ
 
 #### Database (PostgreSQL)
 - Проектировать таблицы:
-  - users(id, name, email, password_hash, role)
-  - products(id, title, description, price, image_url, category)
-  - orders(id, user_id, items_json, total_price, status)
+  - users(id, name, email, password_hash, role_id)
+  - roles(id, name)
+  - products(id, title, description, price, image_url, category_id)
+  - orders(id, user_id, total_price, status)
+  - order_items(id, order_id, product_id, quantity, price)
+  - categories(id, name)
+  - cart(id, user_id)
 - Настраивать связи OneToMany / ManyToOne.
 - Добавлять миграции и тестовые данные (seed scripts).
 
@@ -147,13 +151,11 @@ Codex должен автоматически проверять:
 
 # backend/.env
 PORT=3000
-
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgress
 DB_PASSWORD=postgress
 DB_NAME=slipknot_shop
-
 JWT_SECRET=supersecret
 JWT_REFRESH_SECRET=refreshsecret
 
@@ -165,3 +167,18 @@ VITE_API_URL=http://localhost:3000
 - Документация API (Swagger).
 - Отчётные файлы в Tasks/ по каждому шагу.
 - ER-диаграмма БД и структура проекта.
+
+### Testing Requirement
+
+После выполнения каждой задачи, независимо от содержания запроса, Codex обязан выполнить тестовый запуск проекта, чтобы убедиться, что изменения не нарушили работу системы.
+
+Обязательно:
+1. Запускать backend командой:
+   cd backend && npm run start:dev
+2. Запускать frontend командой:
+   cd frontend && npm run dev
+3. Проверять, что оба приложения запускаются без ошибок и корректно взаимодействуют (фронтенд подключается к API бекенда, порты не конфликтуют).
+4. В отчёте в Tasks/TASK_<номер>_<название>.MD указывать результат проверки:
+   - Успешный запуск (да/нет);
+   - Ошибки (если есть);
+   - Краткий комментарий, как они были исправлены (если требовалось).
