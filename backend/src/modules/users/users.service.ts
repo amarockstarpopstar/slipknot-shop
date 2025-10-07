@@ -10,8 +10,8 @@ import { Repository } from 'typeorm';
 import { Role } from '../roles/entities/role.entity';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserRoleDto } from './dto/update-user-role.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto, UserRoleDto } from './dto/user-response.dto';
 
 // service with user management logic
 @Injectable()
@@ -31,7 +31,8 @@ export class UsersService {
       throw new ConflictException('Пользователь с таким email уже существует');
     }
 
-    const role = await this.resolveRole(createUserDto.roleName);
+    const roleName = createUserDto.roleName?.trim() || 'Покупатель';
+    const role = await this.resolveRole(roleName);
 
     const passwordHash = await bcrypt.hash(createUserDto.password, this.saltRounds);
 
@@ -98,23 +99,62 @@ export class UsersService {
     return user;
   }
 
-  async updateRole(
-    userId: number,
-    updateUserRoleDto: UpdateUserRoleDto,
-  ): Promise<UserResponseDto> {
+  async update(userId: number, updateUserDto: UpdateUserDto): Promise<UserResponseDto> {
     const user = await this.findEntityById(userId);
-    const role = await this.resolveRole(updateUserRoleDto.roleName);
 
-    user.role = role;
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existing = await this.findByEmail(updateUserDto.email);
+      if (existing && existing.id !== user.id) {
+        throw new ConflictException('Пользователь с таким email уже существует');
+      }
+    }
+
+    if (typeof updateUserDto.name === 'string') {
+      user.name = updateUserDto.name;
+    }
+
+    if (typeof updateUserDto.email === 'string') {
+      user.email = updateUserDto.email;
+    }
+
+    if (updateUserDto.phone !== undefined) {
+      const normalizedPhone = updateUserDto.phone?.trim();
+      user.phone = normalizedPhone ? normalizedPhone : null;
+    }
+
+    if (updateUserDto.roleName) {
+      user.role = await this.resolveRole(updateUserDto.roleName);
+    }
+
     const saved = await this.usersRepository.save(user);
     return this.findById(saved.id);
   }
 
-  private async resolveRole(roleName?: string): Promise<Role> {
-    const finalRoleName = roleName?.trim() || 'Покупатель';
+  async remove(userId: number): Promise<void> {
+    const user = await this.findEntityById(userId);
+    await this.usersRepository.remove(user);
+  }
+
+  async findAllRoles(): Promise<UserRoleDto[]> {
+    const roles = await this.rolesRepository.find({
+      order: { name: 'ASC' },
+    });
+
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+    }));
+  }
+
+  private async resolveRole(roleName: string): Promise<Role> {
+    const normalizedRole = roleName.trim();
+
+    if (!normalizedRole) {
+      throw new BadRequestException('Указанная роль не найдена');
+    }
 
     const role = await this.rolesRepository.findOne({
-      where: { name: finalRoleName },
+      where: { name: normalizedRole },
     });
 
     if (!role) {
@@ -130,7 +170,12 @@ export class UsersService {
       name: user.name,
       email: user.email,
       phone: user.phone ?? null,
-      role: user.role ? user.role.name : null,
+      role: user.role
+        ? {
+            id: user.role.id,
+            name: user.role.name,
+          }
+        : null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

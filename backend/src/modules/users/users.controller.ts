@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
-  Patch,
+  Put,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -13,7 +15,8 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto, UserRoleDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
 type RequestWithUser = Request & { user?: { userId?: number } };
@@ -25,38 +28,44 @@ export class UsersController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Req() req: RequestWithUser) {
+  async getProfile(@Req() req: RequestWithUser): Promise<UserResponseDto> {
     const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('Требуется авторизация');
     }
 
-    return {
-      message: 'Профиль получен',
-      user: await this.usersService.findById(userId),
-    };
+    return this.usersService.findById(userId);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Администратор')
-  async getAll() {
-    return {
-      message: 'Список пользователей получен',
-      users: await this.usersService.findAll(),
-    };
+  async getAll(): Promise<UserResponseDto[]> {
+    return this.usersService.findAll();
   }
 
-  @Patch(':id/role')
+  @Get('roles')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Администратор')
-  async updateRole(
+  async getRoles(): Promise<UserRoleDto[]> {
+    return this.usersService.findAllRoles();
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Администратор')
+  async updateUser(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateUserRoleDto,
-  ) {
-    return {
-      message: 'Роль пользователя обновлена',
-      user: await this.usersService.updateRole(id, dto),
-    };
+    @Body() dto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Администратор')
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.usersService.remove(id);
   }
 }

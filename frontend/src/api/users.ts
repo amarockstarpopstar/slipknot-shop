@@ -1,17 +1,49 @@
 import { http } from './http';
 
+export interface UserRole {
+  id: number;
+  name: string;
+}
+
 export interface UserProfile {
   id: number;
   name: string;
   email: string;
-  phone?: string;
-  role?: {
-    id: number;
-    name: string;
-  } | null;
+  phone?: string | null;
+  role: UserRole | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserListItem extends UserProfile {}
+
+export interface UpdateUserPayload {
+  name: string;
+  email: string;
+  phone: string;
+  roleName: string;
 }
 
 export const fetchProfile = async (): Promise<UserProfile> => {
   const { data } = await http.get<UserProfile>('/users/me');
   return data;
+};
+
+export const fetchUsers = async (): Promise<UserListItem[]> => {
+  const { data } = await http.get<UserListItem[]>('/users');
+  return data;
+};
+
+export const fetchRoles = async (): Promise<UserRole[]> => {
+  const { data } = await http.get<UserRole[]>('/users/roles');
+  return data;
+};
+
+export const updateUser = async (id: number, payload: UpdateUserPayload): Promise<UserListItem> => {
+  const { data } = await http.put<UserListItem>(`/users/${id}`, payload);
+  return data;
+};
+
+export const deleteUser = async (id: number): Promise<void> => {
+  await http.delete(`/users/${id}`);
 };

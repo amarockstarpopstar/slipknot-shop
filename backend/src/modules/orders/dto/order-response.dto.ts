@@ -1,6 +1,6 @@
 import { OrderItemResponseDto } from './order-item-response.dto';
 
-// dto describing order details for admin responses
+// dto describing order details for manager responses
 export class OrderResponseDto {
   id: number;
   customer: {

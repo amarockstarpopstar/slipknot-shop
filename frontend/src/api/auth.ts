@@ -1,4 +1,5 @@
 import { http } from './http';
+import type { UserProfile } from './users';
 
 export interface LoginPayload {
   email: string;
@@ -11,17 +12,10 @@ export interface RegisterPayload extends LoginPayload {
 }
 
 export interface AuthResponse {
+  message: string;
   accessToken: string;
   refreshToken: string;
-  user: {
-    id: number;
-    name: string;
-    email: string;
-    role: {
-      id: number;
-      name: string;
-    } | null;
-  };
+  user: UserProfile;
 }
 
 export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
