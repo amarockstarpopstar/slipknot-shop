@@ -6,6 +6,8 @@ import { UsersModule } from './modules/users/users.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ProductsModule } from './modules/products/products.module';
 import { SizesModule } from './modules/sizes/sizes.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { OrderStatusesModule } from './modules/order-statuses/order-statuses.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { buildTypeOrmOptions } from './config/typeorm.config';
@@ -23,6 +25,8 @@ import { buildTypeOrmOptions } from './config/typeorm.config';
     CategoriesModule,
     ProductsModule,
     SizesModule,
+    OrdersModule,
+    OrderStatusesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
