@@ -13,6 +13,7 @@ import { ProductImage } from '../../product-images/entities/product-image.entity
 import { CartItem } from '../../cart-items/entities/cart-item.entity';
 import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { WishlistItem } from '../../wishlist-items/entities/wishlist-item.entity';
+import { SizeEntity } from '../../sizes/entities/size.entity';
 
 // product entity
 @Entity({ name: 'products' })
@@ -26,17 +27,25 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string | null;
 
-  @Column({ type: 'numeric', precision: 10, scale: 2 })
-  price: string;
-
   @Column({ type: 'varchar', length: 100, unique: true })
   sku: string;
 
-  @Column({ type: 'integer', default: 0 })
-  stock: number;
+  // product price stored as string to preserve precision
+  @Column({ type: 'numeric', precision: 10, scale: 2 })
+  price: string;
 
-  @Column({ name: 'main_image_url', type: 'text', nullable: true })
-  mainImageUrl?: string | null;
+  // total quantity available for sale
+  @Column({ name: 'stock_count', type: 'integer', default: 0 })
+  stockCount: number;
+
+  // url to the primary product image
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl?: string | null;
+
+  // optional reference to a predefined size
+  @ManyToOne(() => SizeEntity, (size) => size.products, { nullable: true })
+  @JoinColumn({ name: 'size_id' })
+  size?: SizeEntity | null;
 
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })

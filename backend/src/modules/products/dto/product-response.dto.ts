@@ -5,9 +5,13 @@ export class ProductResponseDto {
   description: string | null;
   price: number;
   sku: string;
-  stock: number;
-  mainImageUrl: string | null;
+  stockCount: number;
+  imageUrl: string | null;
   category: {
+    id: number;
+    name: string;
+  } | null;
+  size: {
     id: number;
     name: string;
   } | null;
