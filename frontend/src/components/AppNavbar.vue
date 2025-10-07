@@ -24,6 +24,9 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/profile">Профиль</RouterLink>
           </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/admin">Админ-панель</RouterLink>
+          </li>
         </ul>
         <RouterLink class="btn btn-outline-light" to="/auth">Войти</RouterLink>
       </div>
