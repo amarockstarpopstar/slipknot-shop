@@ -5,6 +5,9 @@
         <div class="col-lg-6">
           <div class="card shadow-lg">
             <div class="card-body p-4">
+              <div v-if="infoMessage" class="alert alert-warning" role="alert">
+                {{ infoMessage }}
+              </div>
               <ul class="nav nav-pills mb-4" role="tablist">
                 <li class="nav-item" role="presentation">
                   <button
@@ -72,14 +75,21 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '../store/authStore';
+import { useRoute, useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const { loading, error } = storeToRefs(authStore);
+const route = useRoute();
+const router = useRouter();
 const mode = ref<'login' | 'register'>('login');
 const success = ref('');
+const infoMessage = computed(() => {
+  const message = route.query.message;
+  return typeof message === 'string' ? message : '';
+});
 
 const form = reactive({
   name: '',
@@ -93,6 +103,8 @@ const handleSubmit = async () => {
     if (mode.value === 'login') {
       await authStore.loginUser({ email: form.email, password: form.password });
       success.value = 'Вход выполнен успешно!';
+      const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
+      await router.push(redirectTarget);
     } else {
       await authStore.registerUser({
         name: form.name,

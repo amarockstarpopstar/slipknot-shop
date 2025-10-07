@@ -61,7 +61,7 @@ const refreshProducts = async () => {
 };
 
 const addToCart = (product: (typeof products.value)[number]) => {
-  cartStore.addToCart(product);
+  cartStore.addProduct(product.id);
 };
 
 onMounted(async () => {

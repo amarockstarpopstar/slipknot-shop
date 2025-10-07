@@ -31,7 +31,7 @@
             <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
         </ul>
-        <RouterLink class="btn btn-outline-light" to="/auth">Войти</RouterLink>
+        <RouterLink class="btn btn-outline-light" to="/login">Войти</RouterLink>
       </div>
     </div>
   </nav>

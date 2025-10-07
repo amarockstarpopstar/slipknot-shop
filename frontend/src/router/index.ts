@@ -18,7 +18,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cart',
     name: 'cart',
-    component: () => import('../pages/CartPage.vue'),
+    component: () => import('../pages/CartView.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile',
@@ -26,9 +27,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/ProfilePage.vue'),
   },
   {
-    path: '/auth',
-    name: 'auth',
+    path: '/login',
+    name: 'login',
     component: () => import('../pages/AuthPage.vue'),
+    alias: ['/auth'],
   },
   {
     path: '/manager',
@@ -62,7 +64,7 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
   const { isAuthenticated, user } = storeToRefs(authStore);
 
   if (!isAuthenticated.value) {
-    return next({ name: 'auth', query: { redirect: to.fullPath } });
+    return next({ name: 'login', query: { redirect: to.fullPath } });
   }
 
   if (!user.value) {
@@ -70,7 +72,7 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
       await authStore.loadProfile();
     } catch (error) {
       authStore.logout();
-      return next({ name: 'auth', query: { redirect: to.fullPath } });
+      return next({ name: 'login', query: { redirect: to.fullPath } });
     }
   }
 

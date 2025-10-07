@@ -8,6 +8,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { SizesModule } from './modules/sizes/sizes.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { OrderStatusesModule } from './modules/order-statuses/order-statuses.module';
+import { CartsModule } from './modules/carts/carts.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { buildTypeOrmOptions } from './config/typeorm.config';
@@ -27,6 +28,7 @@ import { buildTypeOrmOptions } from './config/typeorm.config';
     SizesModule,
     OrdersModule,
     OrderStatusesModule,
+    CartsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
