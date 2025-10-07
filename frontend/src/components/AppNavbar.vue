@@ -24,8 +24,11 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/profile">Профиль</RouterLink>
           </li>
-          <li class="nav-item">
-            <RouterLink class="nav-link" to="/admin">Админ-панель</RouterLink>
+          <li v-if="user?.role?.name === 'Менеджер'" class="nav-item">
+            <RouterLink class="nav-link" to="/manager">Панель менеджера</RouterLink>
+          </li>
+          <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
+            <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
         </ul>
         <RouterLink class="btn btn-outline-light" to="/auth">Войти</RouterLink>
@@ -35,5 +38,10 @@
 </template>
 
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router';
+import { useAuthStore } from '../store/authStore';
+
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
 </script>

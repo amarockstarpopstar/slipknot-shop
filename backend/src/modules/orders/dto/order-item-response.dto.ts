@@ -1,4 +1,4 @@
-// dto describing order item for admin view
+// dto describing order item for manager view
 export class OrderItemResponseDto {
   id: number;
   product: {

@@ -2,7 +2,7 @@
   <div>
     <section class="bg-dark text-white py-4 mb-4">
       <div class="container">
-        <h1 class="h2 mb-1">Административная панель</h1>
+        <h1 class="h2 mb-1">Панель менеджера</h1>
         <p class="mb-0">Управляйте товарами и заказами магазина</p>
       </div>
     </section>

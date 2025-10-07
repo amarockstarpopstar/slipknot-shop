@@ -7,7 +7,7 @@ import { OrderItemResponseDto } from './dto/order-item-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
 
-// service handling admin order management logic
+// service handling manager order management logic
 @Injectable()
 export class OrdersService {
   constructor(

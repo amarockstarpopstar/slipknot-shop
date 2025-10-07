@@ -7,7 +7,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-// dto for updating order attributes in admin panel
+// dto for updating order attributes in manager panel
 export class UpdateOrderDto {
   @IsOptional()
   @IsInt({ message: 'Статус заказа должен быть указан как число' })
