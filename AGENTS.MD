@@ -19,7 +19,7 @@ Environment: TypeScript, Node.js
 | Auth | JWT (access + refresh) |
 | UI | На русском языке |
 | Docs | Автоматическая Swagger-документация |
-| Logs | Простые README файлы по каждой задаче |
+| Logs | Папка Tasks с отдельными отчётами по каждой задаче |
 
 ### Agent Role: Full-Stack Developer & Assistant
 
@@ -29,7 +29,7 @@ Codex должен действовать как ведущий разработ
 - пишет корректный код под выбранный стек;
 - создаёт и обновляет модули;
 - проверяет ошибки;
-- добавляет комментарии и краткие README-файлы.
+- добавляет комментарии и отдельные Task-файлы.
 
 ### Core Responsibilities
 
@@ -70,18 +70,36 @@ Codex должен действовать как ведущий разработ
 - Названия файлов и папок — в нижнем регистре с дефисами.
 - Все модули должны быть изолированы (products/, users/ и т.д.).
 
-### README-логика по каждой задаче
+### Task Logging System
 
-После выполнения каждой задачи Codex должен создавать простой текстовый файл README.md в соответствующей папке, где кратко описывает:
+После выполнения каждой задачи Codex должен создавать (если нет) папку `Tasks/` в корне проекта и сохранять в неё отдельный отчётный файл в формате:
+
+Tasks/TASK_<номер>_<краткое-название>.MD
+
+Примеры имён:
+Tasks/TASK_1_init-projects.MD
+Tasks/TASK_2_database-setup.MD
+Tasks/TASK_3_products-module.MD
+
+В каждом таком файле Codex должен кратко описывать:
+
 1. Что было сделано (1–3 предложения).
-2. Где находятся изменения (пути к файлам).
-3. Как проверить или запустить результат.
+2. Где находятся изменения (пути к файлам или папкам).
+3. Как проверить или запустить результат (команды, url, или шаги).
 
-Пример:
-# Task: Products module created
-- Added products.module.ts, products.service.ts, products.controller.ts
-- Implemented CRUD endpoints for /products
-- Tested locally with Swagger at /api/docs
+Пример содержимого:
+# TASK_1_init-projects
+
+## Что было сделано
+Созданы два отдельных проекта: фронтенд (Vue 3 + Vite + TypeScript) и бэкенд (NestJS + TypeScript).
+
+## Изменения
+- frontend/ — шаблон Vue 3 проекта.
+- backend/ — шаблон NestJS проекта.
+
+## Проверка
+Запустить фронтенд: cd frontend && npm run dev
+Запустить бэкенд: cd backend && npm run start:dev
 
 ### Folder Structure
 
@@ -102,6 +120,7 @@ slipknot-merch/
 │  │  ├─ store/
 │  │  ├─ api/
 │  ├─ README.md
+├─ Tasks/
 └─ README.md
 
 ### Verification Checklist
@@ -116,13 +135,13 @@ Codex должен автоматически проверять:
 ### Prompts Examples
 
 Создание модуля NestJS
-Создай модуль products в NestJS с CRUD API, DTO и entity. Добавь короткие комментарии на английском и запиши результат в README.
+Создай модуль products в NestJS с CRUD API, DTO и entity. Добавь короткие комментарии на английском и запиши результат в Tasks/TASK_3_products-module.MD.
 
 Создание страницы Vue
-Создай Vue страницу CatalogView.vue с карточками товаров на русском языке и кнопкой “Добавить в корзину”. Добавь README с описанием.
+Создай Vue страницу CatalogView.vue с карточками товаров на русском языке и кнопкой “Добавить в корзину”. Добавь отчёт в Tasks/TASK_4_catalog-page.MD.
 
 Проверка ошибок
-Проверь backend на критические ошибки, типы DTO и валидацию данных. Если найдешь — исправь и опиши изменения в README.
+Проверь backend на критические ошибки, типы DTO и валидацию данных. Если найдешь — исправь и опиши изменения в Tasks/TASK_<номер>_fixes.MD.
 
 ### Environment Variables
 
@@ -138,5 +157,5 @@ VITE_API_URL=http://localhost:3000
 ### Deliverables
 - Рабочий сайт (frontend + backend + db).
 - Документация API (Swagger).
-- README-отчеты по каждому шагу.
+- Отчётные файлы в Tasks/ по каждому шагу.
 - ER-диаграмма БД и структура проекта.
