@@ -1,0 +1,28 @@
+body {
+  margin: 0;
+  font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+a {
+  color: inherit;
+}
+
+a:hover {
+  color: inherit;
+}
+
+.btn-danger {
+  background-color: #8b0000;
+  border-color: #8b0000;
+}
+
+.btn-danger:hover {
+  background-color: #a40000;
+  border-color: #a40000;
+}
+
+.navbar-brand {
+  letter-spacing: 0.08em;
+}

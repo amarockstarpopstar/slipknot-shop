@@ -19,7 +19,26 @@ Environment: TypeScript, Node.js
 | Auth | JWT (access + refresh) |
 | UI | На русском языке |
 | Docs | Автоматическая Swagger-документация |
-| Logs | Простые README файлы по каждой задаче |
+| Logs | Папка Tasks с отдельными отчётами по каждой задаче |
+
+### Pre-Task Setup
+
+Перед выполнением каждой новой задачи Codex обязан подготовить окружение для корректной работы проекта.
+
+1. Проверить наличие запущенного PostgreSQL. Если база данных не активна — запустить её. Если в окружении не установлен PostgreSQL - скачать его.
+2. Убедиться, что база данных `slipknot_shop` существует.  
+   - Если она не создана — создать её (запустить скрипт из backend/database (ПРИ УСЛОВИИ, ЧТО УСТАНОВЛЕН И ЗАПУЩЕН POSTGRESQL!!!)).  
+   Пример выполнения:
+   ```bash
+   psql -U postgress -d slipknot_shop -f backend/database/init.sql
+   ```
+3. Выполнить установку зависимостей:
+   ```bash
+   cd backend && npm install
+   cd ../frontend && npm install
+   cd ..
+   ```
+4. Только после успешной подготовки среды приступать к выполнению задачи.
 
 ### Agent Role: Full-Stack Developer & Assistant
 
@@ -29,7 +48,7 @@ Codex должен действовать как ведущий разработ
 - пишет корректный код под выбранный стек;
 - создаёт и обновляет модули;
 - проверяет ошибки;
-- добавляет комментарии и краткие README-файлы.
+- добавляет комментарии и отдельные Task-файлы.
 
 ### Core Responsibilities
 
@@ -50,9 +69,13 @@ Codex должен действовать как ведущий разработ
 
 #### Database (PostgreSQL)
 - Проектировать таблицы:
-  - users(id, name, email, password_hash, role)
-  - products(id, title, description, price, image_url, category)
-  - orders(id, user_id, items_json, total_price, status)
+  - users(id, name, email, password_hash, role_id)
+  - roles(id, name)
+  - products(id, title, description, price, image_url, category_id)
+  - orders(id, user_id, total_price, status)
+  - order_items(id, order_id, product_id, quantity, price)
+  - categories(id, name)
+  - cart(id, user_id)
 - Настраивать связи OneToMany / ManyToOne.
 - Добавлять миграции и тестовые данные (seed scripts).
 
@@ -70,18 +93,36 @@ Codex должен действовать как ведущий разработ
 - Названия файлов и папок — в нижнем регистре с дефисами.
 - Все модули должны быть изолированы (products/, users/ и т.д.).
 
-### README-логика по каждой задаче
+### Task Logging System
 
-После выполнения каждой задачи Codex должен создавать простой текстовый файл README.md в соответствующей папке, где кратко описывает:
+После выполнения каждой задачи Codex должен создавать (если нет) папку `Tasks/` в корне проекта и сохранять в неё отдельный отчётный файл в формате:
+
+Tasks/TASK_<номер>_<краткое-название>.MD
+
+Примеры имён:
+Tasks/TASK_1_init-projects.MD
+Tasks/TASK_2_database-setup.MD
+Tasks/TASK_3_products-module.MD
+
+В каждом таком файле Codex должен кратко описывать:
+
 1. Что было сделано (1–3 предложения).
-2. Где находятся изменения (пути к файлам).
-3. Как проверить или запустить результат.
+2. Где находятся изменения (пути к файлам или папкам).
+3. Как проверить или запустить результат (команды, url, или шаги).
 
-Пример:
-# Task: Products module created
-- Added products.module.ts, products.service.ts, products.controller.ts
-- Implemented CRUD endpoints for /products
-- Tested locally with Swagger at /api/docs
+Пример содержимого:
+# TASK_1_init-projects
+
+## Что было сделано
+Созданы два отдельных проекта: фронтенд (Vue 3 + Vite + TypeScript) и бэкенд (NestJS + TypeScript).
+
+## Изменения
+- frontend/ — шаблон Vue 3 проекта.
+- backend/ — шаблон NestJS проекта.
+
+## Проверка
+Запустить фронтенд: cd frontend && npm run dev
+Запустить бэкенд: cd backend && npm run start:dev
 
 ### Folder Structure
 
@@ -102,6 +143,7 @@ slipknot-merch/
 │  │  ├─ store/
 │  │  ├─ api/
 │  ├─ README.md
+├─ Tasks/
 └─ README.md
 
 ### Verification Checklist
@@ -113,30 +155,17 @@ Codex должен автоматически проверять:
 - Отсутствие циклических импортов.
 - Соответствие интерфейса русскому языку.
 
-### Prompts Examples
+### Testing Requirement
 
-Создание модуля NestJS
-Создай модуль products в NestJS с CRUD API, DTO и entity. Добавь короткие комментарии на английском и запиши результат в README.
+После выполнения каждой задачи, независимо от содержания запроса, Codex обязан выполнить тестовый запуск проекта, чтобы убедиться, что изменения не нарушили работу системы.
 
-Создание страницы Vue
-Создай Vue страницу CatalogView.vue с карточками товаров на русском языке и кнопкой “Добавить в корзину”. Добавь README с описанием.
-
-Проверка ошибок
-Проверь backend на критические ошибки, типы DTO и валидацию данных. Если найдешь — исправь и опиши изменения в README.
-
-### Environment Variables
-
-# backend/.env
-PORT=3000
-DATABASE_URL=postgres://user:password@localhost:5432/slipknot_merch
-JWT_SECRET=supersecret
-JWT_REFRESH_SECRET=refreshsecret
-
-# frontend/.env
-VITE_API_URL=http://localhost:3000
-
-### Deliverables
-- Рабочий сайт (frontend + backend + db).
-- Документация API (Swagger).
-- README-отчеты по каждому шагу.
-- ER-диаграмма БД и структура проекта.
+Обязательно:
+1. Запускать backend командой:
+   cd backend && npm run start:dev
+2. Запускать frontend командой:
+   cd frontend && npm run dev
+3. Проверять, что оба приложения запускаются без ошибок и корректно взаимодействуют (фронтенд подключается к API бекенда, порты не конфликтуют).
+4. В отчёте в Tasks/TASK_<номер>_<название>.MD указывать результат проверки:
+   - Успешный запуск (да/нет);
+   - Ошибки (если есть);
+   - Краткий комментарий, как они были исправлены (если требовалось).
