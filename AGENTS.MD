@@ -136,37 +136,25 @@ Codex должен автоматически проверять:
 - Отсутствие циклических импортов.
 - Соответствие интерфейса русскому языку.
 
-### Prompts Examples
+### Pre-Task Setup
 
-Создание модуля NestJS
-Создай модуль products в NestJS с CRUD API, DTO и entity. Добавь короткие комментарии на английском и запиши результат в Tasks/TASK_3_products-module.MD.
+Перед выполнением каждой новой задачи Codex обязан подготовить окружение для корректной работы проекта.
 
-Создание страницы Vue
-Создай Vue страницу CatalogView.vue с карточками товаров на русском языке и кнопкой “Добавить в корзину”. Добавь отчёт в Tasks/TASK_4_catalog-page.MD.
-
-Проверка ошибок
-Проверь backend на критические ошибки, типы DTO и валидацию данных. Если найдешь — исправь и опиши изменения в Tasks/TASK_<номер>_fixes.MD.
-
-### Environment Variables
-
-# backend/.env
-PORT=3000
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgress
-DB_PASSWORD=postgress
-DB_NAME=slipknot_shop
-JWT_SECRET=supersecret
-JWT_REFRESH_SECRET=refreshsecret
-
-# frontend/.env
-VITE_API_URL=http://localhost:3000
-
-### Deliverables
-- Рабочий сайт (frontend + backend + db).
-- Документация API (Swagger).
-- Отчётные файлы в Tasks/ по каждому шагу.
-- ER-диаграмма БД и структура проекта.
+1. Проверить наличие запущенного PostgreSQL. Если база данных не активна — запустить её.
+2. Убедиться, что база данных `slipknot_shop` существует.  
+   - Если она не создана — создать её.  
+   - Если существует, **запустить SQL-скрипт инициализации**, уже находящийся в проекте (папка `backend/database/` или `sql/`), чтобы применить структуру таблиц и связи.
+   Пример выполнения:
+   ```bash
+   psql -U postgress -d slipknot_shop -f backend/database/init.sql
+   ```
+3. Выполнить установку зависимостей:
+   ```bash
+   cd backend && npm install
+   cd ../frontend && npm install
+   cd ..
+   ```
+4. Только после успешной подготовки среды приступать к выполнению задачи.
 
 ### Testing Requirement
 
