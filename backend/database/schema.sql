@@ -38,15 +38,21 @@ CREATE TABLE IF NOT EXISTS categories (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS sizes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     description TEXT,
+    image_url TEXT,
     price NUMERIC(10, 2) NOT NULL,
     sku VARCHAR(100) NOT NULL UNIQUE,
-    stock INTEGER DEFAULT 0 NOT NULL,
-    main_image_url TEXT,
+    stock_count INTEGER DEFAULT 0 NOT NULL,
     category_id INTEGER NOT NULL REFERENCES categories(id),
+    size_id INTEGER REFERENCES sizes(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
@@ -136,6 +142,14 @@ INSERT INTO categories (name, description) VALUES
     ('Аксессуары', 'Бейсболки, браслеты, значки и другие аксессуары'),
     ('Музыка', 'Винил, CD и кассеты'),
     ('Коллекционные предметы', 'Эксклюзивные предметы и лимитированные издания')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO sizes (name) VALUES
+    ('XS'),
+    ('S'),
+    ('M'),
+    ('L'),
+    ('XL')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO order_statuses (name) VALUES

@@ -33,16 +33,20 @@ export class UpdateProductDto {
   @IsOptional()
   @IsInt({ message: 'Количество на складе должно быть целым числом' })
   @Min(0, { message: 'Количество на складе не может быть отрицательным' })
-  stock?: number;
+  stockCount?: number;
 
   @IsOptional()
   @IsString({ message: 'Ссылка на изображение должна быть строкой' })
   @MaxLength(500, {
     message: 'Ссылка на изображение должна содержать не более 500 символов',
   })
-  mainImageUrl?: string;
+  imageUrl?: string;
 
   @IsOptional()
   @IsInt({ message: 'Идентификатор категории должен быть числом' })
   categoryId?: number;
+
+  @IsOptional()
+  @IsInt({ message: 'Идентификатор размера должен быть числом' })
+  sizeId?: number | null;
 }

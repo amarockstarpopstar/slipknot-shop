@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { Category } from '../categories/entities/category.entity';
+import { SizeEntity } from '../sizes/entities/size.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
@@ -19,6 +20,8 @@ export class ProductsService {
     private readonly productsRepository: Repository<Product>,
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
+    @InjectRepository(SizeEntity)
+    private readonly sizesRepository: Repository<SizeEntity>,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<ProductResponseDto> {
@@ -34,14 +37,20 @@ export class ProductsService {
 
     const category = await this.findCategoryById(createProductDto.categoryId);
 
+    const size =
+      createProductDto.sizeId !== undefined && createProductDto.sizeId !== null
+        ? await this.findSizeById(createProductDto.sizeId)
+        : null;
+
     const product = this.productsRepository.create({
       title: createProductDto.title.trim(),
       description: createProductDto.description?.trim() ?? null,
       price: createProductDto.price.toFixed(2),
       sku,
-      stock: createProductDto.stock,
-      mainImageUrl: createProductDto.mainImageUrl?.trim() ?? null,
+      stockCount: createProductDto.stockCount,
+      imageUrl: createProductDto.imageUrl?.trim() ?? null,
       category,
+      size: size ?? null,
     });
 
     const saved = await this.productsRepository.save(product);
@@ -50,7 +59,7 @@ export class ProductsService {
 
   async findAll(): Promise<ProductResponseDto[]> {
     const products = await this.productsRepository.find({
-      relations: { category: true },
+      relations: { category: true, size: true },
       order: { id: 'ASC' },
     });
 
@@ -60,7 +69,7 @@ export class ProductsService {
   async findById(id: number): Promise<ProductResponseDto> {
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: { category: true },
+      relations: { category: true, size: true },
     });
 
     if (!product) {
@@ -73,7 +82,7 @@ export class ProductsService {
   async update(id: number, updateProductDto: UpdateProductDto): Promise<ProductResponseDto> {
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: { category: true },
+      relations: { category: true, size: true },
     });
 
     if (!product) {
@@ -105,16 +114,23 @@ export class ProductsService {
       product.price = updateProductDto.price.toFixed(2);
     }
 
-    if (updateProductDto.stock !== undefined) {
-      product.stock = updateProductDto.stock;
+    if (updateProductDto.stockCount !== undefined) {
+      product.stockCount = updateProductDto.stockCount;
     }
 
-    if (updateProductDto.mainImageUrl !== undefined) {
-      product.mainImageUrl = updateProductDto.mainImageUrl?.trim() ?? null;
+    if (updateProductDto.imageUrl !== undefined) {
+      product.imageUrl = updateProductDto.imageUrl?.trim() ?? null;
     }
 
     if (updateProductDto.categoryId !== undefined) {
       product.category = await this.findCategoryById(updateProductDto.categoryId);
+    }
+
+    if (updateProductDto.sizeId !== undefined) {
+      product.size =
+        updateProductDto.sizeId === null
+          ? null
+          : await this.findSizeById(updateProductDto.sizeId);
     }
 
     const saved = await this.productsRepository.save(product);
@@ -141,6 +157,16 @@ export class ProductsService {
     return category;
   }
 
+  private async findSizeById(id: number): Promise<SizeEntity> {
+    const size = await this.sizesRepository.findOne({ where: { id } });
+
+    if (!size) {
+      throw new NotFoundException('Размер не найден');
+    }
+
+    return size;
+  }
+
   private toProductResponse(product: Product): ProductResponseDto {
     return {
       id: product.id,
@@ -148,12 +174,18 @@ export class ProductsService {
       description: product.description ?? null,
       price: Number(product.price),
       sku: product.sku,
-      stock: product.stock,
-      mainImageUrl: product.mainImageUrl ?? null,
+      stockCount: product.stockCount,
+      imageUrl: product.imageUrl ?? null,
       category: product.category
         ? {
             id: product.category.id,
             name: product.category.name,
+          }
+        : null,
+      size: product.size
+        ? {
+            id: product.size.id,
+            name: product.size.name,
           }
         : null,
       createdAt: product.createdAt,
