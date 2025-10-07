@@ -147,7 +147,13 @@ Codex должен автоматически проверять:
 
 # backend/.env
 PORT=3000
-DATABASE_URL=postgres://user:password@localhost:5432/slipknot_merch
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgress
+DB_PASSWORD=postgress
+DB_NAME=slipknot_shop
+
 JWT_SECRET=supersecret
 JWT_REFRESH_SECRET=refreshsecret
 
