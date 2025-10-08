@@ -9,22 +9,28 @@ import { extractErrorMessage } from '../api/http';
 const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 
-const persistTokens = (auth: AuthResponse) => {
-  localStorage.setItem(ACCESS_TOKEN_KEY, auth.accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
-};
-
-const clearTokens = () => {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-};
-
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserProfile | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const accessToken = ref<string | null>(localStorage.getItem(ACCESS_TOKEN_KEY));
+  const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_TOKEN_KEY));
 
-  const isAuthenticated = computed(() => Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)));
+  const isAuthenticated = computed(() => Boolean(accessToken.value));
+
+  const persistTokens = (auth: AuthResponse) => {
+    accessToken.value = auth.accessToken;
+    refreshToken.value = auth.refreshToken;
+    localStorage.setItem(ACCESS_TOKEN_KEY, auth.accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
+  };
+
+  const clearTokens = () => {
+    accessToken.value = null;
+    refreshToken.value = null;
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  };
 
   const setAuthState = (auth: AuthResponse) => {
     persistTokens(auth);
@@ -75,6 +81,24 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = () => {
     clearTokens();
     user.value = null;
+    error.value = null;
+  };
+
+  const initialize = async () => {
+    if (!accessToken.value) {
+      return;
+    }
+
+    if (user.value) {
+      return;
+    }
+
+    try {
+      await loadProfile();
+    } catch (err) {
+      console.warn('Failed to restore session', err);
+      logout();
+    }
   };
 
   return {
@@ -86,5 +110,6 @@ export const useAuthStore = defineStore('auth', () => {
     registerUser,
     loadProfile,
     logout,
+    initialize,
   };
 });
