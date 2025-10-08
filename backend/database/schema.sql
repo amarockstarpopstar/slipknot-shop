@@ -144,13 +144,12 @@ INSERT INTO categories (name, description) VALUES
     ('Коллекционные предметы', 'Эксклюзивные предметы и лимитированные издания')
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO sizes (name) VALUES
-    ('XS'),
-    ('S'),
-    ('M'),
-    ('L'),
-    ('XL')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO sizes (name)
+SELECT size_name
+FROM (VALUES ('XS'), ('S'), ('M'), ('L'), ('XL')) AS predefined(size_name)
+WHERE NOT EXISTS (
+    SELECT 1 FROM sizes s WHERE s.name = predefined.size_name
+);
 
 INSERT INTO order_statuses (name) VALUES
     ('Новый'),
@@ -159,3 +158,71 @@ INSERT INTO order_statuses (name) VALUES
     ('Доставлен'),
     ('Отменен')
 ON CONFLICT (name) DO NOTHING;
+
+WITH product_data AS (
+    SELECT
+        'SKU-TSHIRT-001'::text AS sku,
+        'Футболка Slipknot «We Are Not Your Kind»'::text AS title,
+        'Плотная хлопковая футболка с обложкой альбома We Are Not Your Kind.'::text AS description,
+        'https://static.slipknot-shop.ru/images/catalog/tshirt-wanyk.jpg'::text AS image_url,
+        2990.00::numeric(10, 2) AS price,
+        45::integer AS stock_count,
+        'Одежда'::text AS category_name,
+        'M'::text AS size_name
+    UNION ALL
+    SELECT
+        'SKU-HOODIE-002',
+        'Худи Slipknot с культовым логотипом',
+        'Тёплое чёрное худи с вышитым логотипом группы и подкладкой из флиса.',
+        'https://static.slipknot-shop.ru/images/catalog/hoodie-classic.jpg',
+        5490.00,
+        32,
+        'Одежда',
+        'L'
+    UNION ALL
+    SELECT
+        'SKU-CAP-003',
+        'Бейсболка Slipknot «S»',
+        'Регулируемая бейсболка с металлическим логотипом Slipknot на фронте.',
+        'https://static.slipknot-shop.ru/images/catalog/cap-s-logo.jpg',
+        1990.00,
+        60,
+        'Аксессуары',
+        NULL
+    UNION ALL
+    SELECT
+        'SKU-VINYL-004',
+        'Винил Slipknot «Iowa» (2LP)',
+        'Переиздание легендарного альбома на двойном виниле с буклетом.',
+        'https://static.slipknot-shop.ru/images/catalog/vinyl-iowa.jpg',
+        4290.00,
+        18,
+        'Музыка',
+        NULL
+    UNION ALL
+    SELECT
+        'SKU-MASK-005',
+        'Маска Кори Тейлора — коллекционная серия',
+        'Ручная роспись, лимитированное издание официальной маски фронтмена.',
+        'https://static.slipknot-shop.ru/images/catalog/mask-corey.jpg',
+        12990.00,
+        8,
+        'Коллекционные предметы',
+        NULL
+)
+INSERT INTO products (title, description, image_url, price, sku, stock_count, category_id, size_id)
+SELECT
+    pd.title,
+    pd.description,
+    pd.image_url,
+    pd.price,
+    pd.sku,
+    pd.stock_count,
+    c.id,
+    s.id
+FROM product_data pd
+JOIN categories c ON c.name = pd.category_name
+LEFT JOIN sizes s ON pd.size_name IS NOT NULL AND s.name = pd.size_name
+WHERE NOT EXISTS (
+    SELECT 1 FROM products existing WHERE existing.sku = pd.sku
+);
