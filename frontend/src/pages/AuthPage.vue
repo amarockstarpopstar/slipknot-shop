@@ -103,8 +103,7 @@ const handleSubmit = async () => {
     if (mode.value === 'login') {
       await authStore.loginUser({ email: form.email, password: form.password });
       success.value = 'Вход выполнен успешно!';
-      const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
-      await router.push(redirectTarget);
+      await router.push('/');
     } else {
       await authStore.registerUser({
         name: form.name,
@@ -113,6 +112,7 @@ const handleSubmit = async () => {
         phone: form.phone || undefined,
       });
       success.value = 'Аккаунт создан! Добро пожаловать.';
+      await router.push('/');
     }
   } catch (err) {
     console.error('Auth request failed', err);

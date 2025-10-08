@@ -31,17 +31,40 @@
             <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
         </ul>
-        <RouterLink class="btn btn-outline-light" to="/login">Войти</RouterLink>
+        <div class="d-flex align-items-center gap-2">
+          <RouterLink v-if="!isAuthenticated" class="btn btn-outline-light" to="/login">Вход</RouterLink>
+          <button v-else class="btn btn-outline-light" type="button" @click="openModal">Выход</button>
+        </div>
       </div>
     </div>
+    <LogoutConfirmModal :visible="showModal" @confirm="handleLogout" @cancel="closeModal" />
   </nav>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
+import LogoutConfirmModal from './LogoutConfirmModal.vue';
 
 const authStore = useAuthStore();
-const { user } = storeToRefs(authStore);
+const router = useRouter();
+const { user, isAuthenticated } = storeToRefs(authStore);
+
+const showModal = ref(false);
+
+const openModal = () => {
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+};
+
+const handleLogout = async () => {
+  authStore.logout();
+  closeModal();
+  await router.push('/');
+};
 </script>

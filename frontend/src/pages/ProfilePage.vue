@@ -1,11 +1,8 @@
 <template>
   <section class="py-5">
     <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="mb-4">
         <h1 class="display-6 fw-bold">Профиль</h1>
-        <button v-if="isAuthenticated" class="btn btn-outline-danger" @click="logout">
-          Выйти
-        </button>
       </div>
       <div v-if="!isAuthenticated" class="alert alert-warning" role="alert">
         Выполните вход, чтобы просмотреть информацию профиля.
@@ -47,9 +44,5 @@ const { user, loading, error, isAuthenticated } = storeToRefs(authStore);
 
 const loadProfile = async () => {
   await authStore.loadProfile();
-};
-
-const logout = () => {
-  authStore.logout();
 };
 </script>
