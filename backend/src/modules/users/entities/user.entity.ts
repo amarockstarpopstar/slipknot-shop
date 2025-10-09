@@ -33,6 +33,15 @@ export class User {
   @Column({ type: 'varchar', length: 30, nullable: true })
   phone?: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  country?: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  address?: string | null;
+
   @ManyToOne(() => Role, (role) => role.users, { eager: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;

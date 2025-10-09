@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     phone VARCHAR(30),
+    country VARCHAR(100),
+    city VARCHAR(100),
+    address TEXT,
     role_id INTEGER NOT NULL REFERENCES roles(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL

@@ -2,8 +2,8 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { AuthResponse, LoginPayload, RegisterPayload } from '../api/auth';
 import { login, register } from '../api/auth';
-import type { UserProfile } from '../api/users';
-import { fetchProfile } from '../api/users';
+import type { UpdateProfilePayload, UserProfile } from '../api/users';
+import { fetchProfile, updateProfile } from '../api/users';
 import { extractErrorMessage } from '../api/http';
 
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -12,6 +12,7 @@ const REFRESH_TOKEN_KEY = 'refreshToken';
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserProfile | null>(null);
   const loading = ref(false);
+  const updating = ref(false);
   const error = ref<string | null>(null);
   const accessToken = ref<string | null>(localStorage.getItem(ACCESS_TOKEN_KEY));
   const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_TOKEN_KEY));
@@ -78,6 +79,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const updateProfileData = async (payload: UpdateProfilePayload) => {
+    try {
+      updating.value = true;
+      const updated = await updateProfile(payload);
+      user.value = updated;
+      error.value = null;
+      return updated;
+    } catch (err) {
+      error.value = extractErrorMessage(err);
+      throw err;
+    } finally {
+      updating.value = false;
+    }
+  };
+
   const logout = () => {
     clearTokens();
     user.value = null;
@@ -104,11 +120,13 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     loading,
+    updating,
     error,
     isAuthenticated,
     loginUser,
     registerUser,
     loadProfile,
+    updateProfile: updateProfileData,
     logout,
     initialize,
   };

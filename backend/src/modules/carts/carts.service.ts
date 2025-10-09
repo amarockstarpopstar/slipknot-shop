@@ -114,6 +114,27 @@ export class CartsService {
       throw new BadRequestException('Корзина пуста');
     }
 
+    const user = cart.user;
+
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    const normalizedCountry = user.country?.trim();
+    if (normalizedCountry && normalizedCountry.toLowerCase() !== 'россия') {
+      throw new BadRequestException(
+        'Оформление заказов доступно только пользователям из России.',
+      );
+    }
+
+    const hasAddress = Boolean(
+      normalizedCountry && user.city?.trim() && user.address?.trim(),
+    );
+
+    if (!hasAddress) {
+      throw new BadRequestException('Укажите адрес доставки в профиле');
+    }
+
     const status = await this.orderStatusesRepository.findOne({ where: { name: 'Новый' } });
 
     if (!status) {
