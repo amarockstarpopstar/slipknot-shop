@@ -6,6 +6,8 @@ import { OrderResponseDto } from './dto/order-response.dto';
 import { OrderItemResponseDto } from './dto/order-item-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
+import { DEFAULT_SHIPPING_STATUS } from './orders.constants';
+import { CustomerOrderResponseDto } from './dto/customer-order-response.dto';
 
 // service handling manager order management logic
 @Injectable()
@@ -81,9 +83,28 @@ export class OrdersService {
       order.comment = comment.length ? comment : null;
     }
 
+    if (updateOrderDto.shippingStatus !== undefined) {
+      const shippingStatus = updateOrderDto.shippingStatus.trim();
+      const normalizedStatus = shippingStatus.length ? shippingStatus : DEFAULT_SHIPPING_STATUS;
+      if (order.shippingStatus !== normalizedStatus) {
+        order.shippingStatus = normalizedStatus;
+        order.shippingUpdatedAt = new Date();
+      }
+    }
+
     await this.ordersRepository.save(order);
 
     return this.findById(order.id);
+  }
+
+  async findForUser(userId: number): Promise<CustomerOrderResponseDto[]> {
+    const orders = await this.ordersRepository.find({
+      where: { user: { id: userId } },
+      relations: { status: true },
+      order: { placedAt: 'DESC', id: 'DESC' },
+    });
+
+    return orders.map((order) => this.toCustomerOrderResponse(order));
   }
 
   async remove(id: number): Promise<void> {
@@ -143,8 +164,25 @@ export class OrdersService {
         : null,
       items,
       placedAt: order.placedAt,
+      shippingStatus: order.shippingStatus,
+      shippingUpdatedAt: order.shippingUpdatedAt,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+    };
+  }
+
+  private toCustomerOrderResponse(order: Order): CustomerOrderResponseDto {
+    return {
+      id: order.id,
+      totalAmount: Number(order.totalAmount),
+      status: {
+        id: order.status?.id ?? 0,
+        name: order.status?.name ?? 'Без статуса',
+      },
+      paymentMethod: order.paymentMethod ?? null,
+      shippingStatus: order.shippingStatus,
+      shippingUpdatedAt: order.shippingUpdatedAt,
+      placedAt: order.placedAt,
     };
   }
 }

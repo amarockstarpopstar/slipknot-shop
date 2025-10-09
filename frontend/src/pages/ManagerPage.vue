@@ -179,6 +179,7 @@
                   <th scope="col">ID</th>
                   <th scope="col">Покупатель</th>
                   <th scope="col">Статус</th>
+                  <th scope="col">Отправка</th>
                   <th scope="col">Сумма</th>
                   <th scope="col">Способ оплаты</th>
                   <th scope="col">Позиций</th>
@@ -194,6 +195,10 @@
                     <div class="text-muted small">{{ order.customer.email }}</div>
                   </td>
                   <td>{{ order.status.name }}</td>
+                  <td>
+                    <div class="fw-semibold">{{ order.shippingStatus }}</div>
+                    <div class="text-muted small">{{ formatDate(order.shippingUpdatedAt) }}</div>
+                  </td>
                   <td>{{ formatCurrency(order.totalAmount) }}</td>
                   <td>{{ order.paymentMethod || '—' }}</td>
                   <td>{{ order.items.length }}</td>
@@ -208,7 +213,7 @@
                   </td>
                 </tr>
                 <tr v-if="!orders.length">
-                  <td colspan="8" class="text-center text-muted py-4">Заказы не найдены</td>
+                  <td colspan="9" class="text-center text-muted py-4">Заказы не найдены</td>
                 </tr>
               </tbody>
             </table>
@@ -219,7 +224,7 @@
             <div class="card-body">
               <form @submit.prevent="saveOrder">
                 <div class="row g-3">
-                  <div class="col-md-4">
+                  <div class="col-md-3">
                     <label class="form-label" for="orderStatus">Статус</label>
                     <select id="orderStatus" v-model="orderForm.statusId" class="form-select" required>
                       <option value="">Выберите статус</option>
@@ -228,7 +233,15 @@
                       </option>
                     </select>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-3">
+                    <label class="form-label" for="orderShippingStatus">Статус отправки</label>
+                    <select id="orderShippingStatus" v-model="orderForm.shippingStatus" class="form-select" required>
+                      <option v-for="option in shippingStatusOptions" :key="option" :value="option">
+                        {{ option }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
                     <label class="form-label" for="orderTotal">Сумма (₽)</label>
                     <input
                       id="orderTotal"
@@ -240,7 +253,7 @@
                       required
                     />
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-3">
                     <label class="form-label" for="orderPayment">Способ оплаты</label>
                     <input
                       id="orderPayment"
@@ -316,6 +329,7 @@ interface ProductFormState {
 interface OrderFormState {
   id: number;
   statusId: string;
+  shippingStatus: string;
   totalAmount: string;
   paymentMethod: string;
   comment: string;
@@ -326,6 +340,7 @@ const orders = ref<OrderDto[]>([]);
 const categories = ref<CategoryDto[]>([]);
 const sizes = ref<SizeDto[]>([]);
 const orderStatuses = ref<OrderStatusDto[]>([]);
+const shippingStatusOptions = ref<string[]>(['Готовится к отправке', 'В пути', 'Доставлен']);
 
 const initialLoading = ref(false);
 const productsLoading = ref(false);
@@ -352,6 +367,15 @@ const formatDate = (date: string) => {
   return parsed.toLocaleString('ru-RU');
 };
 
+const ensureShippingStatusOption = (status: string | null | undefined) => {
+  if (!status) {
+    return;
+  }
+  if (!shippingStatusOptions.value.includes(status)) {
+    shippingStatusOptions.value.push(status);
+  }
+};
+
 const showError = (error: unknown) => {
   globalError.value = typeof error === 'string' ? error : extractErrorMessage(error);
   successMessage.value = null;
@@ -375,6 +399,7 @@ const loadInitialData = async () => {
     ]);
     products.value = productsData;
     orders.value = ordersData;
+    ordersData.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     categories.value = categoriesData;
     sizes.value = sizesData;
     orderStatuses.value = statusesData;
@@ -400,7 +425,9 @@ const refreshProducts = async () => {
 const refreshOrders = async () => {
   try {
     ordersLoading.value = true;
-    orders.value = await fetchOrders();
+    const data = await fetchOrders();
+    orders.value = data;
+    data.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     showSuccess('Список заказов обновлен');
   } catch (error) {
     showError(error);
@@ -486,9 +513,11 @@ const removeProduct = async (product: ProductDto) => {
 };
 
 const startEditOrder = (order: OrderDto) => {
+  ensureShippingStatusOption(order.shippingStatus);
   orderForm.value = {
     id: order.id,
     statusId: String(order.status.id),
+    shippingStatus: order.shippingStatus,
     totalAmount: order.totalAmount.toString(),
     paymentMethod: order.paymentMethod ?? '',
     comment: order.comment ?? '',
@@ -513,11 +542,17 @@ const saveOrder = async () => {
     return;
   }
 
+  const paymentMethod = orderForm.value.paymentMethod.trim();
+  const comment = orderForm.value.comment.trim();
+  const shippingStatus =
+    orderForm.value.shippingStatus.trim() || shippingStatusOptions.value[0] || 'Готовится к отправке';
+
   const payload: UpdateOrderPayload = {
     statusId,
     totalAmount,
-    paymentMethod: orderForm.value.paymentMethod.trim(),
-    comment: orderForm.value.comment.trim(),
+    paymentMethod: paymentMethod.length ? paymentMethod : undefined,
+    comment: comment.length ? comment : undefined,
+    shippingStatus,
   };
 
   try {

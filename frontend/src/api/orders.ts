@@ -34,6 +34,8 @@ export interface OrderDto {
   } | null;
   items: OrderItemDto[];
   placedAt: string;
+  shippingStatus: string;
+  shippingUpdatedAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +50,7 @@ export interface UpdateOrderPayload {
   totalAmount?: number;
   paymentMethod?: string;
   comment?: string;
+  shippingStatus?: string;
 }
 
 export const fetchOrders = async (): Promise<OrderDto[]> => {

@@ -7,6 +7,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { DEFAULT_SHIPPING_STATUS } from '../orders.constants';
 
 // dto for updating order attributes in manager panel
 export class UpdateOrderDto {
@@ -32,4 +33,13 @@ export class UpdateOrderDto {
   @IsString({ message: 'Комментарий должен быть строкой' })
   @MaxLength(1000, { message: 'Комментарий должен содержать не более 1000 символов' })
   comment?: string;
+
+  @ApiPropertyOptional({
+    example: DEFAULT_SHIPPING_STATUS,
+    description: 'Статус отправки заказа',
+  })
+  @IsOptional()
+  @IsString({ message: 'Статус отправки должен быть строкой' })
+  @MaxLength(120, { message: 'Статус отправки должен содержать не более 120 символов' })
+  shippingStatus?: string;
 }

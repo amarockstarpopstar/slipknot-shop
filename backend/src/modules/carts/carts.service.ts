@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Cart } from './entities/cart.entity';
 import { CartItem } from '../cart-items/entities/cart-item.entity';
 import { Product } from '../products/entities/product.entity';
@@ -17,6 +17,7 @@ import { Order } from '../orders/entities/order.entity';
 import { OrderItem } from '../order-items/entities/order-item.entity';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
 import { User } from '../users/entities/user.entity';
+import { DEFAULT_SHIPPING_STATUS } from '../orders/orders.constants';
 
 // service encapsulating cart logic
 @Injectable()
@@ -134,11 +135,14 @@ export class CartsService {
       const orderItemsRepo = manager.getRepository(OrderItem);
       const cartItemsRepo = manager.getRepository(CartItem);
       const cartsRepo = manager.getRepository(Cart);
+      const shippingUpdatedAt = new Date();
 
       const order = ordersRepo.create({
         user: cart.user,
         status,
         totalAmount: totalAmount.toFixed(2),
+        shippingStatus: DEFAULT_SHIPPING_STATUS,
+        shippingUpdatedAt,
       });
 
       const savedOrder = await ordersRepo.save(order);
@@ -165,6 +169,8 @@ export class CartsService {
     return {
       orderId: result.id,
       totalAmount: Number(totalAmount.toFixed(2)),
+      shippingStatus: result.shippingStatus,
+      shippingUpdatedAt: result.shippingUpdatedAt,
     };
   }
 
@@ -181,24 +187,45 @@ export class CartsService {
     }
 
     const newCart = this.cartsRepository.create({ user });
-    await this.cartsRepository.save(newCart);
+    try {
+      const saved = await this.cartsRepository.save(newCart);
+      const cartWithRelations = await this.cartsRepository.findOne({
+        where: { id: saved.id },
+        relations: {
+          user: true,
+          items: { product: true },
+        },
+        order: { items: { id: 'ASC' } },
+      });
 
-    const createdCart = await this.findCartByUser(userId);
+      if (!cartWithRelations) {
+        throw new NotFoundException('Не удалось создать корзину');
+      }
 
-    if (!createdCart) {
-      throw new NotFoundException('Не удалось создать корзину');
+      return cartWithRelations;
+    } catch (error) {
+      const driverError =
+        error instanceof QueryFailedError
+          ? error.driverError
+          : (error as { driverError?: { code?: string } }).driverError;
+
+      if (driverError?.code === '23505') {
+        const existingCart = await this.findCartByUser(userId);
+        if (existingCart) {
+          return existingCart;
+        }
+        console.error('Cart unique violation without existing cart', error);
+      } else {
+        console.error('Failed to create cart', error);
+      }
+      throw error;
     }
-
-    return createdCart;
   }
 
   private async findCartByUser(userId: number): Promise<Cart | null> {
     return this.cartsRepository.findOne({
       where: { user: { id: userId } },
-      relations: {
-        user: true,
-        items: { product: true },
-      },
+      relations: { user: true, items: { product: true } },
       order: { items: { id: 'ASC' } },
     });
   }

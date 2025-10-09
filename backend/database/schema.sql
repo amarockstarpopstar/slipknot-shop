@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS orders (
     address_id INTEGER REFERENCES user_addresses(id),
     total_amount NUMERIC(10, 2) NOT NULL,
     payment_method VARCHAR(100),
+    shipping_status VARCHAR(120) DEFAULT 'Готовится к отправке' NOT NULL,
+    shipping_updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     comment TEXT,
     placed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,

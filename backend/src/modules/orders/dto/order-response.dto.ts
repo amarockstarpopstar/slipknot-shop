@@ -66,6 +66,12 @@ export class OrderResponseDto {
   @ApiProperty({ description: 'Дата оформления заказа' })
   placedAt: Date;
 
+  @ApiProperty({ example: 'Готовится к отправке', description: 'Текущий статус отправки заказа' })
+  shippingStatus: string;
+
+  @ApiProperty({ description: 'Дата последнего обновления статуса отправки' })
+  shippingUpdatedAt: Date;
+
   @ApiProperty({ description: 'Дата создания записи' })
   createdAt: Date;
 

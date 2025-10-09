@@ -4,11 +4,12 @@ import { Order } from './entities/order.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
+import { CustomerOrdersController } from './customer-orders.controller';
 
 // module wiring for order management
 @Module({
   imports: [TypeOrmModule.forFeature([Order, OrderStatus])],
-  controllers: [OrdersController],
+  controllers: [OrdersController, CustomerOrdersController],
   providers: [OrdersService],
   exports: [OrdersService],
 })
