@@ -12,6 +12,7 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto, UserRoleDto } from './dto/user-response.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 // service with user management logic
 @Injectable()
@@ -41,6 +42,9 @@ export class UsersService {
       email: createUserDto.email,
       passwordHash,
       phone: createUserDto.phone,
+      country: createUserDto.country ?? null,
+      city: createUserDto.city ?? null,
+      address: createUserDto.address ?? null,
       role,
     });
 
@@ -126,6 +130,67 @@ export class UsersService {
       user.role = await this.resolveRole(updateUserDto.roleName);
     }
 
+    if (updateUserDto.country !== undefined) {
+      const country = updateUserDto.country?.trim();
+      user.country = country ? country : null;
+    }
+
+    if (updateUserDto.city !== undefined) {
+      const city = updateUserDto.city?.trim();
+      user.city = city ? city : null;
+    }
+
+    if (updateUserDto.address !== undefined) {
+      const address = updateUserDto.address?.trim();
+      user.address = address ? address : null;
+    }
+
+    const saved = await this.usersRepository.save(user);
+    return this.findById(saved.id);
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto): Promise<UserResponseDto> {
+    const user = await this.findEntityById(userId);
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.findByEmail(dto.email);
+      if (existing && existing.id !== user.id) {
+        throw new ConflictException('Пользователь с таким email уже существует');
+      }
+    }
+
+    if (typeof dto.name === 'string') {
+      user.name = dto.name;
+    }
+
+    if (typeof dto.email === 'string') {
+      user.email = dto.email;
+    }
+
+    if (dto.phone !== undefined) {
+      const normalizedPhone = dto.phone?.trim();
+      user.phone = normalizedPhone ? normalizedPhone : null;
+    }
+
+    if (dto.country !== undefined) {
+      const country = dto.country?.trim();
+      user.country = country ? country : null;
+    }
+
+    if (dto.city !== undefined) {
+      const city = dto.city?.trim();
+      user.city = city ? city : null;
+    }
+
+    if (dto.address !== undefined) {
+      const address = dto.address?.trim();
+      user.address = address ? address : null;
+    }
+
+    if (typeof dto.password === 'string' && dto.password.length > 0) {
+      user.passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
+    }
+
     const saved = await this.usersRepository.save(user);
     return this.findById(saved.id);
   }
@@ -170,6 +235,9 @@ export class UsersService {
       name: user.name,
       email: user.email,
       phone: user.phone ?? null,
+      country: user.country ?? null,
+      city: user.city ?? null,
+      address: user.address ?? null,
       role: user.role
         ? {
             id: user.role.id,

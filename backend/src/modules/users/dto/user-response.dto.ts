@@ -22,6 +22,15 @@ export class UserResponseDto {
   @ApiPropertyOptional({ example: '+7 (900) 123-45-67', description: 'Номер телефона' })
   phone?: string | null;
 
+  @ApiPropertyOptional({ example: 'Россия', description: 'Страна пользователя' })
+  country?: string | null;
+
+  @ApiPropertyOptional({ example: 'Москва', description: 'Город пользователя' })
+  city?: string | null;
+
+  @ApiPropertyOptional({ example: 'ул. Арбат, д. 12, кв. 34', description: 'Полный адрес пользователя' })
+  address?: string | null;
+
   @ApiProperty({ type: () => UserRoleDto, nullable: true, description: 'Роль пользователя' })
   role: UserRoleDto | null;
 

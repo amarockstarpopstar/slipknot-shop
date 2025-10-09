@@ -27,6 +27,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto, UserRoleDto } from './dto/user-response.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
 
 type RequestWithUser = Request & { user?: { userId?: number } };
@@ -50,6 +51,24 @@ export class UsersController {
     }
 
     return this.usersService.findById(userId);
+  }
+
+  @Put('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Обновить профиль текущего пользователя' })
+  @ApiOkResponse({ description: 'Обновлённые данные пользователя', type: UserResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Пользователь не авторизован' })
+  async updateProfile(
+    @Req() req: RequestWithUser,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<UserResponseDto> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('Требуется авторизация');
+    }
+
+    return this.usersService.updateProfile(userId, dto);
   }
 
   @Get()

@@ -9,6 +9,9 @@ export interface LoginPayload {
 export interface RegisterPayload extends LoginPayload {
   name: string;
   phone?: string;
+  country?: string;
+  city?: string;
+  address?: string;
 }
 
 export interface AuthResponse {
