@@ -21,6 +21,9 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/cart">Корзина</RouterLink>
           </li>
+          <li v-if="isAuthenticated" class="nav-item">
+            <RouterLink class="nav-link" to="/orders">Мои заказы</RouterLink>
+          </li>
           <li class="nav-item">
             <RouterLink class="nav-link" to="/profile">Профиль</RouterLink>
           </li>

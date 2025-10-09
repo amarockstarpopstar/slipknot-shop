@@ -72,10 +72,14 @@
                 <h2 class="h4 mb-3">Итог по заказу</h2>
                 <p class="mb-1">Товаров: {{ totalQuantity }}</p>
                 <p class="mb-3">Сумма: {{ formatCurrency(totalAmount) }}</p>
-                <button type="button" class="btn btn-danger w-100 mb-2" @click="submitOrder" :disabled="updating">
-                  Оформить заказ
+                <button
+                  type="button"
+                  class="btn btn-danger w-100 mb-2"
+                  @click="goToPayment"
+                  :disabled="updating || isEmpty"
+                >
+                  Перейти к оплате
                 </button>
-                <p v-if="successMessage" class="alert alert-success small mb-2">{{ successMessage }}</p>
                 <p v-if="errorMessage" class="alert alert-danger small mb-0">{{ errorMessage }}</p>
               </div>
             </aside>
@@ -90,13 +94,12 @@
 import { onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useCartStore } from '../store/cartStore';
+import { useRouter } from 'vue-router';
 
 const cartStore = useCartStore();
-const { items, totalAmount, totalQuantity, isEmpty, loading, updating, error, lastOrder } =
-  storeToRefs(cartStore);
-
-const successMessage = ref('');
+const { items, totalAmount, totalQuantity, isEmpty, loading, updating, error } = storeToRefs(cartStore);
 const errorMessage = ref('');
+const router = useRouter();
 
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
@@ -116,22 +119,12 @@ const remove = (item: (typeof items.value)[number]) => {
   cartStore.removeItem(item.id);
 };
 
-const submitOrder = async () => {
-  const result = await cartStore.checkout();
-  if (result) {
-    successMessage.value = `Заказ №${result.orderId} успешно создан. Сумма: ${formatCurrency(result.totalAmount)}`;
-  }
+const goToPayment = () => {
+  void router.push({ name: 'checkout-payment' });
 };
 
 watch(error, (value) => {
   errorMessage.value = value ?? '';
-});
-
-watch(lastOrder, (order) => {
-  if (!order) {
-    return;
-  }
-  successMessage.value = `Заказ №${order.orderId} успешно создан. Сумма: ${formatCurrency(order.totalAmount)}`;
 });
 
 onMounted(() => {

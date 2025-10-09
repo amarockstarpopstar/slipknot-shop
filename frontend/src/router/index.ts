@@ -22,9 +22,21 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/checkout/payment',
+    name: 'checkout-payment',
+    component: () => import('../pages/CheckoutPaymentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile',
     name: 'profile',
     component: () => import('../pages/ProfilePage.vue'),
+  },
+  {
+    path: '/orders',
+    name: 'orders-history',
+    component: () => import('../pages/OrdersHistoryPage.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
