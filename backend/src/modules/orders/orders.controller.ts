@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -10,6 +12,8 @@ import {
 import { OrdersService } from './orders.service';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderCustomerDto } from './dto/order-customer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -23,11 +27,26 @@ import { Roles } from '../auth/roles.decorator';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Post()
+  @ApiOperation({ summary: 'Создать новый заказ' })
+  @ApiCreatedResponse({ description: 'Заказ создан', type: OrderResponseDto })
+  @ApiBadRequestResponse({ description: 'Некорректные данные заказа' })
+  create(@Body() createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
+    return this.ordersService.create(createOrderDto);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Получить список заказов' })
   @ApiOkResponse({ description: 'Список заказов', type: OrderResponseDto, isArray: true })
   findAll(): Promise<OrderResponseDto[]> {
     return this.ordersService.findAll();
+  }
+
+  @Get('customers')
+  @ApiOperation({ summary: 'Получить список покупателей' })
+  @ApiOkResponse({ description: 'Покупатели для выбора при создании заказа', type: OrderCustomerDto, isArray: true })
+  findCustomers(): Promise<OrderCustomerDto[]> {
+    return this.ordersService.findCustomers();
   }
 
   @Get(':id')

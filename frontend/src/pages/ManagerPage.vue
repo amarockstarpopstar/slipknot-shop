@@ -18,9 +18,14 @@
         <section class="manager-block">
           <div class="manager-block__header">
             <h2 class="manager-block__title">Товары</h2>
-            <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="productsLoading">
-              Обновить список
-            </button>
+            <div class="manager-block__actions">
+              <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="productsLoading">
+                Обновить список
+              </button>
+              <button class="btn btn-primary" type="button" @click="openAddProductModal">
+                Добавить товар
+              </button>
+            </div>
           </div>
           <div class="table-responsive">
             <table class="table align-middle mb-0 manager-table">
@@ -172,9 +177,14 @@
         <section class="manager-block">
           <div class="manager-block__header">
             <h2 class="manager-block__title">Заказы</h2>
-            <button class="btn btn-outline-secondary" @click="refreshOrders" :disabled="ordersLoading">
-              Обновить список
-            </button>
+            <div class="manager-block__actions">
+              <button class="btn btn-outline-secondary" @click="refreshOrders" :disabled="ordersLoading">
+                Обновить список
+              </button>
+              <button class="btn btn-primary" type="button" @click="openAddOrderModal">
+                Добавить заказ
+              </button>
+            </div>
           </div>
           <div class="table-responsive">
             <table class="table align-middle mb-0 manager-table">
@@ -300,16 +310,272 @@
       </div>
     </div>
   </section>
+
+  <div v-if="addProductModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5 mb-0">Новый товар</h2>
+          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddProductModal"></button>
+        </div>
+        <form @submit.prevent="saveNewProduct">
+          <div class="modal-body">
+            <p class="modal-subtitle text-muted">
+              Заполните карточку товара. Все поля можно отредактировать в любой момент.
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="newProductTitle" class="form-label">Название</label>
+                <input
+                  id="newProductTitle"
+                  v-model="addProductForm.title"
+                  type="text"
+                  class="form-control"
+                  placeholder="Например, Толстовка Slipknot"
+                  required
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="newProductSku" class="form-label">Артикул</label>
+                <input
+                  id="newProductSku"
+                  v-model="addProductForm.sku"
+                  type="text"
+                  class="form-control"
+                  placeholder="SKU-001"
+                  required
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="newProductPrice" class="form-label">Цена (₽)</label>
+                <input
+                  id="newProductPrice"
+                  v-model="addProductForm.price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="form-control"
+                  required
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="newProductStock" class="form-label">Остаток</label>
+                <input
+                  id="newProductStock"
+                  v-model="addProductForm.stockCount"
+                  type="number"
+                  min="0"
+                  class="form-control"
+                  required
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="newProductCategory" class="form-label">Категория</label>
+                <select
+                  id="newProductCategory"
+                  v-model="addProductForm.categoryId"
+                  class="form-select"
+                  required
+                  :disabled="creatingProduct"
+                >
+                  <option value="">Выберите категорию</option>
+                  <option v-for="category in categories" :key="category.id" :value="String(category.id)">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="newProductSize" class="form-label">Размер</label>
+                <select
+                  id="newProductSize"
+                  v-model="addProductForm.sizeId"
+                  class="form-select"
+                  :disabled="creatingProduct"
+                >
+                  <option value="">Без размера</option>
+                  <option v-for="size in sizes" :key="size.id" :value="String(size.id)">
+                    {{ size.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label for="newProductImage" class="form-label">Ссылка на изображение</label>
+                <input
+                  id="newProductImage"
+                  v-model="addProductForm.imageUrl"
+                  type="url"
+                  class="form-control"
+                  placeholder="https://"
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="col-12">
+                <label for="newProductDescription" class="form-label">Описание</label>
+                <textarea
+                  id="newProductDescription"
+                  v-model="addProductForm.description"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Коротко опишите товар"
+                  :disabled="creatingProduct"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer--stacked">
+            <button type="button" class="btn btn-outline-secondary" @click="closeAddProductModal" :disabled="creatingProduct">
+              Отмена
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="creatingProduct">
+              Сохранить
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div v-if="addProductModalVisible" class="modal-backdrop fade show"></div>
+
+  <div v-if="addOrderModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5 mb-0">Новый заказ</h2>
+          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddOrderModal"></button>
+        </div>
+        <form @submit.prevent="saveNewOrder">
+          <div class="modal-body">
+            <p class="modal-subtitle text-muted">
+              Создайте новый заказ и зафиксируйте ключевые данные клиента и доставки.
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="newOrderUser" class="form-label">Покупатель</label>
+                <select
+                  id="newOrderUser"
+                  v-model="addOrderForm.userId"
+                  class="form-select"
+                  required
+                  :disabled="creatingOrder || !orderCustomers.length"
+                >
+                  <option value="">Выберите покупателя</option>
+                  <option v-for="customer in orderCustomers" :key="customer.id" :value="String(customer.id)">
+                    {{ customer.name }} • {{ customer.email }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="newOrderStatus" class="form-label">Статус</label>
+                <select
+                  id="newOrderStatus"
+                  v-model="addOrderForm.statusId"
+                  class="form-select"
+                  required
+                  :disabled="creatingOrder"
+                >
+                  <option value="">Выберите статус</option>
+                  <option v-for="status in orderStatuses" :key="status.id" :value="String(status.id)">
+                    {{ status.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="newOrderShipping" class="form-label">Статус отправки</label>
+                <select
+                  id="newOrderShipping"
+                  v-model="addOrderForm.shippingStatus"
+                  class="form-select"
+                  required
+                  :disabled="creatingOrder"
+                >
+                  <option v-for="option in shippingStatusOptions" :key="option" :value="option">
+                    {{ option }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="newOrderTotal" class="form-label">Сумма (₽)</label>
+                <input
+                  id="newOrderTotal"
+                  v-model="addOrderForm.totalAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="form-control"
+                  required
+                  :disabled="creatingOrder"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="newOrderPayment" class="form-label">Способ оплаты</label>
+                <input
+                  id="newOrderPayment"
+                  v-model="addOrderForm.paymentMethod"
+                  type="text"
+                  class="form-control"
+                  placeholder="Например, Банковская карта"
+                  :disabled="creatingOrder"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="newOrderAddress" class="form-label">ID адреса (опционально)</label>
+                <input
+                  id="newOrderAddress"
+                  v-model="addOrderForm.addressId"
+                  type="number"
+                  min="1"
+                  class="form-control"
+                  placeholder="Укажите при необходимости"
+                  :disabled="creatingOrder"
+                />
+              </div>
+              <div class="col-12">
+                <label for="newOrderComment" class="form-label">Комментарий</label>
+                <textarea
+                  id="newOrderComment"
+                  v-model="addOrderForm.comment"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Дополнительная информация для сборки или доставки"
+                  :disabled="creatingOrder"
+                ></textarea>
+              </div>
+              <div v-if="!orderCustomers.length" class="col-12">
+                <div class="manager-modal__empty">
+                  Нет доступных покупателей. Добавьте пользователя в разделе администрирования.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer--stacked">
+            <button type="button" class="btn btn-outline-secondary" @click="closeAddOrderModal" :disabled="creatingOrder">
+              Отмена
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="creatingOrder || !orderCustomers.length">
+              Сохранить
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div v-if="addOrderModalVisible" class="modal-backdrop fade show"></div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
   fetchProducts,
+  createProduct,
   updateProduct,
   deleteProduct,
   type ProductDto,
+  type CreateProductPayload,
   type UpdateProductPayload,
 } from '../api/products';
 import { fetchCategories, type CategoryDto } from '../api/categories';
@@ -317,16 +583,31 @@ import { fetchSizes, type SizeDto } from '../api/sizes';
 import {
   fetchOrders,
   fetchOrderStatuses,
+  fetchOrderCustomers,
+  createOrder,
   updateOrder,
   deleteOrder,
   type OrderDto,
   type OrderStatusDto,
+  type OrderCustomerDto,
+  type CreateOrderPayload,
   type UpdateOrderPayload,
 } from '../api/orders';
 import { extractErrorMessage } from '../api/http';
 
 interface ProductFormState {
   id: number;
+  title: string;
+  description: string;
+  price: string;
+  sku: string;
+  stockCount: string;
+  imageUrl: string;
+  categoryId: string;
+  sizeId: string;
+}
+
+interface NewProductFormState {
   title: string;
   description: string;
   price: string;
@@ -346,11 +627,22 @@ interface OrderFormState {
   comment: string;
 }
 
+interface NewOrderFormState {
+  userId: string;
+  statusId: string;
+  shippingStatus: string;
+  totalAmount: string;
+  paymentMethod: string;
+  comment: string;
+  addressId: string;
+}
+
 const products = ref<ProductDto[]>([]);
 const orders = ref<OrderDto[]>([]);
 const categories = ref<CategoryDto[]>([]);
 const sizes = ref<SizeDto[]>([]);
 const orderStatuses = ref<OrderStatusDto[]>([]);
+const orderCustomers = ref<OrderCustomerDto[]>([]);
 const shippingStatusOptions = ref<string[]>(['Готовится к отправке', 'В пути', 'Доставлен']);
 
 const initialLoading = ref(false);
@@ -358,12 +650,35 @@ const productsLoading = ref(false);
 const ordersLoading = ref(false);
 const productSaving = ref(false);
 const orderSaving = ref(false);
+const creatingProduct = ref(false);
+const creatingOrder = ref(false);
 
 const globalError = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 
 const productForm = ref<ProductFormState | null>(null);
 const orderForm = ref<OrderFormState | null>(null);
+const addProductModalVisible = ref(false);
+const addOrderModalVisible = ref(false);
+const addProductForm = reactive<NewProductFormState>({
+  title: '',
+  description: '',
+  price: '',
+  sku: '',
+  stockCount: '',
+  imageUrl: '',
+  categoryId: '',
+  sizeId: '',
+});
+const addOrderForm = reactive<NewOrderFormState>({
+  userId: '',
+  statusId: '',
+  shippingStatus: shippingStatusOptions.value[0] ?? 'Готовится к отправке',
+  totalAmount: '',
+  paymentMethod: '',
+  comment: '',
+  addressId: '',
+});
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('ru-RU', {
@@ -397,23 +712,102 @@ const showSuccess = (message: string) => {
   globalError.value = null;
 };
 
+const getDefaultShippingStatus = () => shippingStatusOptions.value[0] ?? 'Готовится к отправке';
+const getDefaultStatusId = () => (orderStatuses.value.length ? String(orderStatuses.value[0].id) : '');
+
+const resetAddProductForm = () => {
+  Object.assign(addProductForm, {
+    title: '',
+    description: '',
+    price: '',
+    sku: '',
+    stockCount: '',
+    imageUrl: '',
+    categoryId: '',
+    sizeId: '',
+  });
+};
+
+const resetAddOrderForm = () => {
+  Object.assign(addOrderForm, {
+    userId: '',
+    statusId: getDefaultStatusId(),
+    shippingStatus: getDefaultShippingStatus(),
+    totalAmount: '',
+    paymentMethod: '',
+    comment: '',
+    addressId: '',
+  });
+};
+
+const toggleAddProductModal = (visible: boolean) => {
+  if (visible) {
+    resetAddProductForm();
+  }
+  addProductModalVisible.value = visible;
+};
+
+const toggleAddOrderModal = (visible: boolean) => {
+  if (visible) {
+    resetAddOrderForm();
+  }
+  addOrderModalVisible.value = visible;
+};
+
+const refreshOrderCustomers = async (silent = false) => {
+  try {
+    orderCustomers.value = await fetchOrderCustomers();
+  } catch (error) {
+    if (!silent) {
+      showError(error);
+    }
+  }
+};
+
+const openAddProductModal = () => {
+  toggleAddProductModal(true);
+};
+
+const closeAddProductModal = () => {
+  toggleAddProductModal(false);
+};
+
+const openAddOrderModal = () => {
+  toggleAddOrderModal(true);
+  void refreshOrderCustomers(true);
+};
+
+const closeAddOrderModal = () => {
+  toggleAddOrderModal(false);
+};
+
 const loadInitialData = async () => {
   try {
     initialLoading.value = true;
     globalError.value = null;
-    const [productsData, ordersData, categoriesData, sizesData, statusesData] = await Promise.all([
+    const [
+      productsData,
+      ordersData,
+      categoriesData,
+      sizesData,
+      statusesData,
+      customersData,
+    ] = await Promise.all([
       fetchProducts(),
       fetchOrders(),
       fetchCategories(),
       fetchSizes(),
       fetchOrderStatuses(),
+      fetchOrderCustomers(),
     ]);
     products.value = productsData;
     orders.value = ordersData;
     categories.value = categoriesData;
     sizes.value = sizesData;
     orderStatuses.value = statusesData;
+    orderCustomers.value = customersData;
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
+    resetAddOrderForm();
   } catch (error) {
     showError(error);
   } finally {
@@ -439,6 +833,7 @@ const refreshOrders = async () => {
     orders.value = await fetchOrders();
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     showSuccess('Список заказов обновлён.');
+    await refreshOrderCustomers(true);
   } catch (error) {
     showError(error);
   } finally {
@@ -462,6 +857,40 @@ const startEditProduct = (product: ProductDto) => {
 
 const cancelProductEdit = () => {
   productForm.value = null;
+};
+
+const saveNewProduct = async () => {
+  if (
+    !addProductForm.title ||
+    !addProductForm.sku ||
+    !addProductForm.price ||
+    !addProductForm.stockCount ||
+    !addProductForm.categoryId
+  ) {
+    return;
+  }
+
+  try {
+    creatingProduct.value = true;
+    const payload: CreateProductPayload = {
+      title: addProductForm.title,
+      description: addProductForm.description ? addProductForm.description : undefined,
+      price: Number(addProductForm.price),
+      sku: addProductForm.sku,
+      stockCount: Number(addProductForm.stockCount),
+      imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
+      categoryId: Number(addProductForm.categoryId),
+      sizeId: addProductForm.sizeId ? Number(addProductForm.sizeId) : undefined,
+    };
+    await createProduct(payload);
+    products.value = await fetchProducts();
+    showSuccess('Новый товар добавлен.');
+    toggleAddProductModal(false);
+  } catch (error) {
+    showError(error);
+  } finally {
+    creatingProduct.value = false;
+  }
 };
 
 const saveProduct = async () => {
@@ -514,6 +943,35 @@ const startEditOrder = (order: OrderDto) => {
 
 const cancelOrderEdit = () => {
   orderForm.value = null;
+};
+
+const saveNewOrder = async () => {
+  if (!addOrderForm.userId || !addOrderForm.statusId || addOrderForm.totalAmount === '') {
+    return;
+  }
+
+  try {
+    creatingOrder.value = true;
+    const payload: CreateOrderPayload = {
+      userId: Number(addOrderForm.userId),
+      statusId: Number(addOrderForm.statusId),
+      totalAmount: Number(addOrderForm.totalAmount),
+      paymentMethod: addOrderForm.paymentMethod ? addOrderForm.paymentMethod : undefined,
+      comment: addOrderForm.comment ? addOrderForm.comment : undefined,
+      shippingStatus: addOrderForm.shippingStatus ? addOrderForm.shippingStatus : undefined,
+      addressId: addOrderForm.addressId ? Number(addOrderForm.addressId) : undefined,
+    };
+    const createdOrder = await createOrder(payload);
+    ensureShippingStatusOption(createdOrder.shippingStatus);
+    orders.value = await fetchOrders();
+    orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
+    showSuccess('Заказ создан.');
+    toggleAddOrderModal(false);
+  } catch (error) {
+    showError(error);
+  } finally {
+    creatingOrder.value = false;
+  }
 };
 
 const saveOrder = async () => {
@@ -593,6 +1051,14 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.manager-block__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .manager-block__title {
   margin: 0;
   font-size: 1.6rem;
@@ -654,6 +1120,15 @@ onMounted(() => {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+}
+
+.manager-modal__empty {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 @media (max-width: 575.98px) {
