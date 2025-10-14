@@ -65,125 +65,101 @@
     </div>
   </section>
 
-  <Teleport to="body">
-    <Transition name="modal-fade" appear>
-      <div v-if="showCountryModal" class="modal-layer" role="presentation" @click.self="closeCountryModal">
-        <div class="modal glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h2 class="modal-title h5 mb-0">Заказ недоступен</h2>
-              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-0">
-                {{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}
-              </p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
-              <button type="button" class="btn btn-danger" @click="handleCountryModalRedirect">
-                Перейти в профиль
-              </button>
-            </div>
-          </div>
+  <div v-if="showCountryModal" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5">Заказ недоступен</h2>
+          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">{{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
+          <RouterLink class="btn btn-danger" to="/profile" @click="closeCountryModal">
+            Перейти в профиль
+          </RouterLink>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </div>
+  <div v-if="showCountryModal" class="modal-backdrop fade show"></div>
 
-  <Teleport to="body">
-    <Transition name="modal-fade" appear>
-      <div
-        v-if="showAddressModal"
-        class="modal-layer"
-        role="presentation"
-        @click.self="closeAddressModal"
-      >
-        <div class="modal glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
-          <div class="modal-content">
-            <form @submit.prevent="submitAddress">
-              <div class="modal-header">
-                <h2 class="modal-title h5 mb-0">Укажите адрес доставки</h2>
-                <button
-                  type="button"
-                  class="btn-close"
-                  aria-label="Закрыть"
-                  @click="closeAddressModal"
-                  :disabled="addressSaving"
-                ></button>
-              </div>
-              <div class="modal-body">
-                <p class="text-muted">Для оформления заказа заполните все поля.</p>
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label for="checkoutCountry" class="form-label">Страна</label>
-                    <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
-                      <option value="">Выберите страну</option>
-                      <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Город</label>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <select
-                        v-if="!addressForm.useCustomCity"
-                        v-model="addressForm.city"
-                        class="form-select flex-grow-1"
-                        :disabled="!addressForm.country"
-                        required
-                      >
-                        <option value="">Выберите город</option>
-                        <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
-                          {{ cityOption }}
-                        </option>
-                      </select>
-                      <input
-                        v-else
-                        v-model="addressForm.customCity"
-                        type="text"
-                        class="form-control flex-grow-1"
-                        placeholder="Введите город"
-                        required
-                      />
-                      <button type="button" class="btn btn-outline-secondary" @click="toggleAddressCityInput">
-                        {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
-                      </button>
-                    </div>
-                    <small class="text-muted">Выберите город или введите свой</small>
-                  </div>
-                  <div class="col-12">
-                    <label for="checkoutAddress" class="form-label">Адрес</label>
-                    <textarea
-                      id="checkoutAddress"
-                      v-model="addressForm.address"
-                      class="form-control"
-                      rows="3"
-                      placeholder="Улица, дом, квартира"
-                      required
-                    ></textarea>
-                  </div>
-                </div>
-                <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
-              </div>
-              <div class="modal-footer">
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  @click="closeAddressModal"
-                  :disabled="addressSaving"
-                >
-                  Отмена
-                </button>
-                <button type="submit" class="btn btn-danger" :disabled="addressSaving">
-                  {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
-                </button>
-              </div>
-            </form>
+  <div v-if="showAddressModal" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <form @submit.prevent="submitAddress">
+          <div class="modal-header">
+            <h2 class="modal-title h5">Укажите адрес доставки</h2>
+            <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddressModal" :disabled="addressSaving"></button>
           </div>
-        </div>
+          <div class="modal-body">
+            <p class="text-muted">Для оформления заказа заполните все поля.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="checkoutCountry" class="form-label">Страна</label>
+                <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
+                  <option value="">Выберите страну</option>
+                  <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Город</label>
+                <div class="d-flex gap-2 flex-wrap">
+                  <select
+                    v-if="!addressForm.useCustomCity"
+                    v-model="addressForm.city"
+                    class="form-select flex-grow-1"
+                    :disabled="!addressForm.country"
+                    required
+                  >
+                    <option value="">Выберите город</option>
+                    <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
+                      {{ cityOption }}
+                    </option>
+                  </select>
+                  <input
+                    v-else
+                    v-model="addressForm.customCity"
+                    type="text"
+                    class="form-control flex-grow-1"
+                    placeholder="Введите город"
+                    required
+                  />
+                  <button type="button" class="btn btn-outline-secondary" @click="toggleAddressCityInput">
+                    {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
+                  </button>
+                </div>
+                <small class="text-muted">Выберите город или введите свой</small>
+              </div>
+              <div class="col-12">
+                <label for="checkoutAddress" class="form-label">Адрес</label>
+                <textarea
+                  id="checkoutAddress"
+                  v-model="addressForm.address"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Улица, дом, квартира"
+                  required
+                ></textarea>
+              </div>
+            </div>
+            <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" @click="closeAddressModal" :disabled="addressSaving">
+              Отмена
+            </button>
+            <button type="submit" class="btn btn-danger" :disabled="addressSaving">
+              {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
+            </button>
+          </div>
+        </form>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </div>
+  <div v-if="showAddressModal" class="modal-backdrop fade show"></div>
 </template>
 
 <script setup lang="ts">
@@ -195,7 +171,6 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { extractErrorMessage } from '../api/http';
 import { SUPPORTED_COUNTRIES, getCitiesByCountry, isRussianCountry } from '../utils/location';
-import { useNavigation } from '../composables/useNavigation';
 
 const cartStore = useCartStore();
 const { items, totalAmount, totalQuantity, loading, updating, error, lastOrder } = storeToRefs(cartStore);
@@ -223,30 +198,12 @@ const addressError = ref<string | null>(null);
 const showCountryModal = ref(false);
 const countryModalMessage = ref('');
 const showAddressModal = ref(false);
-const { goToProfile } = useNavigation();
 
 const addressCityOptions = computed(() => getCitiesByCountry(addressForm.country));
 
 const hasRussianCountry = computed(() => isRussianCountry(user.value?.country));
 const hasUserCity = computed(() => (user.value?.city ?? '').trim().length > 0);
 const hasUserAddress = computed(() => (user.value?.address ?? '').trim().length > 0);
-
-const resolveMissingAddressMessage = () => {
-  const missing: string[] = [];
-  if (!hasUserCity.value) {
-    missing.push('город');
-  }
-  if (!hasUserAddress.value) {
-    missing.push('адрес');
-  }
-  if (missing.length === 0) {
-    return '';
-  }
-  if (missing.length === 1) {
-    return `Укажите ${missing[0]} доставки.`;
-  }
-  return 'Укажите город и полный адрес доставки.';
-};
 
 const resolveCountryErrorMessage = () => {
   const selectedCountry = (user.value?.country ?? '').trim();
@@ -297,7 +254,7 @@ const payOrder = async () => {
   }
   if (!hasUserCity.value || !hasUserAddress.value) {
     fillAddressFormFromProfile();
-    addressError.value = resolveMissingAddressMessage();
+    addressError.value = 'Укажите город и полный адрес доставки.';
     showAddressModal.value = true;
     return;
   }
@@ -312,15 +269,6 @@ const payOrder = async () => {
 const closeCountryModal = () => {
   showCountryModal.value = false;
   countryModalMessage.value = '';
-};
-
-const handleCountryModalRedirect = async () => {
-  if (addressSaving.value) {
-    return;
-  }
-  showCountryModal.value = false;
-  countryModalMessage.value = '';
-  await goToProfile();
 };
 
 const closeAddressModal = () => {
@@ -409,75 +357,12 @@ watch(showAddressModal, (visible) => {
   }
 });
 
-watch(
-  () => addressForm.country,
-  (country) => {
-    const options = getCitiesByCountry(country);
-    if (!addressForm.useCustomCity && addressForm.city && !options.includes(addressForm.city)) {
-      addressForm.city = '';
-    }
-  },
-);
-
-watch(
-  () => [addressForm.city, addressForm.customCity, addressForm.address, addressForm.country, addressForm.useCustomCity],
-  () => {
-    if (addressError.value) {
-      addressError.value = null;
-    }
-  },
-);
-
 onMounted(() => {
   void cartStore.loadCart();
-  if (!user.value) {
-    void authStore.loadProfile().catch((err) => {
-      console.error('Failed to refresh profile before checkout', err);
-    });
-  }
 });
 </script>
 
 <style scoped>
-.modal-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  display: grid;
-  place-items: center;
-  padding: clamp(1rem, 3vw, 2rem);
-  background: color-mix(in srgb, rgba(5, 5, 10, 0.65) 72%, transparent);
-  backdrop-filter: blur(4px);
-}
-
-.modal-layer__dialog {
-  width: min(640px, 100%);
-  max-height: min(90vh, 720px);
-  overflow: hidden;
-  box-shadow: var(--shadow-modal, 0 24px 60px rgba(0, 0, 0, 0.45));
-  animation: modal-pop var(--transition-base) ease;
-}
-
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.24s ease, transform 0.24s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-  transform: translateY(12px) scale(0.98);
-}
-
-@keyframes modal-pop {
-  from {
-    transform: translateY(18px) scale(0.95);
-  }
-  to {
-    transform: translateY(0) scale(1);
-  }
-}
-
 .page-header {
   display: flex;
   align-items: center;

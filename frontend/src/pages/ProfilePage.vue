@@ -6,6 +6,9 @@
           <span class="chip mb-2">Профиль</span>
           <h1 class="section-title mb-0">Личные данные</h1>
         </div>
+        <button class="btn btn-outline-secondary" type="button" @click="refreshProfile" :disabled="loading">
+          Обновить данные
+        </button>
       </div>
 
       <div v-if="!isAuthenticated" class="alert alert-warning" role="alert">
@@ -195,6 +198,12 @@ const cityOptions = computed(() => getCitiesByCountry(form.country));
 
 const canSubmit = computed(() => form.name.trim().length >= 2 && form.email.trim().length > 0);
 
+const refreshProfile = () => {
+  localError.value = null;
+  successMessage.value = '';
+  void authStore.loadProfile();
+};
+
 const toggleCityInput = () => {
   form.useCustomCity = !form.useCustomCity;
   form.city = '';
@@ -224,14 +233,6 @@ const saveProfile = async () => {
 
 watch(user, (value) => {
   if (!value) {
-    form.name = '';
-    form.email = '';
-    form.phone = '';
-    form.country = '';
-    form.city = '';
-    form.customCity = '';
-    form.useCustomCity = false;
-    form.address = '';
     return;
   }
   form.name = value.name ?? '';
@@ -255,19 +256,9 @@ watch(error, (value) => {
 });
 
 onMounted(() => {
-  if (!isAuthenticated.value) {
-    return;
+  if (!user.value) {
+    void authStore.loadProfile();
   }
-  localError.value = null;
-  successMessage.value = '';
-  void authStore
-    .loadProfile()
-    .catch((err) => {
-      console.error('Failed to load profile data', err);
-      if (!localError.value) {
-        localError.value = 'Не удалось загрузить профиль. Попробуйте позже.';
-      }
-    });
 });
 </script>
 
