@@ -1,10 +1,15 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const bootstrapLogger = new Logger('Bootstrap');
+
+  app.useLogger(bootstrapLogger);
 
   // enable global validation for DTOs
   app.useGlobalPipes(
@@ -16,10 +21,32 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalInterceptors(new RequestLoggingInterceptor());
+
   app.enableCors({
     origin: true,
     credentials: true,
   });
+
+  try {
+    const dataSource = app.get(DataSource, { strict: false });
+    if (!dataSource) {
+      bootstrapLogger.warn('Data source is not available. Database connection status is unknown.');
+    } else {
+      if (!dataSource.isInitialized) {
+        await dataSource.initialize();
+      }
+      bootstrapLogger.log(
+        `Database connection to "${dataSource.options.database}" established successfully.`,
+        'Database',
+      );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    bootstrapLogger.error(`Failed to connect to the database: ${message}`, stack);
+    process.exit(1);
+  }
 
   const config = new DocumentBuilder()
     .setTitle('Slipknot Shop API')
@@ -40,6 +67,9 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  const url = await app.getUrl();
+  bootstrapLogger.log(`Application is running on ${url}`);
 }
 bootstrap();
