@@ -10,27 +10,32 @@ export const useProductStore = defineStore('products', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const loadAll = async () => {
+  const loadAll = async (): Promise<ProductDto[] | null> => {
     try {
       loading.value = true;
       items.value = await fetchProducts();
       error.value = null;
+      return items.value;
     } catch (err) {
       error.value = extractErrorMessage(err);
-      throw err;
+      console.error('Failed to load products', err);
+      return null;
     } finally {
       loading.value = false;
     }
   };
 
-  const loadOne = async (id: number) => {
+  const loadOne = async (id: number): Promise<ProductDto | null> => {
     try {
       loading.value = true;
       selected.value = await fetchProductById(id);
       error.value = null;
+      return selected.value;
     } catch (err) {
       error.value = extractErrorMessage(err);
-      throw err;
+      selected.value = null;
+      console.error('Failed to load product', err);
+      return null;
     } finally {
       loading.value = false;
     }

@@ -70,7 +70,7 @@ const closeModal = () => {
 const handleLogout = async () => {
   authStore.logout();
   closeModal();
-  await router.replace({ name: 'login', query: { message: 'Вы успешно вышли из аккаунта' } });
+  await router.replace({ name: 'home', query: { message: 'Вы успешно вышли из аккаунта' } });
 };
 
 watchEffect(() => {

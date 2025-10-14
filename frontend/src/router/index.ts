@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import type { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
+import type { RouteLocationNormalized, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 
 const routes: RouteRecordRaw[] = [
@@ -30,6 +30,7 @@ const routes: RouteRecordRaw[] = [
     path: '/profile',
     name: 'profile',
     component: () => import('../pages/ProfilePage.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/orders',
@@ -42,6 +43,7 @@ const routes: RouteRecordRaw[] = [
     name: 'login',
     component: () => import('../pages/AuthPage.vue'),
     alias: ['/auth'],
+    meta: { requiresGuest: true },
   },
   {
     path: '/manager',
@@ -58,21 +60,27 @@ const routes: RouteRecordRaw[] = [
 ];
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior() {
     return { top: 0 };
   },
 });
 
-router.beforeEach(async (to: RouteLocationNormalized) => {
-  console.log('Navigating to:', to.fullPath);
+router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalizedLoaded) => {
+  console.log(`Navigating from ${from.fullPath} to ${to.fullPath}`);
+
+  const authStore = useAuthStore();
+
+  if (to.matched.some((route) => route.meta?.requiresGuest) && authStore.isAuthenticated) {
+    const redirectTarget = typeof to.query.redirect === 'string' && to.query.redirect.startsWith('/') ? to.query.redirect : '/';
+    return { path: redirectTarget };
+  }
+
   const requiresAuth = to.matched.some((route) => route.meta?.requiresAuth);
   if (!requiresAuth) {
     return true;
   }
-
-  const authStore = useAuthStore();
 
   if (!authStore.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } };
@@ -103,4 +111,8 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
 
 router.afterEach((to) => {
   console.log('Navigated to:', to.fullPath);
+});
+
+router.onError((error) => {
+  console.error('Router error:', error);
 });

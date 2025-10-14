@@ -126,7 +126,10 @@ const confirmLoading = ref(false);
 const confirmError = ref<string | null>(null);
 
 const loadProduct = async (id: number) => {
-  await productStore.loadOne(id);
+  const productLoaded = await productStore.loadOne(id);
+  if (!productLoaded) {
+    showConfirm.value = false;
+  }
 };
 
 const addToCart = async (item: NonNullable<typeof product.value>) => {
