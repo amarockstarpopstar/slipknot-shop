@@ -206,7 +206,7 @@ const canSubmit = computed(() => form.name.trim().length >= 2 && form.email.trim
 const refreshProfile = () => {
   localError.value = null;
   successMessage.value = '';
-  void authStore.fetchProfile();
+  void authStore.loadProfile();
 };
 
 const toggleCityInput = () => {
@@ -262,7 +262,7 @@ watch(error, (value) => {
 
 onMounted(() => {
   if (!user.value) {
-    void authStore.fetchProfile();
+    void authStore.loadProfile();
   }
 });
 </script>
