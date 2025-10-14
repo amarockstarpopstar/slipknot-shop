@@ -92,7 +92,7 @@ const resolveRedirect = () => {
   if (typeof redirectTarget === 'string' && redirectTarget.startsWith('/')) {
     return redirectTarget;
   }
-  return '/profile';
+  return '/';
 };
 
 const handleSubmit = async () => {

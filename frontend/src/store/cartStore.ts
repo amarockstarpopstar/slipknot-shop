@@ -49,7 +49,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const ensureAuthenticated = (): boolean => {
     if (!isAuthenticated.value) {
-      router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
+      void router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
       return false;
     }
     return true;
@@ -60,7 +60,7 @@ export const useCartStore = defineStore('cart', () => {
     resetCart();
     lastOrder.value = null;
     error.value = null;
-    router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
+    void router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
   };
 
   const withUpdate = async <T>(action: () => Promise<T>): Promise<T | null> => {

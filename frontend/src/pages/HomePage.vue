@@ -1,47 +1,57 @@
 <template>
-  <section class="hero-section fade-in-up">
-    <div class="layout-container text-center">
-      <span class="chip mb-3">Официальный мерч</span>
-      <h1 class="section-title mb-3">Каталог Slipknot</h1>
-      <p class="section-subtitle mb-0">
-        Выбирайте фирменные футболки, худи и коллекционные аксессуары из свежей коллекции. Всё — с гарантией подлинности.
-      </p>
-    </div>
-  </section>
-  <section class="section fade-in-up" data-delay="1">
-    <div class="layout-container">
-      <div class="section-header">
-        <h2 class="section-header__title">Популярные товары</h2>
-        <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="loading">
-          Обновить список
-        </button>
+  <div class="home-page">
+    <section class="hero-section fade-in-up">
+      <div class="layout-container text-center">
+        <span class="chip mb-3">Официальный мерч</span>
+        <h1 class="section-title mb-3">Каталог Slipknot</h1>
+        <p class="section-subtitle mb-0">
+          Выбирайте фирменные футболки, худи и коллекционные аксессуары из свежей коллекции. Всё — с гарантией подлинности.
+        </p>
       </div>
-      <LoadingSpinner v-if="loading" />
-      <div v-else>
-        <div v-if="error" class="alert alert-danger" role="alert">
-          {{ error }}
+    </section>
+    <section class="section fade-in-up" data-delay="1">
+      <div class="layout-container">
+        <div
+          v-if="infoMessage"
+          class="alert alert-success alert-dismissible fade show"
+          role="alert"
+        >
+          {{ infoMessage }}
+          <button type="button" class="btn-close" aria-label="Закрыть" @click="dismissInfoMessage"></button>
         </div>
-        <div v-else class="products-grid">
-          <ProductCard v-for="product in products" :key="product.id" :product="product">
-            <template #actions>
-              <button class="btn btn-danger btn-sm" @click="addToCart(product)">В корзину</button>
-              <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
-                Подробнее
-              </RouterLink>
-            </template>
-          </ProductCard>
+        <div class="section-header">
+          <h2 class="section-header__title">Популярные товары</h2>
+          <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="loading">
+            Обновить список
+          </button>
         </div>
-        <div v-if="!products.length && !error" class="alert alert-info mt-4" role="alert">
-          Товары скоро появятся, следите за обновлениями.
+        <LoadingSpinner v-if="loading" />
+        <div v-else>
+          <div v-if="error" class="alert alert-danger" role="alert">
+            {{ error }}
+          </div>
+          <div v-else class="products-grid">
+            <ProductCard v-for="product in products" :key="product.id" :product="product">
+              <template #actions>
+                <button class="btn btn-danger btn-sm" @click="addToCart(product)">В корзину</button>
+                <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
+                  Подробнее
+                </RouterLink>
+              </template>
+            </ProductCard>
+          </div>
+          <div v-if="!products.length && !error" class="alert alert-info mt-4" role="alert">
+            Товары скоро появятся, следите за обновлениями.
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onMounted } from 'vue';
+import { RouterLink, useRoute, useRouter, type LocationQuery } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import ProductCard from '../components/ProductCard.vue';
@@ -50,6 +60,8 @@ import { useCartStore } from '../store/cartStore';
 
 const productStore = useProductStore();
 const cartStore = useCartStore();
+const route = useRoute();
+const router = useRouter();
 
 const { items: products, loading, error } = storeToRefs(productStore);
 
@@ -61,6 +73,20 @@ const addToCart = (product: (typeof products.value)[number]) => {
   cartStore.addProduct(product.id);
 };
 
+const infoMessage = computed(() => {
+  const message = route.query.message;
+  return typeof message === 'string' ? message : '';
+});
+
+const dismissInfoMessage = () => {
+  if (!infoMessage.value) {
+    return;
+  }
+  const nextQuery: LocationQuery = { ...route.query };
+  delete nextQuery.message;
+  void router.replace({ query: nextQuery });
+};
+
 onMounted(async () => {
   if (!products.value.length) {
     await productStore.loadAll();
@@ -69,6 +95,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 4vw, 3.5rem);
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
