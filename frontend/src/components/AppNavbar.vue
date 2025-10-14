@@ -46,8 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { storeToRefs } from 'pinia';
+import { computed, ref, watchEffect } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 import LogoutConfirmModal from './LogoutConfirmModal.vue';
@@ -55,7 +54,8 @@ import ThemeToggle from './ThemeToggle.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
-const { user, isAuthenticated } = storeToRefs(authStore);
+const user = computed(() => authStore.user);
+const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const showModal = ref(false);
 
@@ -72,4 +72,11 @@ const handleLogout = async () => {
   closeModal();
   await router.replace({ name: 'login', query: { message: 'Вы успешно вышли из аккаунта' } });
 };
+
+watchEffect(() => {
+  console.info('Navbar reactive snapshot', {
+    isAuthenticated: isAuthenticated.value,
+    user: user.value,
+  });
+});
 </script>

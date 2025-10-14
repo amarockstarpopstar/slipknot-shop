@@ -1,4 +1,4 @@
-import { defineStore, storeToRefs } from 'pinia';
+import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import {
   addCartItem,
@@ -20,7 +20,7 @@ export const CART_AUTH_MESSAGE = 'Авторизуйтесь, чтобы доб�
 // store managing cart state via backend api
 export const useCartStore = defineStore('cart', () => {
   const authStore = useAuthStore();
-  const { isAuthenticated } = storeToRefs(authStore);
+  const isAuthenticated = computed(() => authStore.isAuthenticated);
 
   const cartId = ref<number | null>(null);
   const items = ref<CartItemDto[]>([]);
