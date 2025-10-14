@@ -3,9 +3,9 @@
     <div class="app-shell fade-in-up">
       <AppNavbar />
       <main class="app-main">
-        <RouterView v-slot="{ Component }">
+        <RouterView v-slot="{ Component, route }">
           <Transition name="page" mode="out-in">
-            <component :is="Component" />
+            <component :is="Component" :key="route.fullPath" />
           </Transition>
         </RouterView>
       </main>

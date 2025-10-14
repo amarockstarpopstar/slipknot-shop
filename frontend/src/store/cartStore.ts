@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   addCartItem,
   checkoutCart,
@@ -147,9 +147,22 @@ export const useCartStore = defineStore('cart', () => {
     return result;
   };
 
-  if (localStorage.getItem('accessToken')) {
-    void loadCart();
-  }
+  const payOrder = async (): Promise<CheckoutResponse | null> => {
+    return checkout();
+  };
+
+  watch(
+    isAuthenticated,
+    (loggedIn) => {
+      if (loggedIn) {
+        void loadCart();
+        return;
+      }
+      resetCart();
+      lastOrder.value = null;
+    },
+    { immediate: true }
+  );
 
   return {
     cartId,
@@ -166,5 +179,6 @@ export const useCartStore = defineStore('cart', () => {
     changeItemQuantity,
     removeItem,
     checkout,
+    payOrder,
   };
 });

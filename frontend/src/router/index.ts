@@ -67,6 +67,7 @@ export const router = createRouter({
 });
 
 router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
+  console.info('Navigating to', to.name ?? to.fullPath);
   const requiresAuth = to.matched.some((route) => route.meta?.requiresAuth);
   if (!requiresAuth) {
     return next();
@@ -100,4 +101,8 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
   }
 
   return next();
+});
+
+router.afterEach((to) => {
+  console.info('Navigation finished', to.name ?? to.fullPath);
 });

@@ -35,6 +35,7 @@ export interface CheckoutResponse {
   totalAmount: number;
   shippingStatus: string;
   shippingUpdatedAt: string;
+  paidAt?: string | null;
 }
 
 export const fetchCart = async (): Promise<CartResponse> => {
