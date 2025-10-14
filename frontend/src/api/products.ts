@@ -45,6 +45,22 @@ export interface UpdateProductPayload {
   sizeId?: number | null;
 }
 
+export interface CreateProductPayload {
+  title: string;
+  description?: string;
+  price: number;
+  sku: string;
+  stockCount: number;
+  imageUrl?: string;
+  categoryId: number;
+  sizeId?: number | null;
+}
+
+export const createProduct = async (payload: CreateProductPayload): Promise<ProductDto> => {
+  const { data } = await http.post<ProductDto>('/products', payload);
+  return data;
+};
+
 export const updateProduct = async (
   id: number,
   payload: UpdateProductPayload,

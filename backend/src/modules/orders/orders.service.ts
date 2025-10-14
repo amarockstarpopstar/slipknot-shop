@@ -8,6 +8,10 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
 import { DEFAULT_SHIPPING_STATUS } from './orders.constants';
 import { CustomerOrderResponseDto } from './dto/customer-order-response.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderCustomerDto } from './dto/order-customer.dto';
+import { User } from '../users/entities/user.entity';
+import { UserAddress } from '../user-addresses/entities/user-address.entity';
 
 // service handling manager order management logic
 @Injectable()
@@ -17,7 +21,39 @@ export class OrdersService {
     private readonly ordersRepository: Repository<Order>,
     @InjectRepository(OrderStatus)
     private readonly statusesRepository: Repository<OrderStatus>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+    @InjectRepository(UserAddress)
+    private readonly addressesRepository: Repository<UserAddress>,
   ) {}
+
+  async create(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
+    const user = await this.findUserById(createOrderDto.userId);
+    const status = await this.findStatusById(createOrderDto.statusId);
+
+    let address: UserAddress | null = null;
+    if (createOrderDto.addressId !== undefined) {
+      address = await this.findAddressById(createOrderDto.addressId);
+    }
+
+    const shippingStatus = (createOrderDto.shippingStatus?.trim() || DEFAULT_SHIPPING_STATUS).slice(0, 120);
+    const paymentMethod = createOrderDto.paymentMethod?.trim() || null;
+    const comment = createOrderDto.comment?.trim() || null;
+
+    const order = this.ordersRepository.create({
+      user,
+      status,
+      address,
+      totalAmount: createOrderDto.totalAmount.toFixed(2),
+      paymentMethod,
+      comment,
+      shippingStatus,
+      shippingUpdatedAt: new Date(),
+    });
+
+    const saved = await this.ordersRepository.save(order);
+    return this.findById(saved.id);
+  }
 
   async findAll(): Promise<OrderResponseDto[]> {
     const orders = await this.ordersRepository.find({
@@ -31,6 +67,23 @@ export class OrdersService {
     });
 
     return orders.map((order) => this.toOrderResponse(order));
+  }
+
+  async findCustomers(): Promise<OrderCustomerDto[]> {
+    const users = await this.usersRepository.find({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      order: { name: 'ASC' },
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    }));
   }
 
   async findById(id: number): Promise<OrderResponseDto> {
@@ -125,6 +178,26 @@ export class OrdersService {
     }
 
     return status;
+  }
+
+  private async findUserById(id: number): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    return user;
+  }
+
+  private async findAddressById(id: number): Promise<UserAddress> {
+    const address = await this.addressesRepository.findOne({ where: { id } });
+
+    if (!address) {
+      throw new NotFoundException('Адрес доставки не найден');
+    }
+
+    return address;
   }
 
   private toOrderResponse(order: Order): OrderResponseDto {

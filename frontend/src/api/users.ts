@@ -30,6 +30,17 @@ export interface UpdateUserPayload {
   address?: string;
 }
 
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  roleName?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+}
+
 export interface UpdateProfilePayload {
   name?: string;
   email?: string;
@@ -57,6 +68,11 @@ export const fetchRoles = async (): Promise<UserRole[]> => {
 
 export const updateUser = async (id: number, payload: UpdateUserPayload): Promise<UserListItem> => {
   const { data } = await http.put<UserListItem>(`/users/${id}`, payload);
+  return data;
+};
+
+export const createUser = async (payload: CreateUserPayload): Promise<UserListItem> => {
+  const { data } = await http.post<UserListItem>('/users', payload);
   return data;
 };
 

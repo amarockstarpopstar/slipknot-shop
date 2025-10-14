@@ -199,7 +199,6 @@ select {
   white-space: nowrap;
 }
 
-.navbar .nav-link,
 .navbar .btn {
   white-space: nowrap;
 }
@@ -212,7 +211,16 @@ select {
   color: var(--color-text-muted);
   font-weight: 500;
   border-radius: var(--radius-lg);
-  padding: 0.55rem 1rem;
+  padding: 0.65rem 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  text-align: center;
+  white-space: normal;
+  text-wrap: balance;
+  line-height: 1.2;
+  min-height: 2.6rem;
   transition: color var(--transition-base), background-color var(--transition-base),
     box-shadow var(--transition-base), transform var(--transition-base);
 }
@@ -248,6 +256,14 @@ select {
 .navbar .btn,
 .navbar .theme-toggle {
   margin-left: 0.5rem;
+}
+
+.navbar .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  white-space: nowrap;
 }
 
 .btn {
@@ -434,16 +450,95 @@ textarea {
   border-color: color-mix(in srgb, var(--color-surface-border) 65%, transparent) !important;
 }
 
+.glass-modal .modal-dialog {
+  animation: glassModalIn 0.38s ease forwards;
+  will-change: transform, opacity;
+}
+
 .glass-modal .modal-content {
-  background: color-mix(in srgb, var(--color-surface-strong) 92%, transparent);
-  border: 1px solid var(--color-surface-border);
-  box-shadow: var(--shadow-hover);
+  position: relative;
+  background: linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--color-surface-strong) 94%, transparent),
+      color-mix(in srgb, var(--color-surface) 82%, transparent)
+    );
+  border: 1px solid color-mix(in srgb, var(--color-surface-border) 72%, transparent);
+  box-shadow: 0 28px 48px rgba(8, 12, 20, 0.32), var(--shadow-hover);
   backdrop-filter: blur(var(--blur-radius));
+}
+
+.glass-modal .modal-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at top right,
+    color-mix(in srgb, var(--color-accent) 22%, transparent) 0%,
+    transparent 60%
+  );
+  opacity: 0.55;
+}
+
+.glass-modal .modal-content::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-surface-border) 35%, transparent),
+    inset 0 18px 48px rgba(255, 255, 255, 0.04);
 }
 
 .glass-modal .modal-header,
 .glass-modal .modal-footer {
-  border-color: color-mix(in srgb, var(--color-surface-border) 45%, transparent) !important;
+  border-color: color-mix(in srgb, var(--color-surface-border) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+.glass-modal .modal-body {
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  border-radius: calc(var(--radius-lg) * 0.8);
+}
+
+.modal-subtitle {
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.modal-footer--stacked {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.modal-footer--stacked .btn {
+  min-width: 8.5rem;
+}
+
+@keyframes glassModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .modal-footer--stacked {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modal-footer--stacked .btn {
+    width: 100%;
+  }
 }
 
 .table-hover > tbody > tr:hover {

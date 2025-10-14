@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
+  Post,
   Put,
   Req,
   UnauthorizedException,
@@ -13,6 +14,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -28,6 +31,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto, UserRoleDto } from './dto/user-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 
 type RequestWithUser = Request & { user?: { userId?: number } };
@@ -37,6 +41,18 @@ type RequestWithUser = Request & { user?: { userId?: number } };
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Администратор')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Создать нового пользователя' })
+  @ApiCreatedResponse({ description: 'Пользователь создан', type: UserResponseDto })
+  @ApiBadRequestResponse({ description: 'Некорректные данные пользователя' })
+  @ApiForbiddenResponse({ description: 'Доступ запрещён' })
+  async createUser(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
+    return this.usersService.create(dto);
+  }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)

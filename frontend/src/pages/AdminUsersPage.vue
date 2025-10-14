@@ -17,9 +17,14 @@
       <div v-else class="admin-panel">
         <div class="admin-panel__toolbar">
           <h2 class="admin-panel__title">Список пользователей</h2>
-          <button class="btn btn-outline-secondary" @click="reload" :disabled="reloading">
-            Обновить данные
-          </button>
+          <div class="admin-panel__actions">
+            <button class="btn btn-outline-secondary" @click="reload" :disabled="reloading">
+              Обновить данные
+            </button>
+            <button class="btn btn-primary" type="button" @click="openCreateModal">
+              Добавить пользователя
+            </button>
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -73,6 +78,130 @@
       </div>
     </div>
   </section>
+
+  <div v-if="createModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5">Новый пользователь</h2>
+          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCreateModal"></button>
+        </div>
+        <form @submit.prevent="createUserAction">
+          <div class="modal-body">
+            <p class="modal-subtitle text-muted">
+              Укажите контактные данные, роль и временный пароль для новой учетной записи.
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="createUserName" class="form-label">Имя</label>
+                <input
+                  id="createUserName"
+                  v-model="createForm.name"
+                  type="text"
+                  class="form-control"
+                  placeholder="Имя и фамилия"
+                  required
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserEmail" class="form-label">Email</label>
+                <input
+                  id="createUserEmail"
+                  v-model="createForm.email"
+                  type="email"
+                  class="form-control"
+                  placeholder="name@example.com"
+                  required
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserPhone" class="form-label">Телефон</label>
+                <input
+                  id="createUserPhone"
+                  v-model="createForm.phone"
+                  type="tel"
+                  class="form-control"
+                  placeholder="Например, +7 900 000-00-00"
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserRole" class="form-label">Роль</label>
+                <select
+                  id="createUserRole"
+                  v-model="createForm.roleName"
+                  class="form-select"
+                  required
+                  :disabled="creating"
+                >
+                  <option value="">Выберите роль</option>
+                  <option v-for="role in roles" :key="role.id" :value="role.name">
+                    {{ role.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="createUserPassword" class="form-label">Пароль</label>
+                <input
+                  id="createUserPassword"
+                  v-model="createForm.password"
+                  type="password"
+                  class="form-control"
+                  placeholder="Минимум 6 символов"
+                  required
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserCountry" class="form-label">Страна</label>
+                <input
+                  id="createUserCountry"
+                  v-model="createForm.country"
+                  type="text"
+                  class="form-control"
+                  placeholder="Например, Россия"
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserCity" class="form-label">Город</label>
+                <input
+                  id="createUserCity"
+                  v-model="createForm.city"
+                  type="text"
+                  class="form-control"
+                  placeholder="Например, Москва"
+                  :disabled="creating"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="createUserAddress" class="form-label">Адрес</label>
+                <input
+                  id="createUserAddress"
+                  v-model="createForm.address"
+                  type="text"
+                  class="form-control"
+                  placeholder="Улица, дом, квартира"
+                  :disabled="creating"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer--stacked">
+            <button type="button" class="btn btn-outline-secondary" @click="closeCreateModal" :disabled="creating">
+              Отмена
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="creating">
+              Сохранить
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div v-if="createModalVisible" class="modal-backdrop fade show"></div>
 
   <div v-if="editModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
@@ -149,9 +278,11 @@
 import { onMounted, reactive, ref } from 'vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
+  createUser,
   deleteUser,
   fetchRoles,
   fetchUsers,
+  type CreateUserPayload,
   type UpdateUserPayload,
   type UserListItem,
   type UserRole,
@@ -165,10 +296,12 @@ const initialLoading = ref(true);
 const reloading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
+const creating = ref(false);
 const errorMessage = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const editModalVisible = ref(false);
 const deleteModalVisible = ref(false);
+const createModalVisible = ref(false);
 const editingUserId = ref<number | null>(null);
 const deletingUser = ref<UserListItem | null>(null);
 
@@ -179,14 +312,47 @@ const editForm = reactive({
   roleName: '',
 });
 
+const createForm = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  roleName: '',
+  password: '',
+  country: '',
+  city: '',
+  address: '',
+});
+
 const resetMessages = () => {
   errorMessage.value = null;
   successMessage.value = null;
 };
 
+const resetCreateForm = () => {
+  createForm.name = '';
+  createForm.email = '';
+  createForm.phone = '';
+  createForm.roleName = roles.value[0]?.name ?? '';
+  createForm.password = '';
+  createForm.country = '';
+  createForm.city = '';
+  createForm.address = '';
+};
+
 const formatDate = (value: string | Date) => {
   const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleString('ru-RU');
+};
+
+const openCreateModal = () => {
+  resetMessages();
+  resetCreateForm();
+  createModalVisible.value = true;
+};
+
+const closeCreateModal = () => {
+  createModalVisible.value = false;
+  resetCreateForm();
 };
 
 const loadData = async () => {
@@ -199,6 +365,36 @@ const loadData = async () => {
   } finally {
     initialLoading.value = false;
     reloading.value = false;
+  }
+};
+
+const createUserAction = async () => {
+  if (!createForm.name || !createForm.email || !createForm.password || !createForm.roleName) {
+    return;
+  }
+
+  try {
+    creating.value = true;
+    resetMessages();
+    const payload: CreateUserPayload = {
+      name: createForm.name,
+      email: createForm.email,
+      password: createForm.password,
+      roleName: createForm.roleName,
+      phone: createForm.phone || undefined,
+      country: createForm.country || undefined,
+      city: createForm.city || undefined,
+      address: createForm.address || undefined,
+    };
+    await createUser(payload);
+    await loadData();
+    successMessage.value = 'Пользователь создан';
+    createModalVisible.value = false;
+    resetCreateForm();
+  } catch (error) {
+    errorMessage.value = extractErrorMessage(error);
+  } finally {
+    creating.value = false;
   }
 };
 
@@ -318,6 +514,14 @@ onMounted(async () => {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.admin-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin-panel__title {
