@@ -67,12 +67,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '../store/authStore';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
+import { useNavigation } from '../composables/useNavigation';
 
 const authStore = useAuthStore();
 const { loading, error } = storeToRefs(authStore);
 const route = useRoute();
-const router = useRouter();
+const { safeReplace } = useNavigation();
 const mode = ref<'login' | 'register'>('login');
 const success = ref('');
 const infoMessage = computed(() => {
@@ -100,7 +101,7 @@ const handleSubmit = async () => {
     if (mode.value === 'login') {
       await authStore.loginUser({ email: form.email, password: form.password });
       success.value = 'Вход выполнен успешно!';
-      await router.replace(resolveRedirect());
+      await safeReplace(resolveRedirect());
     } else {
       await authStore.registerUser({
         name: form.name,
@@ -109,7 +110,7 @@ const handleSubmit = async () => {
         phone: form.phone || undefined,
       });
       success.value = 'Аккаунт создан! Добро пожаловать.';
-      await router.replace(resolveRedirect());
+      await safeReplace(resolveRedirect());
     }
   } catch (err) {
     console.error('Auth request failed', err);
@@ -119,7 +120,7 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    void router.replace(resolveRedirect());
+    void safeReplace(resolveRedirect());
   }
 });
 
@@ -131,7 +132,7 @@ watch(
     }
     const target = resolveRedirect();
     if (route.fullPath !== target) {
-      void router.replace(target);
+      void safeReplace(target);
     }
   }
 );

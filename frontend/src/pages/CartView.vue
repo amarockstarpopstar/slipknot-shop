@@ -11,8 +11,11 @@
       <LoadingSpinner v-if="loading" />
 
       <template v-else>
-        <div v-if="isEmpty" class="alert alert-info" role="alert">
-          Корзина пуста. Добавьте товары из каталога, чтобы оформить заказ.
+        <div v-if="isEmpty" class="alert alert-info d-flex flex-column gap-3" role="alert">
+          <span>Корзина пуста. Добавьте товары из каталога, чтобы оформить заказ.</span>
+          <RouterLink class="btn btn-outline-secondary align-self-start" to="/">
+            Перейти в каталог
+          </RouterLink>
         </div>
 
         <div v-else class="cart-layout">
@@ -73,13 +76,14 @@
 import { onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useCartStore } from '../store/cartStore';
-import { useRouter } from 'vue-router';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
+import { useNavigation } from '../composables/useNavigation';
+import { RouterLink } from 'vue-router';
 
 const cartStore = useCartStore();
 const { items, totalAmount, totalQuantity, isEmpty, loading, updating, error } = storeToRefs(cartStore);
 const errorMessage = ref('');
-const router = useRouter();
+const { goToCheckout } = useNavigation();
 
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
@@ -100,7 +104,7 @@ const remove = (item: (typeof items.value)[number]) => {
 };
 
 const goToPayment = () => {
-  void router.push({ name: 'checkout-payment' });
+  void goToCheckout();
 };
 
 watch(error, (value) => {
