@@ -164,6 +164,40 @@ INSERT INTO order_statuses (name) VALUES
     ('Отменен')
 ON CONFLICT (name) DO NOTHING;
 
+INSERT INTO users (name, email, password_hash, phone, country, city, address, role_id)
+VALUES
+    (
+        'Алексей Админ',
+        'admin@slipknot-shop.ru',
+        '$2b$10$W7sSfO96GfWMYdBTtJR70Oy7/ayMYbg7K4Y3QxcJ2DsbSxhVhoGQi',
+        '+7 (900) 100-00-01',
+        'Россия',
+        'Москва',
+        'ул. Арбат, д. 1',
+        (SELECT id FROM roles WHERE name = 'Администратор')
+    ),
+    (
+        'Мария Менеджер',
+        'manager@slipknot-shop.ru',
+        '$2b$10$XHwr1ItKuGuYL7D/zHROMOc4bYpNbv/yaIP6JNVtkuDqfWuN9/47O',
+        '+7 (901) 200-00-02',
+        'Россия',
+        'Санкт-Петербург',
+        'Невский проспект, д. 10',
+        (SELECT id FROM roles WHERE name = 'Менеджер')
+    ),
+    (
+        'Иван Покупатель',
+        'customer@slipknot-shop.ru',
+        '$2b$10$EbCqo2VQSRRy0npX/JelO./ShlsIuXIDY5cihK0fnbjeQuUJp8hsm',
+        '+7 (902) 300-00-03',
+        'Россия',
+        'Екатеринбург',
+        'ул. Ленина, д. 25',
+        (SELECT id FROM roles WHERE name = 'Покупатель')
+    )
+ON CONFLICT (email) DO NOTHING;
+
 WITH product_data AS (
     SELECT
         'SKU-TSHIRT-001'::text AS sku,

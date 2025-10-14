@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +16,8 @@ import { ProductResponseDto } from './dto/product-response.dto';
 // service with product management logic
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
@@ -58,12 +61,21 @@ export class ProductsService {
   }
 
   async findAll(): Promise<ProductResponseDto[]> {
-    const products = await this.productsRepository.find({
-      relations: { category: true, size: true },
-      order: { id: 'ASC' },
-    });
+    this.logger.log('Запрос каталога товаров');
+    try {
+      const products = await this.productsRepository.find({
+        relations: { category: true, size: true },
+        order: { id: 'ASC' },
+      });
 
-    return products.map((product) => this.toProductResponse(product));
+      this.logger.log(`Каталог успешно загружен (${products.length} позиций)`);
+      return products.map((product) => this.toProductResponse(product));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Ошибка при загрузке каталога: ${message}`, stack);
+      throw error;
+    }
   }
 
   async findById(id: number): Promise<ProductResponseDto> {
