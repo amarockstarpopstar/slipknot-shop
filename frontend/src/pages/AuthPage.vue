@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watchEffect } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '../store/authStore';
 import { useRoute, useRouter } from 'vue-router';
@@ -117,15 +117,24 @@ const handleSubmit = async () => {
   }
 };
 
-watchEffect(() => {
-  if (!authStore.isAuthenticated) {
-    return;
-  }
-  const target = resolveRedirect();
-  if (router.currentRoute.value.fullPath !== target) {
-    void router.replace(target);
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    void router.replace(resolveRedirect());
   }
 });
+
+watch(
+  () => authStore.isAuthenticated,
+  (loggedIn) => {
+    if (!loggedIn) {
+      return;
+    }
+    const target = resolveRedirect();
+    if (route.fullPath !== target) {
+      void router.replace(target);
+    }
+  }
+);
 </script>
 
 <style scoped>

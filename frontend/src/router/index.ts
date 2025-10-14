@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
-import { storeToRefs } from 'pinia';
+import type { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 
 const routes: RouteRecordRaw[] = [
@@ -66,26 +65,25 @@ export const router = createRouter({
   },
 });
 
-router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
+router.beforeEach(async (to: RouteLocationNormalized) => {
   console.log('Navigating to:', to.fullPath);
   const requiresAuth = to.matched.some((route) => route.meta?.requiresAuth);
   if (!requiresAuth) {
-    return next();
+    return true;
   }
 
   const authStore = useAuthStore();
-  const { isAuthenticated, user } = storeToRefs(authStore);
 
-  if (!isAuthenticated.value) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
+  if (!authStore.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } };
   }
 
-  if (!user.value) {
+  if (!authStore.user) {
     try {
       await authStore.loadProfile();
     } catch (error) {
       authStore.logout();
-      return next({ name: 'login', query: { redirect: to.fullPath } });
+      return { name: 'login', query: { redirect: to.fullPath } };
     }
   }
 
@@ -94,13 +92,13 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     .flat();
 
   if (allowedRoles.length > 0) {
-    const roleName = user.value?.role?.name ?? null;
+    const roleName = authStore.user?.role?.name ?? null;
     if (!roleName || !allowedRoles.includes(roleName)) {
-      return next({ name: 'home' });
+      return { name: 'home' };
     }
   }
 
-  return next();
+  return true;
 });
 
 router.afterEach((to) => {
