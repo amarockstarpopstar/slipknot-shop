@@ -68,7 +68,7 @@
   <Teleport to="body">
     <Transition name="modal-fade" appear>
       <div v-if="showCountryModal" class="modal-layer" role="presentation" @click.self="closeCountryModal">
-        <div class="modal d-block glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
+        <div class="modal glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
           <div class="modal-content">
             <div class="modal-header">
               <h2 class="modal-title h5 mb-0">Заказ недоступен</h2>
@@ -99,7 +99,7 @@
         role="presentation"
         @click.self="closeAddressModal"
       >
-        <div class="modal d-block glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
+        <div class="modal glass-modal modal-layer__dialog" role="dialog" aria-modal="true">
           <div class="modal-content">
             <form @submit.prevent="submitAddress">
               <div class="modal-header">
@@ -187,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -428,20 +428,6 @@ watch(
   },
 );
 
-const isModalVisible = computed(() => showCountryModal.value || showAddressModal.value);
-
-watch(
-  isModalVisible,
-  (visible) => {
-    document.body.classList.toggle('modal-open', visible);
-  },
-  { immediate: true },
-);
-
-onBeforeUnmount(() => {
-  document.body.classList.remove('modal-open');
-});
-
 onMounted(() => {
   void cartStore.loadCart();
   if (!user.value) {
@@ -462,10 +448,6 @@ onMounted(() => {
   padding: clamp(1rem, 3vw, 2rem);
   background: color-mix(in srgb, rgba(5, 5, 10, 0.65) 72%, transparent);
   backdrop-filter: blur(4px);
-}
-
-:global(body.modal-open) {
-  overflow: hidden;
 }
 
 .modal-layer__dialog {
