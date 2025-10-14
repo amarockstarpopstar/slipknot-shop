@@ -6,18 +6,19 @@
     <transition name="scale">
       <div
         v-if="visible"
-        class="modal d-block"
+        class="modal d-block glass-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="logout-modal-title"
+        @click.self="emitCancel"
       >
         <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content shadow-lg">
-            <div class="modal-body text-center p-4">
-              <p id="logout-modal-title" class="fs-5 mb-4">
+          <div class="modal-content p-4">
+            <div class="modal-body text-center p-0">
+              <p id="logout-modal-title" class="fs-5 mb-4 fw-semibold">
                 Вы действительно хотите выйти из аккаунта?
               </p>
-              <div class="d-flex justify-content-center gap-3">
+              <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <button type="button" class="btn btn-danger" @click="emitConfirm">Да</button>
                 <button type="button" class="btn btn-outline-secondary" @click="emitCancel">Отмена</button>
               </div>
@@ -57,7 +58,7 @@ watch(
       document.body.classList.remove('modal-open');
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 onBeforeUnmount(() => {
@@ -87,13 +88,20 @@ const emitCancel = () => {
 
 .scale-enter-active,
 .scale-leave-active {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 .scale-enter-from,
 .scale-leave-to {
-  transform: scale(0.95);
+  transform: translateY(16px) scale(0.96);
   opacity: 0;
+}
+
+.glass-modal .modal-content {
+  background: color-mix(in srgb, var(--color-surface-strong) 90%, transparent);
+  border: 1px solid var(--color-surface-border);
+  box-shadow: var(--shadow-hover);
+  backdrop-filter: blur(var(--blur-radius));
 }
 
 :global(body.modal-open) {

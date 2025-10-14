@@ -1,12 +1,13 @@
 <template>
-  <section class="py-5 bg-dark text-white min-vh-100">
-    <div class="container">
-      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between mb-4 gap-3">
+  <section class="section fade-in-up">
+    <div class="layout-container">
+      <div class="orders-header">
         <div>
-          <h1 class="display-6 fw-bold mb-1">Мои заказы</h1>
-          <p class="mb-0 text-muted">Отслеживайте историю покупок и статусы отправки.</p>
+          <span class="chip mb-2">История</span>
+          <h1 class="section-title">Мои заказы</h1>
+          <p class="section-subtitle mb-0">Отслеживайте историю покупок и статусы отправки.</p>
         </div>
-        <button class="btn btn-outline-light" type="button" @click="loadOrders" :disabled="loading">
+        <button class="btn btn-outline-secondary" type="button" @click="loadOrders" :disabled="loading">
           Обновить список
         </button>
       </div>
@@ -21,7 +22,7 @@
           Заказов пока нет. Добавьте товары в корзину и оформите заказ.
         </div>
         <div v-else class="table-responsive">
-          <table class="table table-dark table-striped align-middle">
+          <table class="table align-middle mb-0">
             <thead>
               <tr>
                 <th scope="col">№ заказа</th>
@@ -37,7 +38,7 @@
                 <th scope="row">{{ order.id }}</th>
                 <td>{{ formatDate(order.placedAt) }}</td>
                 <td>{{ formatCurrency(order.totalAmount) }}</td>
-                <td>{{ order.status.name }}</td>
+                <td><span class="status-chip">{{ order.status.name }}</span></td>
                 <td>{{ order.shippingStatus }}</td>
                 <td>{{ formatDate(order.shippingUpdatedAt) }}</td>
               </tr>
@@ -82,3 +83,32 @@ onMounted(() => {
   void loadOrders();
 });
 </script>
+
+<style scoped>
+.orders-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 575.98px) {
+  .orders-header :deep(.btn) {
+    width: 100%;
+  }
+}
+</style>

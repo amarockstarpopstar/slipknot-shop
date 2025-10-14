@@ -1,16 +1,17 @@
 <template>
-  <section class="py-5 bg-dark text-white text-center">
-    <div class="container">
-      <h1 class="display-4 fw-bold mb-3">Каталог мерча Slipknot</h1>
-      <p class="lead mb-0">
-        Выбирайте фирменные футболки, худи и коллекционные аксессуары из официальной коллекции
+  <section class="hero-section fade-in-up">
+    <div class="layout-container text-center">
+      <span class="chip mb-3">Официальный мерч</span>
+      <h1 class="section-title mb-3">Каталог Slipknot</h1>
+      <p class="section-subtitle mb-0">
+        Выбирайте фирменные футболки, худи и коллекционные аксессуары из свежей коллекции. Всё — с гарантией подлинности.
       </p>
     </div>
   </section>
-  <section class="py-5">
-    <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h4 mb-0">Популярные товары</h2>
+  <section class="section fade-in-up" data-delay="1">
+    <div class="layout-container">
+      <div class="section-header">
+        <h2 class="section-header__title">Популярные товары</h2>
         <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="loading">
           Обновить список
         </button>
@@ -20,19 +21,15 @@
         <div v-if="error" class="alert alert-danger" role="alert">
           {{ error }}
         </div>
-        <div v-else class="row g-4">
-          <div v-for="product in products" :key="product.id" class="col-sm-6 col-lg-4">
-            <ProductCard :product="product">
-              <template #actions>
-                <button class="btn btn-danger btn-sm" @click="addToCart(product)">
-                  В корзину
-                </button>
-                <RouterLink class="btn btn-outline-dark btn-sm ms-2" :to="`/product/${product.id}`">
-                  Подробнее
-                </RouterLink>
-              </template>
-            </ProductCard>
-          </div>
+        <div v-else class="products-grid">
+          <ProductCard v-for="product in products" :key="product.id" :product="product">
+            <template #actions>
+              <button class="btn btn-danger btn-sm" @click="addToCart(product)">В корзину</button>
+              <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
+                Подробнее
+              </RouterLink>
+            </template>
+          </ProductCard>
         </div>
         <div v-if="!products.length && !error" class="alert alert-info mt-4" role="alert">
           Товары скоро появятся, следите за обновлениями.
@@ -70,3 +67,36 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.section-header__title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 600;
+  margin: 0;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+@media (max-width: 575.98px) {
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-header :deep(.btn) {
+    width: 100%;
+  }
+}
+</style>
