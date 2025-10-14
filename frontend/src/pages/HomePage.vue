@@ -51,17 +51,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { RouterLink, useRoute, useRouter, type LocationQuery } from 'vue-router';
+import { RouterLink, useRoute, type LocationQuery } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import ProductCard from '../components/ProductCard.vue';
 import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
+import { useNavigation } from '../composables/useNavigation';
 
 const productStore = useProductStore();
 const cartStore = useCartStore();
 const route = useRoute();
-const router = useRouter();
+const { safeReplace } = useNavigation();
 
 const { items: products, loading, error } = storeToRefs(productStore);
 
@@ -84,7 +85,7 @@ const dismissInfoMessage = () => {
   }
   const nextQuery: LocationQuery = { ...route.query };
   delete nextQuery.message;
-  void router.replace({ query: nextQuery });
+  void safeReplace({ query: nextQuery });
 };
 
 onMounted(async () => {

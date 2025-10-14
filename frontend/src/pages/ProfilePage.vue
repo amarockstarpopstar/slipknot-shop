@@ -165,11 +165,12 @@ import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import { useAuthStore } from '../store/authStore';
+import { SUPPORTED_COUNTRIES, getCitiesByCountry } from '../utils/location';
 
 const authStore = useAuthStore();
 const { user, loading, updating, error, isAuthenticated } = storeToRefs(authStore);
 
-const countries = ['Россия', 'Беларусь', 'Казахстан', 'Армения', 'Грузия', 'Другая страна'];
+const countries = [...SUPPORTED_COUNTRIES];
 
 const form = reactive({
   name: '',
@@ -186,20 +187,14 @@ const form = reactive({
 const localError = ref<string | null>(null);
 const successMessage = ref('');
 
-const hasAddress = computed(() => Boolean(form.country && (form.city || form.customCity) && form.address));
-
-const cityOptions = computed(() => {
-  if (form.country === 'Россия') {
-    return ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань'];
-  }
-  if (form.country === 'Беларусь') {
-    return ['Минск', 'Гродно', 'Брест'];
-  }
-  if (form.country === 'Казахстан') {
-    return ['Алматы', 'Астана', 'Шымкент'];
-  }
-  return [];
+const hasAddress = computed(() => {
+  const country = form.country.trim();
+  const city = form.useCustomCity ? form.customCity.trim() : form.city.trim();
+  const address = form.address.trim();
+  return Boolean(country && city && address);
 });
+
+const cityOptions = computed(() => getCitiesByCountry(form.country));
 
 const canSubmit = computed(() => form.name.trim().length >= 2 && form.email.trim().length > 0);
 

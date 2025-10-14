@@ -104,15 +104,16 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { useNavigation } from '../composables/useNavigation';
 
 const route = useRoute();
-const router = useRouter();
+const { safePush, goToCheckout } = useNavigation();
 const productStore = useProductStore();
 const cartStore = useCartStore();
 const authStore = useAuthStore();
@@ -141,7 +142,7 @@ const openConfirm = () => {
     return;
   }
   if (!isAuthenticated.value) {
-    void router.push({ name: 'login', query: { redirect: route.fullPath } });
+    void safePush({ name: 'login', query: { redirect: route.fullPath } });
     return;
   }
   confirmError.value = null;
@@ -171,7 +172,7 @@ const confirmPurchase = async () => {
   }
   confirmLoading.value = false;
   showConfirm.value = false;
-  await router.push({ name: 'checkout-payment' });
+  await goToCheckout();
 };
 
 onMounted(async () => {

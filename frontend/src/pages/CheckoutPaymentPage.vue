@@ -73,7 +73,7 @@
           <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
         </div>
         <div class="modal-body">
-          <p class="mb-0">Оформление заказов доступно только пользователям из России.</p>
+          <p class="mb-0">{{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
@@ -170,6 +170,7 @@ import LoadingSpinner from '../components/LoadingSpinner.vue';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { extractErrorMessage } from '../api/http';
+import { SUPPORTED_COUNTRIES, getCitiesByCountry, isRussianCountry } from '../utils/location';
 
 const cartStore = useCartStore();
 const { items, totalAmount, totalQuantity, loading, updating, error, lastOrder } = storeToRefs(cartStore);
@@ -182,7 +183,7 @@ const { user } = storeToRefs(authStore);
 const paymentSuccess = computed(() => Boolean(lastOrder.value && lastOrder.value.paidAt));
 const hasItems = computed(() => items.value.length > 0);
 
-const countries = ['Россия', 'Беларусь', 'Казахстан'];
+const countries = [...SUPPORTED_COUNTRIES];
 
 const addressForm = reactive({
   country: '',
@@ -195,20 +196,40 @@ const addressForm = reactive({
 const addressSaving = ref(false);
 const addressError = ref<string | null>(null);
 const showCountryModal = ref(false);
+const countryModalMessage = ref('');
 const showAddressModal = ref(false);
 
-const addressCityOptions = computed(() => {
-  if (addressForm.country === 'Россия') {
-    return ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань'];
+const addressCityOptions = computed(() => getCitiesByCountry(addressForm.country));
+
+const hasRussianCountry = computed(() => isRussianCountry(user.value?.country));
+const hasUserCity = computed(() => (user.value?.city ?? '').trim().length > 0);
+const hasUserAddress = computed(() => (user.value?.address ?? '').trim().length > 0);
+
+const resolveCountryErrorMessage = () => {
+  const selectedCountry = (user.value?.country ?? '').trim();
+  if (!selectedCountry) {
+    return 'Укажите Россию в профиле, чтобы оформить заказ.';
   }
-  if (addressForm.country === 'Беларусь') {
-    return ['Минск', 'Гродно', 'Брест'];
+  return `Оформление доступно только для России. Сейчас выбран адрес: «${selectedCountry}».`;
+};
+
+const fillAddressFormFromProfile = () => {
+  const profileCountry = (user.value?.country ?? '').trim();
+  addressForm.country = profileCountry || SUPPORTED_COUNTRIES[0];
+
+  const profileCity = (user.value?.city ?? '').trim();
+  const options = getCitiesByCountry(addressForm.country);
+  addressForm.useCustomCity = Boolean(profileCity && !options.includes(profileCity));
+  if (addressForm.useCustomCity) {
+    addressForm.customCity = profileCity;
+    addressForm.city = '';
+  } else {
+    addressForm.city = profileCity;
+    addressForm.customCity = '';
   }
-  if (addressForm.country === 'Казахстан') {
-    return ['Алматы', 'Астана', 'Шымкент'];
-  }
-  return [];
-});
+
+  addressForm.address = (user.value?.address ?? '').trim();
+};
 
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
@@ -226,11 +247,14 @@ const payOrder = async () => {
   if (!user.value) {
     return;
   }
-  if (user.value.country !== 'Россия') {
+  if (!hasRussianCountry.value) {
+    countryModalMessage.value = resolveCountryErrorMessage();
     showCountryModal.value = true;
     return;
   }
-  if (!user.value.address) {
+  if (!hasUserCity.value || !hasUserAddress.value) {
+    fillAddressFormFromProfile();
+    addressError.value = 'Укажите город и полный адрес доставки.';
     showAddressModal.value = true;
     return;
   }
@@ -244,6 +268,7 @@ const payOrder = async () => {
 
 const closeCountryModal = () => {
   showCountryModal.value = false;
+  countryModalMessage.value = '';
 };
 
 const closeAddressModal = () => {
@@ -263,11 +288,42 @@ const submitAddress = async () => {
   addressSaving.value = true;
   addressError.value = null;
   try {
+    const country = addressForm.country.trim();
+    const city = (addressForm.useCustomCity ? addressForm.customCity : addressForm.city).trim();
+    const addressLine = addressForm.address.trim();
+
+    if (!country) {
+      addressError.value = 'Выберите страну доставки.';
+      addressSaving.value = false;
+      return;
+    }
+
+    if (!isRussianCountry(country)) {
+      addressSaving.value = false;
+      countryModalMessage.value = 'Для оформления заказа выберите страну «Россия».';
+      showAddressModal.value = false;
+      showCountryModal.value = true;
+      return;
+    }
+
+    if (!city) {
+      addressError.value = 'Укажите город доставки.';
+      addressSaving.value = false;
+      return;
+    }
+
+    if (!addressLine) {
+      addressError.value = 'Введите полный адрес доставки.';
+      addressSaving.value = false;
+      return;
+    }
+
     await authStore.updateProfile({
-      country: addressForm.country,
-      city: addressForm.useCustomCity ? addressForm.customCity : addressForm.city,
-      address: addressForm.address,
+      country,
+      city,
+      address: addressLine,
     });
+    fillAddressFormFromProfile();
     showAddressModal.value = false;
   } catch (err) {
     addressError.value = extractErrorMessage(err) ?? 'Не удалось сохранить адрес. Попробуйте ещё раз.';
@@ -279,6 +335,25 @@ const submitAddress = async () => {
 watch(error, (value) => {
   if (value) {
     localError.value = value;
+  }
+});
+
+watch(
+  () => user.value,
+  () => {
+    if (!showAddressModal.value) {
+      return;
+    }
+    fillAddressFormFromProfile();
+  },
+  { deep: true },
+);
+
+watch(showAddressModal, (visible) => {
+  if (visible) {
+    fillAddressFormFromProfile();
+  } else {
+    addressError.value = null;
   }
 });
 
