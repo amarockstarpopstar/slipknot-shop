@@ -1,22 +1,27 @@
 <template>
-  <section class="py-5 bg-dark text-white min-vh-100">
-    <div class="container">
-      <h1 class="display-5 fw-bold mb-4">Оплата заказа</h1>
+  <section class="section fade-in-up">
+    <div class="layout-container">
+      <header class="page-header">
+        <div>
+          <span class="chip mb-2">Оплата</span>
+          <h1 class="section-title">Оплата заказа</h1>
+        </div>
+      </header>
 
       <LoadingSpinner v-if="loading && !hasItems && !paymentSuccess" />
 
       <div v-else>
-        <div v-if="paymentSuccess" class="mb-5">
+        <div v-if="paymentSuccess" class="payment-success">
           <div class="alert alert-success" role="alert">
             Заказ №{{ lastOrder?.orderId }} успешно оплачен. Сумма: {{ formatCurrency(lastOrder?.totalAmount ?? 0) }}
           </div>
-          <div class="card bg-secondary border-0 text-white shadow-lg">
-            <div class="card-body">
-              <h2 class="h4 mb-3">Статус отправки</h2>
-              <p class="mb-1 fw-semibold">{{ lastOrder?.shippingStatus }}</p>
-              <p class="mb-3 text-muted small">Обновлено: {{ formatDate(lastOrder?.shippingUpdatedAt ?? '') }}</p>
-              <RouterLink class="btn btn-outline-light me-2" to="/orders">Перейти к истории заказов</RouterLink>
-              <RouterLink class="btn btn-light" to="/">Продолжить покупки</RouterLink>
+          <div class="payment-status">
+            <h2 class="payment-status__title">Статус отправки</h2>
+            <p class="payment-status__value">{{ lastOrder?.shippingStatus }}</p>
+            <p class="payment-status__meta">Обновлено: {{ formatDate(lastOrder?.shippingUpdatedAt ?? '') }}</p>
+            <div class="payment-status__actions">
+              <RouterLink class="btn btn-outline-light" to="/orders">Перейти к истории заказов</RouterLink>
+              <RouterLink class="btn btn-danger" to="/">Продолжить покупки</RouterLink>
             </div>
           </div>
         </div>
@@ -25,47 +30,33 @@
           <div v-if="!items.length" class="alert alert-info" role="alert">
             Корзина пуста. Добавьте товары, чтобы оформить заказ.
           </div>
-          <div v-else class="row g-4">
-            <div class="col-lg-8">
-              <div class="list-group shadow-lg">
-                <article
-                  v-for="item in items"
-                  :key="item.id"
-                  class="list-group-item bg-dark text-white border-secondary d-flex gap-3 align-items-center"
-                >
-                  <img
-                    v-if="item.product.imageUrl"
-                    :src="item.product.imageUrl"
-                    class="rounded"
-                    width="96"
-                    height="96"
-                    :alt="item.product.title"
-                  />
-                  <div class="flex-grow-1">
-                    <h2 class="h5 mb-2">{{ item.product.title }}</h2>
-                    <p class="mb-1 text-muted">Цена: {{ formatCurrency(item.product.price) }}</p>
-                    <p class="mb-0 text-muted">Количество: {{ item.quantity }}</p>
-                  </div>
-                </article>
-              </div>
-            </div>
-            <div class="col-lg-4">
-              <aside class="card shadow-lg bg-secondary text-white border-0">
-                <div class="card-body">
-                  <h2 class="h4 mb-3">К оплате</h2>
-                  <p class="mb-1">Товаров: {{ totalQuantity }}</p>
-                  <p class="mb-3">Сумма: {{ formatCurrency(totalAmount) }}</p>
-                  <button
-                    type="button"
-                    class="btn btn-danger w-100"
-                    @click="payOrder"
-                    :disabled="updating || !items.length || addressSaving"
-                  >
-                    Оплатить
-                  </button>
+          <div v-else class="checkout-layout">
+            <div class="checkout-items">
+              <article v-for="item in items" :key="item.id" class="checkout-item">
+                <div class="checkout-item__image" v-if="item.product.imageUrl">
+                  <img :src="item.product.imageUrl" :alt="item.product.title" loading="lazy" />
                 </div>
-              </aside>
+                <div v-else class="checkout-item__placeholder">Фото</div>
+                <div class="checkout-item__content">
+                  <h2 class="checkout-item__title">{{ item.product.title }}</h2>
+                  <p class="checkout-item__price">Цена: {{ formatCurrency(item.product.price) }}</p>
+                  <p class="checkout-item__meta">Количество: {{ item.quantity }}</p>
+                </div>
+              </article>
             </div>
+            <aside class="checkout-summary">
+              <h2 class="checkout-summary__title">К оплате</h2>
+              <p class="checkout-summary__line">Товаров: <span>{{ totalQuantity }}</span></p>
+              <p class="checkout-summary__line">Сумма: <span>{{ formatCurrency(totalAmount) }}</span></p>
+              <button
+                type="button"
+                class="btn btn-danger w-100"
+                @click="payOrder"
+                :disabled="updating || !items.length || addressSaving"
+              >
+                Оплатить
+              </button>
+            </aside>
           </div>
         </div>
 
@@ -74,7 +65,7 @@
     </div>
   </section>
 
-  <div v-if="showCountryModal" class="modal fade show d-block" tabindex="-1" role="dialog">
+  <div v-if="showCountryModal" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
@@ -85,7 +76,7 @@
           <p class="mb-0">Оформление заказов доступно только пользователям из России.</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="closeCountryModal">Понятно</button>
+          <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
           <RouterLink class="btn btn-danger" to="/profile" @click="closeCountryModal">
             Перейти в профиль
           </RouterLink>
@@ -95,38 +86,27 @@
   </div>
   <div v-if="showCountryModal" class="modal-backdrop fade show"></div>
 
-  <div v-if="showAddressModal" class="modal fade show d-block" tabindex="-1" role="dialog">
+  <div v-if="showAddressModal" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
         <form @submit.prevent="submitAddress">
           <div class="modal-header">
             <h2 class="modal-title h5">Укажите адрес доставки</h2>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Закрыть"
-              @click="closeAddressModal"
-              :disabled="addressSaving"
-            ></button>
+            <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddressModal" :disabled="addressSaving"></button>
           </div>
-          <div class="modal-body text-dark">
+          <div class="modal-body">
             <p class="text-muted">Для оформления заказа заполните все поля.</p>
             <div class="row g-3">
               <div class="col-md-6">
                 <label for="checkoutCountry" class="form-label">Страна</label>
-                <select
-                  id="checkoutCountry"
-                  v-model="addressForm.country"
-                  class="form-select"
-                  required
-                >
+                <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
                   <option value="">Выберите страну</option>
                   <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
                 </select>
               </div>
               <div class="col-md-6">
                 <label class="form-label">Город</label>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                   <select
                     v-if="!addressForm.useCustomCity"
                     v-model="addressForm.city"
@@ -168,7 +148,7 @@
             <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeAddressModal" :disabled="addressSaving">
+            <button type="button" class="btn btn-outline-secondary" @click="closeAddressModal" :disabled="addressSaving">
               Отмена
             </button>
             <button type="submit" class="btn btn-danger" :disabled="addressSaving">
@@ -199,121 +179,71 @@ const localError = ref<string | null>(null);
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
-const showAddressModal = ref(false);
-const showCountryModal = ref(false);
-const addressError = ref<string | null>(null);
-const addressSaving = ref(false);
+const paymentSuccess = computed(() => Boolean(lastOrder.value && lastOrder.value.paidAt));
+const hasItems = computed(() => items.value.length > 0);
 
-const countries = [
-  'Россия',
-  'Беларусь',
-  'Казахстан',
-  'Армения',
-  'Грузия',
-  'Другая страна',
-];
-
-const citiesByCountry: Record<string, string[]> = {
-  Россия: ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань'],
-  Беларусь: ['Минск', 'Гомель', 'Витебск', 'Могилёв'],
-  Казахстан: ['Астана', 'Алматы', 'Шымкент', 'Караганда'],
-  Армения: ['Ереван', 'Гюмри', 'Ванадзор'],
-  Грузия: ['Тбилиси', 'Батуми', 'Кутаиси'],
-  'Другая страна': [],
-};
+const countries = ['Россия', 'Беларусь', 'Казахстан'];
 
 const addressForm = reactive({
-  country: 'Россия',
+  country: '',
   city: '',
   customCity: '',
   useCustomCity: false,
   address: '',
 });
 
-const addressCityOptions = computed(() => citiesByCountry[addressForm.country] ?? []);
+const addressSaving = ref(false);
+const addressError = ref<string | null>(null);
+const showCountryModal = ref(false);
+const showAddressModal = ref(false);
 
-const addressResolvedCity = computed(() => {
-  const value = addressForm.useCustomCity ? addressForm.customCity : addressForm.city;
-  return value.trim();
+const addressCityOptions = computed(() => {
+  if (addressForm.country === 'Россия') {
+    return ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань'];
+  }
+  if (addressForm.country === 'Беларусь') {
+    return ['Минск', 'Гродно', 'Брест'];
+  }
+  if (addressForm.country === 'Казахстан') {
+    return ['Алматы', 'Астана', 'Шымкент'];
+  }
+  return [];
 });
-
-watch(
-  () => addressForm.country,
-  (country) => {
-    const options = citiesByCountry[country] ?? [];
-    if (!country) {
-      addressForm.city = '';
-      addressForm.useCustomCity = false;
-      addressForm.customCity = '';
-      return;
-    }
-
-    if (!options.includes(addressForm.city)) {
-      addressForm.city = '';
-    }
-    if (!addressForm.useCustomCity) {
-      addressForm.customCity = '';
-    }
-  },
-);
-
-const ONLY_RUSSIA_MESSAGE = 'Оформление заказов доступно только пользователям из России.';
-const ADDRESS_REQUIRED_SUBSTRING = 'Укажите адрес доставки';
 
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
 const formatDate = (value: string) => {
   if (!value) {
-    return '';
+    return '—';
   }
-  const date = new Date(value);
-  return date.toLocaleString('ru-RU');
+  return new Intl.DateTimeFormat('ru-RU', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 };
 
-const hasItems = computed(() => items.value.length > 0);
-
-const paymentSuccess = computed(() => Boolean(lastOrder.value));
-
-const ensureProfileLoaded = async () => {
-  if (user.value) {
-    return true;
+const payOrder = async () => {
+  if (!user.value) {
+    return;
   }
-  try {
-    await authStore.loadProfile();
-    return Boolean(user.value);
-  } catch (err) {
-    localError.value = extractErrorMessage(err) ?? 'Не удалось загрузить профиль пользователя.';
-    return false;
+  if (user.value.country !== 'Россия') {
+    showCountryModal.value = true;
+    return;
   }
-};
+  if (!user.value.address) {
+    showAddressModal.value = true;
+    return;
+  }
 
-const fillAddressFormFromUser = () => {
-  const profile = user.value;
-  const profileCountry = profile?.country?.trim();
-  addressForm.country = profileCountry ? profileCountry : 'Россия';
-  addressForm.address = profile?.address ?? '';
-
-  const availableCities = citiesByCountry[addressForm.country] ?? [];
-  const profileCity = profile?.city ?? '';
-  if (profileCity && availableCities.includes(profileCity)) {
-    addressForm.city = profileCity;
-    addressForm.useCustomCity = false;
-    addressForm.customCity = '';
-  } else if (profileCity) {
-    addressForm.city = '';
-    addressForm.useCustomCity = true;
-    addressForm.customCity = profileCity;
-  } else {
-    addressForm.city = '';
-    addressForm.useCustomCity = false;
-    addressForm.customCity = '';
+  localError.value = null;
+  await cartStore.payOrder();
+  if (error.value) {
+    localError.value = error.value;
   }
 };
 
-const openAddressModal = () => {
-  fillAddressFormFromUser();
-  addressError.value = null;
-  showAddressModal.value = true;
+const closeCountryModal = () => {
+  showCountryModal.value = false;
 };
 
 const closeAddressModal = () => {
@@ -325,116 +255,188 @@ const closeAddressModal = () => {
 
 const toggleAddressCityInput = () => {
   addressForm.useCustomCity = !addressForm.useCustomCity;
-  if (addressForm.useCustomCity) {
-    addressForm.city = '';
-  } else {
-    addressForm.customCity = '';
-  }
-};
-
-const proceedCheckout = async () => {
-  const result = await cartStore.checkout();
-  if (!result) {
-    localError.value = error.value ?? 'Не удалось оформить заказ. Попробуйте ещё раз.';
-  } else {
-    localError.value = null;
-  }
-  return result;
-};
-
-const showCountryRestriction = () => {
-  showCountryModal.value = true;
-};
-
-const payOrder = async () => {
-  localError.value = null;
-
-  const hasProfile = await ensureProfileLoaded();
-  if (!hasProfile) {
-    return;
-  }
-
-  const profile = user.value;
-  const country = profile?.country?.trim() ?? '';
-  const city = profile?.city?.trim() ?? '';
-  const address = profile?.address?.trim() ?? '';
-
-  if (country && country.toLowerCase() !== 'россия') {
-    showCountryRestriction();
-    return;
-  }
-
-  if (!country || !city || !address) {
-    openAddressModal();
-    return;
-  }
-
-  await proceedCheckout();
+  addressForm.city = '';
+  addressForm.customCity = '';
 };
 
 const submitAddress = async () => {
+  addressSaving.value = true;
   addressError.value = null;
-
-  const country = addressForm.country.trim();
-  const city = addressResolvedCity.value;
-  const address = addressForm.address.trim();
-
-  if (!country) {
-    addressError.value = 'Выберите страну.';
-    return;
-  }
-
-  if (!city) {
-    addressError.value = 'Укажите город.';
-    return;
-  }
-
-  if (!address) {
-    addressError.value = 'Введите полный адрес.';
-    return;
-  }
-
-  if (country.toLowerCase() !== 'россия') {
-    showAddressModal.value = false;
-    showCountryRestriction();
-    return;
-  }
-
   try {
-    addressSaving.value = true;
-    await authStore.updateProfile({ country, city, address });
+    await authStore.updateProfile({
+      country: addressForm.country,
+      city: addressForm.useCustomCity ? addressForm.customCity : addressForm.city,
+      address: addressForm.address,
+    });
     showAddressModal.value = false;
-    await proceedCheckout();
   } catch (err) {
-    addressError.value = extractErrorMessage(err) ?? 'Не удалось сохранить адрес.';
+    addressError.value = extractErrorMessage(err) ?? 'Не удалось сохранить адрес. Попробуйте ещё раз.';
   } finally {
     addressSaving.value = false;
   }
 };
 
-const closeCountryModal = () => {
-  showCountryModal.value = false;
-};
+watch(error, (value) => {
+  if (value) {
+    localError.value = value;
+  }
+});
 
 onMounted(() => {
-  localError.value = error.value;
-  if (!items.value.length) {
-    void cartStore.loadCart();
-  }
-  if (!user.value) {
-    void authStore.loadProfile();
-  }
-});
-
-watch(error, (value) => {
-  localError.value = value ?? null;
-  if (!value) {
-    return;
-  }
-  if (value === ONLY_RUSSIA_MESSAGE) {
-    showCountryRestriction();
-  } else if (value.includes(ADDRESS_REQUIRED_SUBSTRING) && !showAddressModal.value) {
-    openAddressModal();
-  }
+  void cartStore.loadCart();
 });
 </script>
+
+<style scoped>
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+}
+
+.payment-success {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.payment-status {
+  padding: 1.75rem;
+  border-radius: calc(var(--radius-lg) * 1.1);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.payment-status__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.payment-status__value {
+  margin: 0 0 0.3rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.payment-status__meta {
+  margin: 0 0 1.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.payment-status__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.checkout-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.checkout-item {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.checkout-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.checkout-item__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
+.checkout-item__placeholder {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface-alt) 80%, transparent);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.checkout-item__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.checkout-item__price,
+.checkout-item__meta {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.checkout-summary {
+  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: var(--shadow-card);
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 120px;
+}
+
+.checkout-summary__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.checkout-summary__line {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.checkout-summary__line span {
+  color: var(--color-text);
+}
+
+@media (max-width: 991.98px) {
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-summary {
+    position: static;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .checkout-item {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

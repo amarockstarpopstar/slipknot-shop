@@ -1,7 +1,7 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <RouterLink class="navbar-brand fw-bold" to="/">Slipknot Shop</RouterLink>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid layout-container d-flex align-items-center">
+      <RouterLink class="navbar-brand" to="/">Slipknot Shop</RouterLink>
       <button
         class="navbar-toggler"
         type="button"
@@ -24,7 +24,7 @@
           <li v-if="isAuthenticated" class="nav-item">
             <RouterLink class="nav-link" to="/orders">Мои заказы</RouterLink>
           </li>
-          <li class="nav-item">
+          <li v-if="isAuthenticated" class="nav-item">
             <RouterLink class="nav-link" to="/profile">Профиль</RouterLink>
           </li>
           <li v-if="user?.role?.name === 'Менеджер'" class="nav-item">
@@ -34,7 +34,8 @@
             <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
         </ul>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <ThemeToggle />
           <RouterLink v-if="!isAuthenticated" class="btn btn-outline-light" to="/login">Вход</RouterLink>
           <button v-else class="btn btn-outline-light" type="button" @click="openModal">Выход</button>
         </div>
@@ -50,6 +51,7 @@ import { storeToRefs } from 'pinia';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 import LogoutConfirmModal from './LogoutConfirmModal.vue';
+import ThemeToggle from './ThemeToggle.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();

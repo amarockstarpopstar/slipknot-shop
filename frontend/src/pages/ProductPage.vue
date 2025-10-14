@@ -1,7 +1,7 @@
 <template>
-  <section class="py-5">
-    <div class="container">
-      <RouterLink to="/" class="btn btn-link text-decoration-none mb-4">
+  <section class="section fade-in-up">
+    <div class="layout-container">
+      <RouterLink to="/" class="accent-link d-inline-flex align-items-center mb-4">
         ← Назад к каталогу
       </RouterLink>
       <LoadingSpinner v-if="loading" />
@@ -9,36 +9,37 @@
         <div v-if="productError" class="alert alert-danger" role="alert">
           {{ productError }}
         </div>
-        <div v-else-if="product" class="row g-4 align-items-center">
-          <div class="col-md-6">
+        <div v-else-if="product" class="product-layout">
+          <div class="product-gallery">
             <img
               v-if="product.imageUrl"
               :src="product.imageUrl"
-              class="img-fluid rounded shadow-sm"
+              class="product-gallery__image"
               :alt="`Изображение ${product.title}`"
             />
-            <div v-else class="bg-light border rounded p-5 text-center text-muted">
-              Фото появится позже
-            </div>
+            <div v-else class="product-gallery__placeholder">Фото появится позже</div>
           </div>
-          <div class="col-md-6">
-            <h1 class="display-6 fw-bold mb-3">{{ product.title }}</h1>
-            <p class="text-muted mb-2">Категория: {{ product.category?.name ?? 'не указана' }}</p>
-            <p class="mb-4">{{ product.description ?? 'Описание будет добавлено позже.' }}</p>
-            <p class="mb-2">Артикул: {{ product.sku }}</p>
-            <p class="mb-4">
-              Размер: {{ product.size?.name ?? 'универсальный' }} · Остаток: {{ product.stockCount }} шт.
-            </p>
-            <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-              <span class="display-6 text-danger me-3">{{ product.price.toLocaleString('ru-RU') }} ₽</span>
-              <button class="btn btn-danger btn-lg" type="button" @click="openConfirm">
-                Оформить
-              </button>
-              <button class="btn btn-outline-light btn-lg" type="button" @click="addToCart(product)">
-                Добавить в корзину
-              </button>
+          <div class="product-details">
+            <h1 class="product-details__title">{{ product.title }}</h1>
+            <p class="product-details__category">Категория: {{ product.category?.name ?? 'не указана' }}</p>
+            <p class="product-details__description">{{ product.description ?? 'Описание будет добавлено позже.' }}</p>
+            <div class="product-details__meta">
+              <span>Артикул: {{ product.sku }}</span>
+              <span>Размер: {{ product.size?.name ?? 'универсальный' }}</span>
+              <span>Остаток: {{ product.stockCount }} шт.</span>
             </div>
-            <div class="alert alert-dark" role="alert">
+            <div class="product-details__actions">
+              <span class="product-details__price">{{ product.price.toLocaleString('ru-RU') }} ₽</span>
+              <div class="product-details__buttons">
+                <button class="btn btn-danger btn-lg" type="button" @click="openConfirm">
+                  Оформить
+                </button>
+                <button class="btn btn-outline-light btn-lg" type="button" @click="addToCart(product)">
+                  Добавить в корзину
+                </button>
+              </div>
+            </div>
+            <div class="product-details__info">
               Бесплатная доставка по России при заказе от 7 000 ₽
             </div>
           </div>
@@ -48,22 +49,23 @@
         </div>
       </div>
     </div>
+
     <Teleport to="body">
       <div
         v-if="showConfirm"
-        class="modal fade show d-block"
+        class="modal fade show d-block glass-modal"
         tabindex="-1"
         role="dialog"
         aria-modal="true"
         @click.self="closeConfirm"
       >
         <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content bg-dark text-white border border-light">
-            <header class="modal-header border-secondary">
+          <div class="modal-content">
+            <header class="modal-header">
               <h2 class="modal-title h4 mb-0">Подтвердите оформление</h2>
               <button
                 type="button"
-                class="btn-close btn-close-white"
+                class="btn-close"
                 aria-label="Закрыть"
                 @click="closeConfirm"
               ></button>
@@ -78,7 +80,7 @@
               </p>
               <p v-if="confirmError" class="alert alert-danger mb-0">{{ confirmError }}</p>
             </section>
-            <footer class="modal-footer border-secondary">
+            <footer class="modal-footer">
               <button type="button" class="btn btn-outline-light" @click="closeConfirm" :disabled="confirmLoading">
                 Отмена
               </button>
@@ -192,3 +194,121 @@ watch(cartError, (value) => {
   }
 });
 </script>
+
+<style scoped>
+.product-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 6vw, 3.5rem);
+  align-items: start;
+}
+
+.product-gallery {
+  position: sticky;
+  top: 120px;
+}
+
+.product-gallery__image {
+  width: 100%;
+  border-radius: calc(var(--radius-lg) * 1.2);
+  box-shadow: var(--shadow-card);
+}
+
+.product-gallery__placeholder {
+  display: grid;
+  place-items: center;
+  border-radius: calc(var(--radius-lg) * 1.2);
+  background: color-mix(in srgb, var(--color-surface-alt) 85%, transparent);
+  color: var(--color-text-muted);
+  padding: 4rem 2rem;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.product-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2rem);
+  border-radius: calc(var(--radius-lg) * 1.2);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.product-details__title {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 700;
+}
+
+.product-details__category {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.product-details__description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.product-details__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.product-details__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.product-details__price {
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-danger) 60%, var(--color-text));
+}
+
+.product-details__buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.product-details__info {
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+@media (max-width: 991.98px) {
+  .product-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .product-gallery {
+    position: static;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .product-details__buttons {
+    flex-direction: column;
+  }
+
+  .product-details__buttons :deep(.btn) {
+    width: 100%;
+  }
+}
+</style>
