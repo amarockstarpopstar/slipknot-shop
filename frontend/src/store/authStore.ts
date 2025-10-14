@@ -41,8 +41,8 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   const setAuthState = (auth: AuthResponse) => {
-    persistTokens(auth);
     user.value = auth.user;
+    persistTokens(auth);
     error.value = null;
     console.info('User logged in', { id: auth.user.id, email: auth.user.email });
     logAuthState();
@@ -179,6 +179,22 @@ export const useAuthStore = defineStore('auth', () => {
       }
     },
     { flush: 'post' }
+  );
+
+  watch(
+    isAuthenticated,
+    (loggedIn) => {
+      console.log('Auth state changed:', loggedIn);
+      if (loggedIn && !user.value && !loading.value) {
+        void loadProfile();
+        return;
+      }
+
+      if (!loggedIn && user.value) {
+        user.value = null;
+      }
+    },
+    { immediate: true }
   );
 
   return {
