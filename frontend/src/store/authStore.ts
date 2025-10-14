@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { AuthResponse, LoginPayload, RegisterPayload } from '../api/auth';
 import { login, register } from '../api/auth';
 import type { UpdateProfilePayload, UserProfile } from '../api/users';
@@ -19,6 +19,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(accessToken.value));
 
+  const logAuthState = () => {
+    console.info('Auth state updated', {
+      isAuthenticated: isAuthenticated.value,
+      user: user.value,
+    });
+  };
+
   const persistTokens = (auth: AuthResponse) => {
     accessToken.value = auth.accessToken;
     refreshToken.value = auth.refreshToken;
@@ -37,6 +44,8 @@ export const useAuthStore = defineStore('auth', () => {
     persistTokens(auth);
     user.value = auth.user;
     error.value = null;
+    console.info('User logged in', { id: auth.user.id, email: auth.user.email });
+    logAuthState();
   };
 
   const loginUser = async (payload: LoginPayload) => {
@@ -71,6 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
       const profile = await fetchProfile();
       user.value = profile;
       error.value = null;
+      logAuthState();
     } catch (err) {
       error.value = extractErrorMessage(err);
       throw err;
@@ -98,6 +108,8 @@ export const useAuthStore = defineStore('auth', () => {
     clearTokens();
     user.value = null;
     error.value = null;
+    console.info('User logged out');
+    logAuthState();
   };
 
   const initialize = async () => {
@@ -116,6 +128,58 @@ export const useAuthStore = defineStore('auth', () => {
       logout();
     }
   };
+
+  const syncFromStorage = async () => {
+    const storedAccess = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const storedRefresh = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const tokenChanged = storedAccess !== accessToken.value || storedRefresh !== refreshToken.value;
+
+    accessToken.value = storedAccess;
+    refreshToken.value = storedRefresh;
+
+    if (!storedAccess) {
+      if (user.value) {
+        user.value = null;
+        console.info('User logged out');
+        logAuthState();
+      }
+      return;
+    }
+
+    if (tokenChanged && !user.value) {
+      try {
+        await loadProfile();
+      } catch (err) {
+        console.warn('Failed to sync auth state from storage', err);
+        logout();
+      }
+      return;
+    }
+
+    if (tokenChanged) {
+      logAuthState();
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event: StorageEvent) => {
+      if (!event.key || event.key === ACCESS_TOKEN_KEY || event.key === REFRESH_TOKEN_KEY) {
+        void syncFromStorage();
+      }
+    });
+  }
+
+  watch(
+    accessToken,
+    (token, previous) => {
+      if (!token && previous && user.value) {
+        user.value = null;
+        console.info('User logged out');
+        logAuthState();
+      }
+    },
+    { flush: 'post' }
+  );
 
   return {
     user,

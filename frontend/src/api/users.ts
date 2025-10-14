@@ -23,7 +23,7 @@ export interface UserListItem extends UserProfile {}
 export interface UpdateUserPayload {
   name: string;
   email: string;
-  phone: string;
+  phone?: string | null;
   roleName: string;
   country?: string;
   city?: string;

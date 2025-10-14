@@ -87,12 +87,20 @@ const form = reactive({
   phone: '',
 });
 
+const resolveRedirect = () => {
+  const redirectTarget = route.query.redirect;
+  if (typeof redirectTarget === 'string' && redirectTarget.startsWith('/')) {
+    return redirectTarget;
+  }
+  return '/profile';
+};
+
 const handleSubmit = async () => {
   try {
     if (mode.value === 'login') {
       await authStore.loginUser({ email: form.email, password: form.password });
       success.value = 'Вход выполнен успешно!';
-      await router.push('/');
+      await router.replace(resolveRedirect());
     } else {
       await authStore.registerUser({
         name: form.name,
@@ -101,7 +109,7 @@ const handleSubmit = async () => {
         phone: form.phone || undefined,
       });
       success.value = 'Аккаунт создан! Добро пожаловать.';
-      await router.push('/');
+      await router.replace(resolveRedirect());
     }
   } catch (err) {
     console.error('Auth request failed', err);
