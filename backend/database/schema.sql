@@ -89,9 +89,7 @@ CREATE TABLE IF NOT EXISTS products (
     image_url TEXT,
     price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
     sku VARCHAR(100) NOT NULL UNIQUE,
-    stock_count INTEGER DEFAULT 0 NOT NULL CHECK (stock_count >= 0),
     category_id INTEGER NOT NULL REFERENCES categories(id),
-    size_id INTEGER REFERENCES sizes(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
@@ -110,6 +108,23 @@ CREATE TABLE IF NOT EXISTS product_images (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS product_sizes (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    size VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    UNIQUE (product_id, size)
+);
+
+CREATE TABLE IF NOT EXISTS size_stock (
+    id SERIAL PRIMARY KEY,
+    size_id INTEGER NOT NULL REFERENCES product_sizes(id) ON DELETE CASCADE,
+    stock INTEGER NOT NULL CHECK (stock >= 0),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    UNIQUE (size_id)
+);
+
 CREATE TABLE IF NOT EXISTS carts (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -121,12 +136,17 @@ CREATE TABLE IF NOT EXISTS cart_items (
     id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES products(id),
+    product_size_id INTEGER REFERENCES product_sizes(id) ON DELETE SET NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-    UNIQUE (cart_id, product_id)
+    UNIQUE (cart_id, product_id, product_size_id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cart_items_product_null_size
+ON cart_items (cart_id, product_id)
+WHERE product_size_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS order_statuses (
     id SERIAL PRIMARY KEY,
@@ -154,6 +174,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES products(id),
+    product_size_id INTEGER REFERENCES product_sizes(id) ON DELETE SET NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -183,6 +204,18 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
     product_id INTEGER NOT NULL REFERENCES products(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     UNIQUE (wishlist_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    UNIQUE (user_id, product_id)
 );
 
 -- ============================================================================
@@ -251,6 +284,16 @@ CREATE TRIGGER trg_audit_products
 AFTER INSERT OR UPDATE OR DELETE ON products
 FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
 
+DROP TRIGGER IF EXISTS trg_audit_product_sizes ON product_sizes;
+CREATE TRIGGER trg_audit_product_sizes
+AFTER INSERT OR UPDATE OR DELETE ON product_sizes
+FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+
+DROP TRIGGER IF EXISTS trg_audit_size_stock ON size_stock;
+CREATE TRIGGER trg_audit_size_stock
+AFTER INSERT OR UPDATE OR DELETE ON size_stock
+FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+
 DROP TRIGGER IF EXISTS trg_audit_orders ON orders;
 CREATE TRIGGER trg_audit_orders
 AFTER INSERT OR UPDATE OR DELETE ON orders
@@ -259,6 +302,11 @@ FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
 DROP TRIGGER IF EXISTS trg_audit_order_items ON order_items;
 CREATE TRIGGER trg_audit_order_items
 AFTER INSERT OR UPDATE OR DELETE ON order_items
+FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+
+DROP TRIGGER IF EXISTS trg_audit_reviews ON reviews;
+CREATE TRIGGER trg_audit_reviews
+AFTER INSERT OR UPDATE OR DELETE ON reviews
 FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
 
 -- ============================================================================
@@ -280,6 +328,16 @@ FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN order_statuses os ON os.id = o.status_id
 LEFT JOIN payments p ON p.order_id = o.id;
+
+CREATE OR REPLACE VIEW vw_sales_by_day AS
+SELECT
+    DATE(o.placed_at) AS sale_date,
+    SUM(oi.quantity) AS total_items,
+    SUM(oi.quantity * oi.unit_price) AS total_amount
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+GROUP BY DATE(o.placed_at)
+ORDER BY sale_date;
 
 CREATE OR REPLACE VIEW vw_audit_log_detailed AS
 SELECT
@@ -378,10 +436,11 @@ BEGIN
         )
         SELECT id INTO v_order_id FROM inserted_order;
 
-        INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+        INSERT INTO order_items (order_id, product_id, product_size_id, quantity, unit_price)
         SELECT
             v_order_id,
             ci.product_id,
+            ci.product_size_id,
             ci.quantity,
             ci.unit_price
         FROM cart_items ci
@@ -512,9 +571,7 @@ WITH product_data AS (
         'Плотная хлопковая футболка с обложкой альбома We Are Not Your Kind.'::text AS description,
         'https://static.slipknot-shop.ru/images/catalog/tshirt-wanyk.jpg'::text AS image_url,
         2990.00::numeric(10, 2) AS price,
-        45::integer AS stock_count,
-        'Одежда'::text AS category_name,
-        'M'::text AS size_name
+        'Одежда'::text AS category_name
     UNION ALL
     SELECT
         'SKU-HOODIE-002',
@@ -522,9 +579,7 @@ WITH product_data AS (
         'Тёплое чёрное худи с вышитым логотипом группы и подкладкой из флиса.',
         'https://static.slipknot-shop.ru/images/catalog/hoodie-classic.jpg',
         5490.00,
-        32,
-        'Одежда',
-        'L'
+        'Одежда'
     UNION ALL
     SELECT
         'SKU-CAP-003',
@@ -532,9 +587,7 @@ WITH product_data AS (
         'Регулируемая бейсболка с металлическим логотипом Slipknot на фронте.',
         'https://static.slipknot-shop.ru/images/catalog/cap-s-logo.jpg',
         1990.00,
-        60,
-        'Аксессуары',
-        NULL
+        'Аксессуары'
     UNION ALL
     SELECT
         'SKU-VINYL-004',
@@ -542,9 +595,7 @@ WITH product_data AS (
         'Переиздание легендарного альбома на двойном виниле с буклетом.',
         'https://static.slipknot-shop.ru/images/catalog/vinyl-iowa.jpg',
         4290.00,
-        18,
-        'Музыка',
-        NULL
+        'Музыка'
     UNION ALL
     SELECT
         'SKU-MASK-005',
@@ -552,26 +603,63 @@ WITH product_data AS (
         'Ручная роспись, лимитированное издание официальной маски фронтмена.',
         'https://static.slipknot-shop.ru/images/catalog/mask-corey.jpg',
         12990.00,
-        8,
-        'Коллекционные предметы',
-        NULL
+        'Коллекционные предметы'
+),
+upserted_products AS (
+    INSERT INTO products (title, description, image_url, price, sku, category_id)
+    SELECT
+        pd.title,
+        pd.description,
+        pd.image_url,
+        pd.price,
+        pd.sku,
+        c.id
+    FROM product_data pd
+    JOIN categories c ON c.name = pd.category_name
+    ON CONFLICT (sku) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        image_url = EXCLUDED.image_url,
+        price = EXCLUDED.price,
+        category_id = EXCLUDED.category_id,
+        updated_at = NOW()
+    RETURNING id, sku
 )
-INSERT INTO products (title, description, image_url, price, sku, stock_count, category_id, size_id)
+SELECT 1;
+
+WITH size_data AS (
+    SELECT 'SKU-TSHIRT-001'::text AS sku, 'S'::text AS size, 12::integer AS stock UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'M', 18 UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'L', 15 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'M', 14 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'L', 10 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'XL', 8
+)
+INSERT INTO product_sizes (product_id, size)
+SELECT DISTINCT
+    p.id,
+    sd.size
+FROM size_data sd
+JOIN products p ON p.sku = sd.sku
+ON CONFLICT (product_id, size) DO UPDATE SET updated_at = NOW();
+
+WITH size_data AS (
+    SELECT 'SKU-TSHIRT-001'::text AS sku, 'S'::text AS size, 12::integer AS stock UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'M', 18 UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'L', 15 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'M', 14 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'L', 10 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'XL', 8
+)
+INSERT INTO size_stock (size_id, stock, updated_at)
 SELECT
-    pd.title,
-    pd.description,
-    pd.image_url,
-    pd.price,
-    pd.sku,
-    pd.stock_count,
-    c.id,
-    s.id
-FROM product_data pd
-JOIN categories c ON c.name = pd.category_name
-LEFT JOIN sizes s ON pd.size_name IS NOT NULL AND s.name = pd.size_name
-WHERE NOT EXISTS (
-    SELECT 1 FROM products existing WHERE existing.sku = pd.sku
-);
+    ps.id,
+    sd.stock,
+    NOW()
+FROM size_data sd
+JOIN products p ON p.sku = sd.sku
+JOIN product_sizes ps ON ps.product_id = p.id AND ps.size = sd.size
+ON CONFLICT (size_id) DO UPDATE SET stock = EXCLUDED.stock, updated_at = NOW();
 
 INSERT INTO product_tags (product_id, tag_id)
 SELECT p.id, t.id
@@ -580,6 +668,26 @@ JOIN tags t ON t.name = 'Новая коллекция'
 WHERE p.sku IN ('SKU-TSHIRT-001', 'SKU-HOODIE-002')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO reviews (user_id, product_id, rating, comment, status)
+SELECT
+    u.id,
+    p.id,
+    review_data.rating,
+    review_data.comment,
+    review_data.status
+FROM (
+    VALUES
+        ('customer@slipknot-shop.ru', 'SKU-TSHIRT-001', 5, 'Отличное качество и яркий принт!', 'approved'),
+        ('customer@slipknot-shop.ru', 'SKU-HOODIE-002', 4, 'Худи очень тёплое, но хотелось бы больше цветов.', 'pending')
+) AS review_data(email, sku, rating, comment, status)
+JOIN users u ON u.email = review_data.email
+JOIN products p ON p.sku = review_data.sku
+ON CONFLICT (user_id, product_id) DO UPDATE SET
+    rating = EXCLUDED.rating,
+    comment = EXCLUDED.comment,
+    status = EXCLUDED.status,
+    updated_at = NOW();
+
 -- Ensure audit log view has at least one entry for history by writing a seed update
 DO $$
 DECLARE
@@ -587,6 +695,14 @@ DECLARE
 BEGIN
     SELECT id INTO v_admin_id FROM users WHERE email = 'admin@slipknot-shop.ru';
     PERFORM set_current_app_user(v_admin_id);
-    UPDATE products SET stock_count = stock_count WHERE sku = 'SKU-TSHIRT-001';
+    UPDATE size_stock
+    SET stock = stock
+    WHERE size_id = (
+        SELECT ps.id
+        FROM product_sizes ps
+        JOIN products p ON p.id = ps.product_id
+        WHERE p.sku = 'SKU-TSHIRT-001' AND ps.size = 'M'
+        LIMIT 1
+    );
 END;
 $$;

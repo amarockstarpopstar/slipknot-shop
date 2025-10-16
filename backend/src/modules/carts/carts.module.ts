@@ -5,6 +5,8 @@ import { CartsController } from './carts.controller';
 import { Cart } from './entities/cart.entity';
 import { CartItem } from '../cart-items/entities/cart-item.entity';
 import { Product } from '../products/entities/product.entity';
+import { ProductSize } from '../products/entities/product-size.entity';
+import { SizeStock } from '../products/entities/size-stock.entity';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderItem } from '../order-items/entities/order-item.entity';
@@ -14,7 +16,17 @@ import { CartAuthGuard } from './guards/cart-auth.guard';
 // module providing cart functionality
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Cart, CartItem, Product, User, Order, OrderItem, OrderStatus]),
+    TypeOrmModule.forFeature([
+      Cart,
+      CartItem,
+      Product,
+      ProductSize,
+      SizeStock,
+      User,
+      Order,
+      OrderItem,
+      OrderStatus,
+    ]),
   ],
   controllers: [CartsController],
   providers: [CartsService, CartAuthGuard],
