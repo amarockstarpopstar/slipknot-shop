@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Cart } from '../../carts/entities/cart.entity';
 import { Product } from '../../products/entities/product.entity';
+import { ProductSize } from '../../products/entities/product-size.entity';
 
 // cart item entity
 @Entity({ name: 'cart_items' })
@@ -23,6 +24,12 @@ export class CartItem {
   @ManyToOne(() => Product, (product) => product.cartItems)
   @JoinColumn({ name: 'product_id' })
   product: Product;
+
+  @ManyToOne(() => ProductSize, (productSize) => productSize.cartItems, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'product_size_id' })
+  productSize?: ProductSize | null;
 
   @Column({ type: 'integer' })
   quantity: number;

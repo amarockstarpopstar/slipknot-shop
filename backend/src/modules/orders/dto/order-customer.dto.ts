@@ -8,6 +8,9 @@ export class OrderCustomerDto {
   @ApiProperty({ example: 'Сид Уилсон', description: 'Имя покупателя' })
   name: string;
 
-  @ApiProperty({ example: 'sid@slipknot.com', description: 'Электронная почта покупателя' })
+  @ApiProperty({
+    example: 'sid@slipknot.com',
+    description: 'Электронная почта покупателя',
+  })
   email: string;
 }

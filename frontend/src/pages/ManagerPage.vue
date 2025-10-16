@@ -35,8 +35,8 @@
                 <col style="width: 12rem" />
                 <col style="width: 10rem" />
                 <col style="width: 9rem" />
+                <col style="width: 18rem" />
                 <col style="width: 12rem" />
-                <col style="width: 10rem" />
                 <col style="width: 11rem" />
               </colgroup>
               <thead>
@@ -46,8 +46,8 @@
                   <th scope="col">Артикул</th>
                   <th scope="col">Цена</th>
                   <th scope="col">Остаток</th>
+                  <th scope="col">Размеры</th>
                   <th scope="col">Категория</th>
-                  <th scope="col">Размер</th>
                   <th scope="col" class="text-end">Действия</th>
                 </tr>
               </thead>
@@ -57,9 +57,9 @@
                   <td>{{ product.title }}</td>
                   <td>{{ product.sku }}</td>
                   <td>{{ formatCurrency(product.price) }}</td>
-                  <td>{{ product.stockCount }}</td>
+                  <td>{{ getTotalStock(product) }}</td>
+                  <td>{{ summarizeSizes(product) }}</td>
                   <td>{{ product.category ? product.category.name : '—' }}</td>
-                  <td>{{ product.size ? product.size.name : '—' }}</td>
                   <td class="text-end manager-table__actions">
                     <button class="btn btn-sm btn-outline-primary" @click="startEditProduct(product)">
                       Редактировать
@@ -114,17 +114,6 @@
                 />
               </div>
               <div class="col-md-3">
-                <label class="form-label" for="productStock">Остаток</label>
-                <input
-                  id="productStock"
-                  v-model="productForm.stockCount"
-                  type="number"
-                  min="0"
-                  class="form-control"
-                  required
-                />
-              </div>
-              <div class="col-md-3">
                 <label class="form-label" for="productCategory">Категория</label>
                 <select id="productCategory" v-model="productForm.categoryId" class="form-select" required>
                   <option value="">Выберите категорию</option>
@@ -133,14 +122,71 @@
                   </option>
                 </select>
               </div>
-              <div class="col-md-3">
-                <label class="form-label" for="productSize">Размер</label>
-                <select id="productSize" v-model="productForm.sizeId" class="form-select">
-                  <option value="">Без размера</option>
-                  <option v-for="size in sizes" :key="size.id" :value="String(size.id)">
-                    {{ size.name }}
-                  </option>
-                </select>
+              <div class="col-12">
+                <div class="manager-sizes">
+                  <div class="manager-sizes__header">
+                    <label class="form-label mb-0">Размеры и остатки</label>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      @click="addSizeRow(productForm.sizes)"
+                      :disabled="productSaving"
+                    >
+                      Добавить размер
+                    </button>
+                  </div>
+                  <div class="manager-sizes__list">
+                    <div
+                      v-for="(sizeRow, index) in productForm.sizes"
+                      :key="sizeRow.id ?? `product-size-${index}`"
+                      class="manager-sizes__row row g-3 align-items-end"
+                    >
+                      <div class="col-md-4 col-sm-6">
+                        <label
+                          class="form-label"
+                          :for="`productSizeName-${productForm.id}-${index}`"
+                        >
+                          Размер
+                        </label>
+                        <input
+                          :id="`productSizeName-${productForm.id}-${index}`"
+                          v-model="sizeRow.size"
+                          type="text"
+                          class="form-control"
+                          placeholder="Например, M"
+                          maxlength="20"
+                          :disabled="productSaving"
+                        />
+                      </div>
+                      <div class="col-md-3 col-sm-6">
+                        <label
+                          class="form-label"
+                          :for="`productSizeStock-${productForm.id}-${index}`"
+                        >
+                          Остаток
+                        </label>
+                        <input
+                          :id="`productSizeStock-${productForm.id}-${index}`"
+                          v-model="sizeRow.stock"
+                          type="number"
+                          min="0"
+                          class="form-control"
+                          :disabled="productSaving"
+                        />
+                      </div>
+                      <div class="col-md-2 col-sm-4">
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger mt-4 w-100"
+                          @click="removeSizeRow(productForm.sizes, index)"
+                          :disabled="productSaving"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="col-md-6">
                 <label class="form-label" for="productImage">Ссылка на изображение</label>
@@ -362,18 +408,6 @@
                 />
               </div>
               <div class="col-md-4">
-                <label for="newProductStock" class="form-label">Остаток</label>
-                <input
-                  id="newProductStock"
-                  v-model="addProductForm.stockCount"
-                  type="number"
-                  min="0"
-                  class="form-control"
-                  required
-                  :disabled="creatingProduct"
-                />
-              </div>
-              <div class="col-md-4">
                 <label for="newProductCategory" class="form-label">Категория</label>
                 <select
                   id="newProductCategory"
@@ -388,19 +422,71 @@
                   </option>
                 </select>
               </div>
-              <div class="col-md-4">
-                <label for="newProductSize" class="form-label">Размер</label>
-                <select
-                  id="newProductSize"
-                  v-model="addProductForm.sizeId"
-                  class="form-select"
-                  :disabled="creatingProduct"
-                >
-                  <option value="">Без размера</option>
-                  <option v-for="size in sizes" :key="size.id" :value="String(size.id)">
-                    {{ size.name }}
-                  </option>
-                </select>
+              <div class="col-12">
+                <div class="manager-sizes">
+                  <div class="manager-sizes__header">
+                    <label class="form-label mb-0">Размеры и остатки</label>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      @click="addSizeRow(addProductForm.sizes)"
+                      :disabled="creatingProduct"
+                    >
+                      Добавить размер
+                    </button>
+                  </div>
+                  <div class="manager-sizes__list">
+                    <div
+                      v-for="(sizeRow, index) in addProductForm.sizes"
+                      :key="sizeRow.id ?? `new-product-size-${index}`"
+                      class="manager-sizes__row row g-3 align-items-end"
+                    >
+                      <div class="col-md-4 col-sm-6">
+                        <label
+                          class="form-label"
+                          :for="`newProductSizeName-${index}`"
+                        >
+                          Размер
+                        </label>
+                        <input
+                          :id="`newProductSizeName-${index}`"
+                          v-model="sizeRow.size"
+                          type="text"
+                          class="form-control"
+                          placeholder="Например, M"
+                          maxlength="20"
+                          :disabled="creatingProduct"
+                        />
+                      </div>
+                      <div class="col-md-3 col-sm-6">
+                        <label
+                          class="form-label"
+                          :for="`newProductSizeStock-${index}`"
+                        >
+                          Остаток
+                        </label>
+                        <input
+                          :id="`newProductSizeStock-${index}`"
+                          v-model="sizeRow.stock"
+                          type="number"
+                          min="0"
+                          class="form-control"
+                          :disabled="creatingProduct"
+                        />
+                      </div>
+                      <div class="col-md-2 col-sm-4">
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger mt-4 w-100"
+                          @click="removeSizeRow(addProductForm.sizes, index)"
+                          :disabled="creatingProduct"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="col-md-8">
                 <label for="newProductImage" class="form-label">Ссылка на изображение</label>
@@ -575,11 +661,11 @@ import {
   updateProduct,
   deleteProduct,
   type ProductDto,
+  type ProductSizePayload,
   type CreateProductPayload,
   type UpdateProductPayload,
 } from '../api/products';
 import { fetchCategories, type CategoryDto } from '../api/categories';
-import { fetchSizes, type SizeDto } from '../api/sizes';
 import {
   fetchOrders,
   fetchOrderStatuses,
@@ -595,16 +681,21 @@ import {
 } from '../api/orders';
 import { extractErrorMessage } from '../api/http';
 
+interface EditableProductSize {
+  id: number | null;
+  size: string;
+  stock: string;
+}
+
 interface ProductFormState {
   id: number;
   title: string;
   description: string;
   price: string;
   sku: string;
-  stockCount: string;
   imageUrl: string;
   categoryId: string;
-  sizeId: string;
+  sizes: EditableProductSize[];
 }
 
 interface NewProductFormState {
@@ -612,10 +703,9 @@ interface NewProductFormState {
   description: string;
   price: string;
   sku: string;
-  stockCount: string;
   imageUrl: string;
   categoryId: string;
-  sizeId: string;
+  sizes: EditableProductSize[];
 }
 
 interface OrderFormState {
@@ -640,7 +730,6 @@ interface NewOrderFormState {
 const products = ref<ProductDto[]>([]);
 const orders = ref<OrderDto[]>([]);
 const categories = ref<CategoryDto[]>([]);
-const sizes = ref<SizeDto[]>([]);
 const orderStatuses = ref<OrderStatusDto[]>([]);
 const orderCustomers = ref<OrderCustomerDto[]>([]);
 const shippingStatusOptions = ref<string[]>(['Готовится к отправке', 'В пути', 'Доставлен']);
@@ -665,10 +754,9 @@ const addProductForm = reactive<NewProductFormState>({
   description: '',
   price: '',
   sku: '',
-  stockCount: '',
   imageUrl: '',
   categoryId: '',
-  sizeId: '',
+  sizes: [],
 });
 const addOrderForm = reactive<NewOrderFormState>({
   userId: '',
@@ -712,6 +800,71 @@ const showSuccess = (message: string) => {
   globalError.value = null;
 };
 
+const toEditableSizes = (sizes: ProductDto['sizes']): EditableProductSize[] => {
+  if (!sizes.length) {
+    return [{ id: null, size: '', stock: '' }];
+  }
+
+  return sizes.map((size) => ({
+    id: size.id,
+    size: size.size,
+    stock: size.stock.toString(),
+  }));
+};
+
+const buildSizePayload = (sizes: EditableProductSize[]): ProductSizePayload[] => {
+  const payload: ProductSizePayload[] = [];
+  const seen = new Set<string>();
+
+  for (const size of sizes) {
+    const trimmed = size.size.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const normalizedName = trimmed.toLowerCase();
+    if (seen.has(normalizedName)) {
+      throw new Error(`Размер "${trimmed}" указан несколько раз.`);
+    }
+
+    const stockValue = Number(size.stock);
+    if (!Number.isFinite(stockValue) || stockValue < 0) {
+      throw new Error(`Некорректное значение остатка для размера "${trimmed}".`);
+    }
+
+    seen.add(normalizedName);
+    payload.push({ size: trimmed, stock: Math.floor(stockValue) });
+  }
+
+  return payload;
+};
+
+const addSizeRow = (rows: EditableProductSize[]) => {
+  rows.push({ id: null, size: '', stock: '' });
+};
+
+const removeSizeRow = (rows: EditableProductSize[], index: number) => {
+  if (rows.length <= 1) {
+    rows.splice(0, rows.length, { id: null, size: '', stock: '' });
+    return;
+  }
+
+  rows.splice(index, 1);
+};
+
+const getTotalStock = (product: ProductDto): number =>
+  product.sizes.reduce((sum, size) => sum + size.stock, 0);
+
+const summarizeSizes = (product: ProductDto): string => {
+  if (!product.sizes.length) {
+    return '—';
+  }
+
+  return product.sizes
+    .map((size) => `${size.size} — ${size.stock}`)
+    .join(', ');
+};
+
 const getDefaultShippingStatus = () => shippingStatusOptions.value[0] ?? 'Готовится к отправке';
 const getDefaultStatusId = () => (orderStatuses.value.length ? String(orderStatuses.value[0].id) : '');
 
@@ -721,10 +874,9 @@ const resetAddProductForm = () => {
     description: '',
     price: '',
     sku: '',
-    stockCount: '',
     imageUrl: '',
     categoryId: '',
-    sizeId: '',
+    sizes: [{ id: null, size: '', stock: '' }],
   });
 };
 
@@ -789,21 +941,18 @@ const loadInitialData = async () => {
       productsData,
       ordersData,
       categoriesData,
-      sizesData,
       statusesData,
       customersData,
     ] = await Promise.all([
       fetchProducts(),
       fetchOrders(),
       fetchCategories(),
-      fetchSizes(),
       fetchOrderStatuses(),
       fetchOrderCustomers(),
     ]);
     products.value = productsData;
     orders.value = ordersData;
     categories.value = categoriesData;
-    sizes.value = sizesData;
     orderStatuses.value = statusesData;
     orderCustomers.value = customersData;
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
@@ -848,10 +997,9 @@ const startEditProduct = (product: ProductDto) => {
     description: product.description ?? '',
     price: product.price.toString(),
     sku: product.sku,
-    stockCount: product.stockCount.toString(),
     imageUrl: product.imageUrl ?? '',
     categoryId: product.category ? String(product.category.id) : '',
-    sizeId: product.size ? String(product.size.id) : '',
+    sizes: toEditableSizes(product.sizes),
   };
 };
 
@@ -864,9 +1012,16 @@ const saveNewProduct = async () => {
     !addProductForm.title ||
     !addProductForm.sku ||
     !addProductForm.price ||
-    !addProductForm.stockCount ||
     !addProductForm.categoryId
   ) {
+    return;
+  }
+
+  let sizePayload: ProductSizePayload[] = [];
+  try {
+    sizePayload = buildSizePayload(addProductForm.sizes);
+  } catch (error) {
+    showError(error);
     return;
   }
 
@@ -877,10 +1032,9 @@ const saveNewProduct = async () => {
       description: addProductForm.description ? addProductForm.description : undefined,
       price: Number(addProductForm.price),
       sku: addProductForm.sku,
-      stockCount: Number(addProductForm.stockCount),
       imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
       categoryId: Number(addProductForm.categoryId),
-      sizeId: addProductForm.sizeId ? Number(addProductForm.sizeId) : undefined,
+      sizes: sizePayload.length ? sizePayload : undefined,
     };
     await createProduct(payload);
     products.value = await fetchProducts();
@@ -897,6 +1051,13 @@ const saveProduct = async () => {
   if (!productForm.value) {
     return;
   }
+  let sizePayload: ProductSizePayload[] = [];
+  try {
+    sizePayload = buildSizePayload(productForm.value.sizes);
+  } catch (error) {
+    showError(error);
+    return;
+  }
   try {
     productSaving.value = true;
     const payload: UpdateProductPayload = {
@@ -904,10 +1065,11 @@ const saveProduct = async () => {
       description: productForm.value.description || undefined,
       price: Number(productForm.value.price),
       sku: productForm.value.sku,
-      stockCount: Number(productForm.value.stockCount),
       imageUrl: productForm.value.imageUrl || undefined,
-      categoryId: Number(productForm.value.categoryId),
-      sizeId: productForm.value.sizeId ? Number(productForm.value.sizeId) : undefined,
+      categoryId: productForm.value.categoryId
+        ? Number(productForm.value.categoryId)
+        : undefined,
+      sizes: sizePayload,
     };
     await updateProduct(productForm.value.id, payload);
     await refreshProducts();
@@ -1120,6 +1282,33 @@ onMounted(() => {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+}
+
+.manager-sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--color-surface-alt) 85%, transparent);
+}
+
+.manager-sizes__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.manager-sizes__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.manager-sizes__row {
+  margin: 0;
 }
 
 .manager-modal__empty {

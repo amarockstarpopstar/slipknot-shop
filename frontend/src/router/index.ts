@@ -63,6 +63,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/AdminAuditPage.vue'),
     meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
   },
+  {
+    path: '/admin/reviews',
+    name: 'admin-reviews',
+    component: () => import('../pages/AdminReviewsPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
+  },
 ];
 
 export const router = createRouter({

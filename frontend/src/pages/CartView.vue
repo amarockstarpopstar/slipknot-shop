@@ -28,6 +28,8 @@
               <div class="cart-item__content">
                 <h2 class="cart-item__title">{{ item.product.title }}</h2>
                 <p class="cart-item__meta">Цена: {{ formatCurrency(item.product.price) }}</p>
+                <p v-if="item.size" class="cart-item__meta">Размер: {{ item.size.size }}</p>
+                <p v-if="item.size" class="cart-item__stock">Остаток: {{ item.size.stock }} шт.</p>
                 <div class="cart-item__controls">
                   <span class="cart-item__label">Количество</span>
                   <div class="cart-item__buttons">
@@ -35,7 +37,14 @@
                       –
                     </button>
                     <span class="cart-item__quantity">{{ item.quantity }}</span>
-                    <button type="button" class="btn btn-outline-light" @click="increase(item)" :disabled="updating">
+                    <button
+                      type="button"
+                      class="btn btn-outline-light"
+                      @click="increase(item)"
+                      :disabled="
+                        updating || (item.size ? item.quantity >= item.size.stock : false)
+                      "
+                    >
                       +
                     </button>
                   </div>
@@ -88,6 +97,10 @@ const { goToCheckout } = useNavigation();
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
 const increase = (item: (typeof items.value)[number]) => {
+  if (item.size && item.quantity >= item.size.stock) {
+    errorMessage.value = 'Вы достигли максимального остатка на складе для этого размера.';
+    return;
+  }
   cartStore.changeItemQuantity(item.id, item.quantity + 1);
 };
 
@@ -179,6 +192,12 @@ onMounted(() => {
 .cart-item__meta {
   margin: 0 0 1rem;
   color: var(--color-text-muted);
+}
+
+.cart-item__stock {
+  margin: -0.5rem 0 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
 }
 
 .cart-item__controls {

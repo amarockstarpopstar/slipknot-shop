@@ -35,7 +35,12 @@ export class Order {
   @Column({ name: 'total_amount', type: 'numeric', precision: 10, scale: 2 })
   totalAmount: string;
 
-  @Column({ name: 'payment_method', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'payment_method',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   paymentMethod?: string | null;
 
   @Column({
@@ -56,7 +61,11 @@ export class Order {
   @Column({ type: 'text', nullable: true })
   comment?: string | null;
 
-  @Column({ name: 'placed_at', type: 'timestamp with time zone', default: () => 'NOW()' })
+  @Column({
+    name: 'placed_at',
+    type: 'timestamp with time zone',
+    default: () => 'NOW()',
+  })
   placedAt: Date;
 
   @OneToMany(() => OrderItem, (item) => item.order)

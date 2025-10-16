@@ -12,6 +12,13 @@ export interface CartItemDto {
   quantity: number;
   unitPrice: number;
   product: CartProductDto;
+  size: CartItemSizeDto | null;
+}
+
+export interface CartItemSizeDto {
+  id: number;
+  size: string;
+  stock: number;
 }
 
 export interface CartResponse {
@@ -24,6 +31,7 @@ export interface CartResponse {
 export interface AddCartItemPayload {
   productId: number;
   quantity?: number;
+  productSizeId?: number | null;
 }
 
 export interface UpdateCartItemPayload {
