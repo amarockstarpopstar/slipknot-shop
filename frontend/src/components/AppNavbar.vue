@@ -33,6 +33,9 @@
           <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
             <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
+          <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
+            <RouterLink class="nav-link" to="/admin/audit">Журнал аудита</RouterLink>
+          </li>
         </ul>
         <div class="d-flex align-items-center flex-wrap gap-2">
           <ThemeToggle />

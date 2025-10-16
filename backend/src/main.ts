@@ -2,7 +2,6 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
 import { DataSource } from 'typeorm';
 
 async function bootstrap() {
@@ -20,8 +19,6 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-
-  app.useGlobalInterceptors(new RequestLoggingInterceptor());
 
   app.enableCors({
     origin: true,

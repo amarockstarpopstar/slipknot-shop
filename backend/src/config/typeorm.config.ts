@@ -2,16 +2,31 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { join } from 'path';
 
+const resolveValue = (configService: ConfigService, keys: string[], fallback?: string): string | undefined => {
+  for (const key of keys) {
+    const value = configService.get<string>(key);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
 export const buildTypeOrmOptions = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
-  const portValue = configService.get<string>('DB_PORT');
+  const portValue = resolveValue(configService, ['DATABASE_PORT', 'DB_PORT']);
   const port = portValue ? Number.parseInt(portValue, 10) : 5432;
 
-  const host = configService.get<string>('DB_HOST') || '127.0.0.1';
-  const username = configService.get<string>('DB_USER') || 'postgres';
-  const password = configService.get<string>('DB_PASSWORD') || 'postgres';
-  const database = configService.get<string>('DB_NAME') || 'slipknot_shop';
+  const host =
+    resolveValue(configService, ['DATABASE_HOST', 'DB_HOST']) ?? '127.0.0.1';
+  const username =
+    resolveValue(configService, ['DATABASE_USER', 'DB_USER']) ?? 'postgres';
+  const password =
+    resolveValue(configService, ['DATABASE_PASSWORD', 'DB_PASSWORD']) ??
+    'postgres';
+  const database =
+    resolveValue(configService, ['DATABASE_NAME', 'DB_NAME']) ?? 'slipknot_merch';
 
   return {
     type: 'postgres',
