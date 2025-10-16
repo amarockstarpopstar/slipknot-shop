@@ -44,6 +44,129 @@
             </div>
           </div>
         </div>
+        <section v-if="product" class="product-reviews">
+          <header class="product-reviews__header">
+            <h2 class="product-reviews__title">Отзывы покупателей</h2>
+            <p class="product-reviews__subtitle">
+              Узнайте впечатления других фанатов и поделитесь своим опытом после покупки.
+            </p>
+          </header>
+          <div v-if="reviewsError" class="alert alert-danger" role="alert">
+            {{ reviewsError }}
+          </div>
+          <LoadingSpinner v-else-if="reviewsLoading" />
+          <div v-else class="product-reviews__content">
+            <ul v-if="productReviews.length" class="product-reviews__list">
+              <li v-for="review in productReviews" :key="review.id" class="product-reviews__item">
+                <div class="product-reviews__item-header">
+                  <span
+                    class="product-reviews__rating"
+                    :aria-label="`Оценка ${review.rating} из 5`"
+                  >
+                    {{ formatRating(review.rating) }}
+                  </span>
+                  <div class="product-reviews__meta">
+                    <span class="product-reviews__author">{{ review.author.name }}</span>
+                    <span class="product-reviews__date">{{ formatDateTime(review.createdAt) }}</span>
+                  </div>
+                </div>
+                <p v-if="review.comment" class="product-reviews__comment">{{ review.comment }}</p>
+              </li>
+            </ul>
+            <p v-else class="product-reviews__empty text-muted">
+              Пока нет отзывов — станьте первым, кто расскажет о своём заказе.
+            </p>
+          </div>
+
+          <div class="product-reviews__form">
+            <h3 class="product-reviews__form-title">Оставить отзыв</h3>
+            <div v-if="reviewSuccess" class="alert alert-success" role="status">
+              {{ reviewSuccess }}
+            </div>
+            <div v-if="reviewError" class="alert alert-danger" role="alert">
+              {{ reviewError }}
+            </div>
+            <div v-if="isAuthenticated && eligibilityError" class="alert alert-danger" role="alert">
+              {{ eligibilityError }}
+            </div>
+            <div v-if="!isAuthenticated" class="alert alert-warning" role="alert">
+              Авторизуйтесь, чтобы поделиться впечатлениями о покупке.
+            </div>
+            <div v-else class="product-reviews__form-body">
+              <div v-if="eligibilityLoading" class="product-reviews__eligibility text-muted">
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                Проверяем возможность оставить отзыв...
+              </div>
+              <p
+                v-else-if="!hasPurchasedProduct"
+                class="alert alert-info product-reviews__hint"
+                role="alert"
+              >
+                Оставить отзыв можно только после покупки этого товара.
+              </p>
+              <p
+                v-else-if="alreadyReviewed"
+                class="alert alert-info product-reviews__hint"
+                role="alert"
+              >
+                Вы уже отправили отзыв. Он появится после проверки модератором.
+              </p>
+              <form class="review-form" @submit.prevent="submitReview">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label for="reviewRating" class="form-label">Оценка</label>
+                    <select
+                      id="reviewRating"
+                      v-model.number="reviewForm.rating"
+                      class="form-select"
+                      :disabled="reviewSubmitting || !canSubmitReview"
+                      required
+                    >
+                      <option v-for="score in ratingOptions" :key="score" :value="score">
+                        {{ score }} / 5
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label for="reviewComment" class="form-label">Комментарий</label>
+                    <textarea
+                      id="reviewComment"
+                      v-model="reviewForm.comment"
+                      class="form-control"
+                      rows="4"
+                      placeholder="Расскажите, что понравилось или что можно улучшить"
+                      :disabled="reviewSubmitting || !canSubmitReview"
+                      maxlength="2000"
+                    ></textarea>
+                    <small class="text-muted">Максимум 2000 символов.</small>
+                  </div>
+                </div>
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3">
+                  <button
+                    type="submit"
+                    class="btn btn-danger px-4"
+                    :disabled="reviewSubmitting || !canSubmitReview"
+                  >
+                    <span
+                      v-if="reviewSubmitting"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                    Отправить отзыв
+                  </button>
+                  <p v-if="canSubmitReview" class="product-reviews__hint text-muted mb-0">
+                    Отзыв появится после проверки модератором.
+                  </p>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
         <div v-else class="alert alert-info" role="alert">
           Товар не найден или был удалён.
         </div>
@@ -103,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -111,20 +234,78 @@ import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useNavigation } from '../composables/useNavigation';
+import { useReviewsStore } from '../store/reviewsStore';
 
 const route = useRoute();
 const { safePush, goToCheckout } = useNavigation();
 const productStore = useProductStore();
 const cartStore = useCartStore();
 const authStore = useAuthStore();
+const reviewsStore = useReviewsStore();
 
 const { selected: product, loading, error: productError } = storeToRefs(productStore);
 const { error: cartError } = storeToRefs(cartStore);
 const { isAuthenticated } = storeToRefs(authStore);
+const reviewsRefs = storeToRefs(reviewsStore);
+const reviewsByProduct = reviewsRefs.reviewsByProduct;
+const reviewsLoading = reviewsRefs.productLoading;
+const reviewsError = reviewsRefs.productError;
+const eligibilityByProduct = reviewsRefs.eligibilityByProduct;
+const eligibilityLoading = reviewsRefs.eligibilityLoading;
+const eligibilityError = reviewsRefs.eligibilityError;
 
 const showConfirm = ref(false);
 const confirmLoading = ref(false);
 const confirmError = ref<string | null>(null);
+
+const ratingOptions = [5, 4, 3, 2, 1];
+
+const reviewForm = reactive({
+  rating: 5,
+  comment: '',
+});
+const reviewSubmitting = ref(false);
+const reviewSuccess = ref<string | null>(null);
+const reviewError = ref<string | null>(null);
+
+const productReviews = computed(() => {
+  const id = product.value?.id;
+  if (!id) {
+    return [];
+  }
+  return reviewsByProduct.value[id] ?? [];
+});
+
+const eligibilityInfo = computed(() => {
+  const id = product.value?.id;
+  if (!id) {
+    return null;
+  }
+  return eligibilityByProduct.value[id] ?? null;
+});
+
+const canSubmitReview = computed(() => Boolean(eligibilityInfo.value?.canReview));
+const hasPurchasedProduct = computed(() => Boolean(eligibilityInfo.value?.hasPurchased));
+const alreadyReviewed = computed(() => Boolean(eligibilityInfo.value?.alreadyReviewed));
+
+const formatRating = (rating: number): string => {
+  const safeRating = Math.min(5, Math.max(1, Math.round(rating)));
+  const filled = '★'.repeat(safeRating);
+  const empty = '☆'.repeat(5 - safeRating);
+  return `${filled}${empty}`;
+};
+
+const formatDateTime = (value: string | Date): string => {
+  try {
+    return new Intl.DateTimeFormat('ru-RU', {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  } catch (error) {
+    console.warn('Failed to format review date', error);
+    return '';
+  }
+};
 
 const loadProduct = async (id: number) => {
   const productLoaded = await productStore.loadOne(id);
@@ -192,11 +373,78 @@ watch(
   },
 );
 
+watch(
+  () => product.value?.id,
+  (productId) => {
+    reviewSuccess.value = null;
+    reviewError.value = null;
+    reviewForm.rating = 5;
+    reviewForm.comment = '';
+
+    if (typeof productId !== 'number') {
+      return;
+    }
+
+    void reviewsStore.loadProductReviews(productId);
+    if (isAuthenticated.value) {
+      void reviewsStore.checkEligibility(productId);
+    } else {
+      reviewsStore.removeEligibilityForProduct(productId);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => isAuthenticated.value,
+  (authenticated) => {
+    const productId = product.value?.id;
+    if (typeof productId !== 'number') {
+      return;
+    }
+
+    if (authenticated) {
+      void reviewsStore.checkEligibility(productId);
+      return;
+    }
+
+    reviewsStore.removeEligibilityForProduct(productId);
+  },
+);
+
 watch(cartError, (value) => {
   if (value && showConfirm.value && !confirmLoading.value) {
     confirmError.value = value;
   }
 });
+
+const submitReview = async () => {
+  if (!product.value || reviewSubmitting.value || !canSubmitReview.value) {
+    return;
+  }
+
+  reviewSubmitting.value = true;
+  reviewError.value = null;
+  reviewSuccess.value = null;
+
+  try {
+    await reviewsStore.submitReview({
+      productId: product.value.id,
+      rating: reviewForm.rating,
+      comment: reviewForm.comment.trim().length
+        ? reviewForm.comment.trim()
+        : undefined,
+    });
+    reviewSuccess.value = 'Спасибо! Отзыв отправлен на модерацию и скоро появится на странице товара.';
+    reviewForm.comment = '';
+    reviewForm.rating = 5;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Не удалось отправить отзыв';
+    reviewError.value = message;
+  } finally {
+    reviewSubmitting.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -296,6 +544,127 @@ watch(cartError, (value) => {
   color: var(--color-text);
 }
 
+.product-reviews {
+  margin-top: clamp(3rem, 6vw, 4rem);
+  padding: clamp(1.75rem, 3vw, 2.25rem);
+  border-radius: calc(var(--radius-lg) * 1.2);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.5rem, 3vw, 2rem);
+}
+
+.product-reviews__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.product-reviews__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
+}
+
+.product-reviews__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.product-reviews__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.product-reviews__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.product-reviews__item {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-surface-border);
+}
+
+.product-reviews__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.product-reviews__item-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.product-reviews__rating {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-accent, #fbbf24);
+  letter-spacing: 0.2em;
+}
+
+.product-reviews__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.product-reviews__author {
+  font-weight: 600;
+}
+
+.product-reviews__date {
+  color: var(--color-text-muted);
+}
+
+.product-reviews__comment {
+  margin: 0.75rem 0 0;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.product-reviews__empty {
+  margin: 0;
+}
+
+.product-reviews__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.product-reviews__form-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 600;
+}
+
+.product-reviews__form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.product-reviews__hint {
+  color: var(--color-text-muted);
+}
+
+.product-reviews__eligibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 @media (max-width: 991.98px) {
   .product-layout {
     grid-template-columns: 1fr;
@@ -313,6 +682,14 @@ watch(cartError, (value) => {
 
   .product-details__buttons :deep(.btn) {
     width: 100%;
+  }
+
+  .product-reviews__meta {
+    align-items: flex-start;
+  }
+
+  .product-reviews__rating {
+    letter-spacing: 0.12em;
   }
 }
 </style>
