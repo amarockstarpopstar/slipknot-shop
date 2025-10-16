@@ -14,6 +14,7 @@ import { UserAddress } from '../../user-addresses/entities/user-address.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Cart } from '../../carts/entities/cart.entity';
 import { Wishlist } from '../../wishlists/entities/wishlist.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 // user entity
 @Entity({ name: 'users' })
@@ -57,6 +58,9 @@ export class User {
 
   @OneToOne(() => Wishlist, (wishlist) => wishlist.user)
   wishlist: Wishlist;
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

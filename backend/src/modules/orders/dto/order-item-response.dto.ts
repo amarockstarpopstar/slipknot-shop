@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class OrderItemProductDto {
   @ApiProperty({ example: 7, description: 'Идентификатор товара' })
@@ -11,13 +11,31 @@ class OrderItemProductDto {
   sku: string;
 }
 
+class OrderItemSizeDto {
+  @ApiProperty({ example: 12, description: 'Идентификатор размера товара' })
+  id: number;
+
+  @ApiProperty({ example: 'L', description: 'Размер заказа' })
+  size: string;
+}
+
 // dto describing order item for manager view
 export class OrderItemResponseDto {
   @ApiProperty({ example: 12, description: 'Идентификатор позиции заказа' })
   id: number;
 
-  @ApiProperty({ type: () => OrderItemProductDto, description: 'Краткая информация о товаре' })
+  @ApiProperty({
+    type: () => OrderItemProductDto,
+    description: 'Краткая информация о товаре',
+  })
   product: OrderItemProductDto;
+
+  @ApiPropertyOptional({
+    type: () => OrderItemSizeDto,
+    nullable: true,
+    description: 'Информация о выбранном размере',
+  })
+  size: OrderItemSizeDto | null;
 
   @ApiProperty({ example: 2, description: 'Количество товара в заказе' })
   quantity: number;

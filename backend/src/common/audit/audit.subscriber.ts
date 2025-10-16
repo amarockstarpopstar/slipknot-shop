@@ -22,7 +22,7 @@ export class AuditSubscriber implements EntitySubscriberInterface {
     this.dataSource.subscribers.push(this);
   }
 
-  listenTo(): Function {
+  listenTo(): new (...args: unknown[]) => unknown {
     return Object;
   }
 
@@ -43,7 +43,9 @@ export class AuditSubscriber implements EntitySubscriberInterface {
   ): Promise<void> {
     const userId = this.auditContextService.getCurrentUserId();
     try {
-      await event.queryRunner.query('SELECT set_current_app_user($1)', [userId ?? null]);
+      await event.queryRunner.query('SELECT set_current_app_user($1)', [
+        userId ?? null,
+      ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to set current app user for audit: ${message}`);

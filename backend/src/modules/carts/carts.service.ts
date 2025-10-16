@@ -8,6 +8,7 @@ import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Cart } from './entities/cart.entity';
 import { CartItem } from '../cart-items/entities/cart-item.entity';
 import { Product } from '../products/entities/product.entity';
+import { ProductSize } from '../products/entities/product-size.entity';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartResponseDto } from './dto/cart-response.dto';
@@ -29,6 +30,8 @@ export class CartsService {
     private readonly cartItemsRepository: Repository<CartItem>,
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
+    @InjectRepository(ProductSize)
+    private readonly productSizesRepository: Repository<ProductSize>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     @InjectRepository(OrderStatus)
@@ -43,14 +46,38 @@ export class CartsService {
 
   async addItem(userId: number, dto: AddCartItemDto): Promise<CartResponseDto> {
     const cart = await this.getOrCreateCart(userId);
-    const product = await this.productsRepository.findOne({ where: { id: dto.productId } });
+    const product = await this.productsRepository.findOne({
+      where: { id: dto.productId },
+      relations: { productSizes: { stock: true } },
+    });
 
     if (!product) {
       throw new NotFoundException('Товар не найден');
     }
 
     const quantityToAdd = dto.quantity ?? 1;
-    let cartItem = cart.items?.find((item) => item.product?.id === product.id);
+    const requiresSizeSelection = (product.productSizes?.length ?? 0) > 0;
+
+    let productSize: ProductSize | null = null;
+
+    if (dto.productSizeId !== undefined && dto.productSizeId !== null) {
+      productSize = await this.productSizesRepository.findOne({
+        where: { id: dto.productSizeId },
+        relations: { product: true, stock: true },
+      });
+
+      if (!productSize || productSize.product?.id !== product.id) {
+        throw new BadRequestException('Указанный размер не принадлежит товару');
+      }
+    } else if (requiresSizeSelection) {
+      throw new BadRequestException('Для товара необходимо выбрать размер');
+    }
+
+    let cartItem = cart.items?.find(
+      (item) =>
+        item.product?.id === product.id &&
+        (item.productSize?.id ?? null) === (productSize?.id ?? null),
+    );
 
     if (cartItem) {
       cartItem.quantity += quantityToAdd;
@@ -58,6 +85,7 @@ export class CartsService {
       cartItem = this.cartItemsRepository.create({
         cart,
         product,
+        productSize: productSize ?? null,
         quantity: quantityToAdd,
         unitPrice: product.price,
       });
@@ -68,15 +96,23 @@ export class CartsService {
     return this.getCart(userId);
   }
 
-  async updateItem(userId: number, itemId: number, dto: UpdateCartItemDto): Promise<CartResponseDto> {
+  async updateItem(
+    userId: number,
+    itemId: number,
+    dto: UpdateCartItemDto,
+  ): Promise<CartResponseDto> {
     const cartItem = await this.cartItemsRepository.findOne({
       where: {
         id: itemId,
         cart: { user: { id: userId } },
       },
       relations: {
-        cart: { items: { product: true }, user: true },
+        cart: {
+          items: { product: true, productSize: { stock: true } },
+          user: true,
+        },
         product: true,
+        productSize: { stock: true },
       },
     });
 
@@ -135,7 +171,9 @@ export class CartsService {
       throw new BadRequestException('Укажите адрес доставки в профиле');
     }
 
-    const status = await this.orderStatusesRepository.findOne({ where: { name: 'Новый' } });
+    const status = await this.orderStatusesRepository.findOne({
+      where: { name: 'Новый' },
+    });
 
     if (!status) {
       throw new NotFoundException('Статус заказа не найден');
@@ -143,7 +181,9 @@ export class CartsService {
 
     const unavailableItem = cart.items.find((item) => !item.product);
     if (unavailableItem) {
-      throw new NotFoundException('Некоторые товары в корзине больше не доступны');
+      throw new NotFoundException(
+        'Некоторые товары в корзине больше не доступны',
+      );
     }
 
     const totalAmount = cart.items.reduce(
@@ -172,6 +212,7 @@ export class CartsService {
         orderItemsRepo.create({
           order: savedOrder,
           product: item.product,
+          productSize: item.productSize ?? null,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         }),
@@ -214,7 +255,7 @@ export class CartsService {
         where: { id: saved.id },
         relations: {
           user: true,
-          items: { product: true },
+          items: { product: true, productSize: { stock: true } },
         },
         order: { items: { id: 'ASC' } },
       });
@@ -246,7 +287,10 @@ export class CartsService {
   private async findCartByUser(userId: number): Promise<Cart | null> {
     return this.cartsRepository.findOne({
       where: { user: { id: userId } },
-      relations: { user: true, items: { product: true } },
+      relations: {
+        user: true,
+        items: { product: true, productSize: { stock: true } },
+      },
       order: { items: { id: 'ASC' } },
     });
   }
@@ -262,10 +306,20 @@ export class CartsService {
         price: Number(item.product?.price ?? item.unitPrice),
         imageUrl: item.product?.imageUrl ?? null,
       },
+      size: item.productSize
+        ? {
+            id: item.productSize.id,
+            size: item.productSize.size,
+            stock: item.productSize.stock?.stock ?? 0,
+          }
+        : null,
     }));
 
     const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const totalAmount = items.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0,
+    );
 
     return {
       id: cart.id,
