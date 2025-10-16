@@ -8,7 +8,10 @@ class OrderCustomerDto {
   @ApiProperty({ example: 'Джоуи Джордисон', description: 'Имя покупателя' })
   name: string;
 
-  @ApiProperty({ example: 'joey@slipknot.com', description: 'Email покупателя' })
+  @ApiProperty({
+    example: 'joey@slipknot.com',
+    description: 'Email покупателя',
+  })
   email: string;
 }
 
@@ -16,7 +19,10 @@ class OrderStatusDto {
   @ApiProperty({ example: 2, description: 'Идентификатор статуса заказа' })
   id: number;
 
-  @ApiProperty({ example: 'В обработке', description: 'Название статуса заказа' })
+  @ApiProperty({
+    example: 'В обработке',
+    description: 'Название статуса заказа',
+  })
   name: string;
 }
 
@@ -33,7 +39,11 @@ class OrderAddressDto {
   @ApiProperty({ example: '119002', description: 'Почтовый индекс' })
   postalCode: string;
 
-  @ApiPropertyOptional({ example: 'Домофон 12', description: 'Комментарий к адресу', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Домофон 12',
+    description: 'Комментарий к адресу',
+    nullable: true,
+  })
   comment: string | null;
 }
 
@@ -42,31 +52,56 @@ export class OrderResponseDto {
   @ApiProperty({ example: 101, description: 'Идентификатор заказа' })
   id: number;
 
-  @ApiProperty({ type: () => OrderCustomerDto, description: 'Информация о покупателе' })
+  @ApiProperty({
+    type: () => OrderCustomerDto,
+    description: 'Информация о покупателе',
+  })
   customer: OrderCustomerDto;
 
-  @ApiProperty({ type: () => OrderStatusDto, description: 'Текущий статус заказа' })
+  @ApiProperty({
+    type: () => OrderStatusDto,
+    description: 'Текущий статус заказа',
+  })
   status: OrderStatusDto;
 
   @ApiProperty({ example: 5980, description: 'Итоговая сумма заказа' })
   totalAmount: number;
 
-  @ApiPropertyOptional({ example: 'Картой при получении', description: 'Способ оплаты', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Картой при получении',
+    description: 'Способ оплаты',
+    nullable: true,
+  })
   paymentMethod: string | null;
 
-  @ApiPropertyOptional({ example: 'Позвонить за час до доставки', description: 'Комментарий менеджера', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Позвонить за час до доставки',
+    description: 'Комментарий менеджера',
+    nullable: true,
+  })
   comment: string | null;
 
-  @ApiProperty({ type: () => OrderAddressDto, nullable: true, description: 'Адрес доставки' })
+  @ApiProperty({
+    type: () => OrderAddressDto,
+    nullable: true,
+    description: 'Адрес доставки',
+  })
   address: OrderAddressDto | null;
 
-  @ApiProperty({ type: () => OrderItemResponseDto, isArray: true, description: 'Состав заказа' })
+  @ApiProperty({
+    type: () => OrderItemResponseDto,
+    isArray: true,
+    description: 'Состав заказа',
+  })
   items: OrderItemResponseDto[];
 
   @ApiProperty({ description: 'Дата оформления заказа' })
   placedAt: Date;
 
-  @ApiProperty({ example: 'Готовится к отправке', description: 'Текущий статус отправки заказа' })
+  @ApiProperty({
+    example: 'Готовится к отправке',
+    description: 'Текущий статус отправки заказа',
+  })
   shippingStatus: string;
 
   @ApiProperty({ description: 'Дата последнего обновления статуса отправки' })

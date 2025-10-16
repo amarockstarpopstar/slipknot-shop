@@ -36,7 +36,9 @@ export class OrdersService {
       address = await this.findAddressById(createOrderDto.addressId);
     }
 
-    const shippingStatus = (createOrderDto.shippingStatus?.trim() || DEFAULT_SHIPPING_STATUS).slice(0, 120);
+    const shippingStatus = (
+      createOrderDto.shippingStatus?.trim() || DEFAULT_SHIPPING_STATUS
+    ).slice(0, 120);
     const paymentMethod = createOrderDto.paymentMethod?.trim() || null;
     const comment = createOrderDto.comment?.trim() || null;
 
@@ -61,7 +63,7 @@ export class OrdersService {
         user: true,
         status: true,
         address: true,
-        items: { product: true },
+        items: { product: true, productSize: true },
       },
       order: { id: 'ASC' },
     });
@@ -93,7 +95,7 @@ export class OrdersService {
         user: true,
         status: true,
         address: true,
-        items: { product: true },
+        items: { product: true, productSize: true },
       },
     });
 
@@ -104,7 +106,10 @@ export class OrdersService {
     return this.toOrderResponse(order);
   }
 
-  async update(id: number, updateOrderDto: UpdateOrderDto): Promise<OrderResponseDto> {
+  async update(
+    id: number,
+    updateOrderDto: UpdateOrderDto,
+  ): Promise<OrderResponseDto> {
     const order = await this.ordersRepository.findOne({
       where: { id },
       relations: {
@@ -138,7 +143,9 @@ export class OrdersService {
 
     if (updateOrderDto.shippingStatus !== undefined) {
       const shippingStatus = updateOrderDto.shippingStatus.trim();
-      const normalizedStatus = shippingStatus.length ? shippingStatus : DEFAULT_SHIPPING_STATUS;
+      const normalizedStatus = shippingStatus.length
+        ? shippingStatus
+        : DEFAULT_SHIPPING_STATUS;
       if (order.shippingStatus !== normalizedStatus) {
         order.shippingStatus = normalizedStatus;
         order.shippingUpdatedAt = new Date();
@@ -208,6 +215,12 @@ export class OrdersService {
         title: item.product?.title ?? 'Товар удален',
         sku: item.product?.sku ?? '—',
       },
+      size: item.productSize
+        ? {
+            id: item.productSize.id,
+            size: item.productSize.size,
+          }
+        : null,
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
     }));

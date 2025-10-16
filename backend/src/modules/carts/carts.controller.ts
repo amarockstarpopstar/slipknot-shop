@@ -85,7 +85,10 @@ export class CartsController {
   @Post('checkout')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Оформить заказ из корзины' })
-  @ApiOkResponse({ description: 'Информация о созданном заказе', type: CheckoutResponseDto })
+  @ApiOkResponse({
+    description: 'Информация о созданном заказе',
+    type: CheckoutResponseDto,
+  })
   @ApiUnauthorizedResponse({ description: 'Пользователь не авторизован' })
   checkout(@Req() req: AuthenticatedRequest): Promise<CheckoutResponseDto> {
     return this.cartsService.checkout(req.user.id);
