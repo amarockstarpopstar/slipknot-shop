@@ -104,19 +104,24 @@
           <div v-else class="product-reviews__content">
             <ul v-if="productReviews.length" class="product-reviews__list">
               <li v-for="review in productReviews" :key="review.id" class="product-reviews__item">
-                <div class="product-reviews__item-header">
-                  <span
-                    class="product-reviews__rating"
-                    :aria-label="`Оценка ${review.rating} из 5`"
-                  >
-                    {{ formatRating(review.rating) }}
-                  </span>
-                  <div class="product-reviews__meta">
-                    <span class="product-reviews__author">{{ review.author.name }}</span>
-                    <span class="product-reviews__date">{{ formatDateTime(review.createdAt) }}</span>
-                  </div>
-                </div>
-                <p v-if="review.comment" class="product-reviews__comment">{{ review.comment }}</p>
+                <article class="review-card">
+                  <header class="review-card__header">
+                    <div class="review-card__identity">
+                      <span class="review-card__author">{{ review.author.name }}</span>
+                      <span class="review-card__date">{{ formatDateTime(review.createdAt) }}</span>
+                    </div>
+                    <div
+                      class="review-card__rating"
+                      :aria-label="`Оценка ${review.rating} из 5`"
+                    >
+                      <span class="review-card__stars" aria-hidden="true">
+                        {{ getRatingStars(review.rating) }}
+                      </span>
+                      <span class="review-card__rating-value">{{ review.rating }} / 5</span>
+                    </div>
+                  </header>
+                  <p v-if="review.comment" class="review-card__comment">{{ review.comment }}</p>
+                </article>
               </li>
             </ul>
             <p v-else class="product-reviews__empty text-muted">
@@ -369,7 +374,7 @@ const canSubmitReview = computed(() => Boolean(eligibilityInfo.value?.canReview)
 const hasPurchasedProduct = computed(() => Boolean(eligibilityInfo.value?.hasPurchased));
 const alreadyReviewed = computed(() => Boolean(eligibilityInfo.value?.alreadyReviewed));
 
-const formatRating = (rating: number): string => {
+const getRatingStars = (rating: number): string => {
   const safeRating = Math.min(5, Math.max(1, Math.round(rating)));
   const filled = '★'.repeat(safeRating);
   const empty = '☆'.repeat(5 - safeRating);
@@ -762,6 +767,7 @@ const submitReview = async () => {
   color: var(--color-text-muted);
 }
 
+
 .product-reviews__content {
   display: flex;
   flex-direction: column;
@@ -773,53 +779,104 @@ const submitReview = async () => {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: clamp(1.25rem, 3vw, 1.75rem);
+  gap: clamp(1.5rem, 3vw, 1.85rem);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .product-reviews__item {
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--color-surface-border);
+  margin: 0;
 }
 
-.product-reviews__item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.product-reviews__item-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.product-reviews__rating {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--color-accent, #fbbf24);
-  letter-spacing: 0.2em;
-}
-
-.product-reviews__meta {
+.review-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
+  gap: 1rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: calc(var(--radius-lg) * 1.1);
+  border: 1px solid color-mix(in srgb, var(--color-surface-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-surface-strong, var(--color-surface)) 80%, transparent);
+  box-shadow: 0 22px 45px -40px rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(calc(var(--blur-radius) * 0.6));
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.review-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.review-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.review-card:hover::before {
+  opacity: 1;
+}
+
+.review-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.review-card__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: min(100%, 22rem);
+}
+
+.review-card__author {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.review-card__date {
   font-size: 0.9rem;
+  color: var(--color-text-muted);
 }
 
-.product-reviews__author {
+.review-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  color: color-mix(in srgb, #fcd34d 70%, var(--color-text));
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.product-reviews__date {
-  color: var(--color-text-muted);
+.review-card__stars {
+  font-size: 1.2rem;
+  letter-spacing: 0.16em;
 }
 
-.product-reviews__comment {
-  margin: 0.75rem 0 0;
-  line-height: 1.6;
-  color: var(--color-text-muted);
+.review-card__rating-value {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-text) 80%, var(--color-accent) 20%);
+}
+
+.review-card__comment {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.7;
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  max-width: 68ch;
+  word-break: break-word;
+  white-space: pre-line;
 }
 
 .product-reviews__empty {
@@ -873,11 +930,17 @@ const submitReview = async () => {
     width: 100%;
   }
 
-  .product-reviews__meta {
+  .review-card__header {
+    flex-direction: column;
     align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  .product-reviews__rating {
+  .review-card__rating {
+    align-self: flex-start;
+  }
+
+  .review-card__stars {
     letter-spacing: 0.12em;
   }
 }
