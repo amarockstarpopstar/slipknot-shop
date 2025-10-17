@@ -6,9 +6,6 @@
           <span class="chip mb-2">Профиль</span>
           <h1 class="section-title mb-0">Личные данные</h1>
         </div>
-        <button class="btn btn-outline-secondary" type="button" @click="refreshProfile" :disabled="loading">
-          Обновить данные
-        </button>
       </div>
 
       <div v-if="!isAuthenticated" class="alert alert-warning" role="alert">
@@ -198,12 +195,6 @@ const cityOptions = computed(() => getCitiesByCountry(form.country));
 
 const canSubmit = computed(() => form.name.trim().length >= 2 && form.email.trim().length > 0);
 
-const refreshProfile = () => {
-  localError.value = null;
-  successMessage.value = '';
-  void authStore.loadProfile();
-};
-
 const toggleCityInput = () => {
   form.useCustomCity = !form.useCustomCity;
   form.city = '';
@@ -256,7 +247,9 @@ watch(error, (value) => {
 });
 
 onMounted(() => {
-  if (!user.value) {
+  if (isAuthenticated.value) {
+    localError.value = null;
+    successMessage.value = '';
     void authStore.loadProfile();
   }
 });
