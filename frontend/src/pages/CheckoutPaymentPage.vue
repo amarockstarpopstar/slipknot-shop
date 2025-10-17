@@ -77,9 +77,9 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
-          <RouterLink class="btn btn-danger" to="/profile" @click="closeCountryModal">
+          <button type="button" class="btn btn-danger" @click="handleCountryModalProfileRedirect">
             Перейти в профиль
-          </RouterLink>
+          </button>
         </div>
       </div>
     </div>
@@ -171,6 +171,7 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { extractErrorMessage } from '../api/http';
 import { SUPPORTED_COUNTRIES, getCitiesByCountry, isRussianCountry } from '../utils/location';
+import { useNavigation } from '../composables/useNavigation';
 
 const cartStore = useCartStore();
 const { items, totalAmount, totalQuantity, loading, updating, error, lastOrder } = storeToRefs(cartStore);
@@ -198,6 +199,8 @@ const addressError = ref<string | null>(null);
 const showCountryModal = ref(false);
 const countryModalMessage = ref('');
 const showAddressModal = ref(false);
+
+const { goToProfile } = useNavigation();
 
 const addressCityOptions = computed(() => getCitiesByCountry(addressForm.country));
 
@@ -269,6 +272,11 @@ const payOrder = async () => {
 const closeCountryModal = () => {
   showCountryModal.value = false;
   countryModalMessage.value = '';
+};
+
+const handleCountryModalProfileRedirect = async () => {
+  closeCountryModal();
+  await goToProfile();
 };
 
 const closeAddressModal = () => {

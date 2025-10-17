@@ -89,7 +89,7 @@ const { dailySales, loading, error, downloading, downloadError, totalItems, tota
   storeToRefs(reportsStore);
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null);
-const chartInstance = ref<Chart<'line'> | null>(null);
+const chartInstance = ref<{ destroy: () => void } | null>(null);
 const successMessage = ref<string | null>(null);
 
 const formattedAmount = computed(() =>
@@ -155,7 +155,7 @@ const buildChart = () => {
           type: 'linear',
           position: 'left',
           ticks: {
-            callback: (value) =>
+            callback: (value: string | number) =>
               new Intl.NumberFormat('ru-RU', {
                 style: 'currency',
                 currency: 'RUB',
@@ -172,7 +172,7 @@ const buildChart = () => {
         },
         x: {
           ticks: {
-            callback: (_value, index) => {
+            callback: (_value: string | number, index: number) => {
               const label = labels[index];
               if (!label) {
                 return '';
@@ -190,7 +190,7 @@ const buildChart = () => {
         },
         tooltip: {
           callbacks: {
-            title: (tooltipItems) => {
+            title: (tooltipItems: Array<{ dataIndex: number }>) => {
               const item = tooltipItems[0];
               const label = labels[item.dataIndex];
               return label ? new Date(label).toLocaleDateString('ru-RU') : '';

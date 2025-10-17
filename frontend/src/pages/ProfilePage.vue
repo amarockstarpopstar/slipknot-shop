@@ -159,13 +159,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import { useAuthStore } from '../store/authStore';
 import { SUPPORTED_COUNTRIES, getCitiesByCountry } from '../utils/location';
 
 const authStore = useAuthStore();
 const { user, loading, updating, error, isAuthenticated } = storeToRefs(authStore);
+const route = useRoute();
 
 const countries = [...SUPPORTED_COUNTRIES];
 
@@ -199,6 +200,35 @@ const toggleCityInput = () => {
   form.useCustomCity = !form.useCustomCity;
   form.city = '';
   form.customCity = '';
+};
+
+const resetForm = () => {
+  form.name = '';
+  form.email = '';
+  form.phone = '';
+  form.password = '';
+  form.country = '';
+  form.city = '';
+  form.customCity = '';
+  form.useCustomCity = false;
+  form.address = '';
+};
+
+const loadProfileData = async () => {
+  if (!isAuthenticated.value) {
+    resetForm();
+    return;
+  }
+
+  localError.value = null;
+  successMessage.value = '';
+
+  try {
+    await authStore.loadProfile();
+  } catch (err) {
+    console.error('Failed to load profile data', err);
+    localError.value = 'Не удалось загрузить профиль. Попробуйте ещё раз.';
+  }
 };
 
 const saveProfile = async () => {
@@ -247,11 +277,23 @@ watch(error, (value) => {
 });
 
 onMounted(() => {
-  if (isAuthenticated.value) {
-    localError.value = null;
-    successMessage.value = '';
-    void authStore.loadProfile();
+  void loadProfileData();
+});
+
+watch(
+  () => route.fullPath,
+  () => {
+    void loadProfileData();
+  },
+);
+
+watch(isAuthenticated, (loggedIn) => {
+  if (loggedIn) {
+    void loadProfileData();
+    return;
   }
+  resetForm();
+  successMessage.value = '';
 });
 </script>
 
