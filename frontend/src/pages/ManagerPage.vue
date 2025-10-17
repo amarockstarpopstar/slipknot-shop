@@ -353,6 +353,79 @@
             </form>
           </div>
         </section>
+
+        <section class="manager-block manager-block--analytics">
+          <div class="manager-block__header">
+            <h2 class="manager-block__title">Аналитика продаж</h2>
+            <div class="manager-block__actions">
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                @click="refreshDailySales"
+                :disabled="reportsLoading"
+              >
+                Обновить данные
+              </button>
+              <button
+                class="btn btn-primary"
+                type="button"
+                @click="downloadSalesExcel"
+                :disabled="reportsExportLoading || !reportsHasData"
+              >
+                Скачать Excel
+              </button>
+            </div>
+          </div>
+
+          <p class="manager-block__subtitle">
+            Анализируйте динамику заказов по дням и формируйте отчёт для коллег в один клик.
+          </p>
+
+          <div v-if="reportsError" class="alert alert-warning" role="alert">
+            {{ reportsError }}
+          </div>
+
+          <LoadingSpinner v-if="reportsLoading" />
+
+          <div v-else-if="reportsHasData" class="manager-analytics">
+            <SalesChart
+              :labels="chartLabels"
+              :revenue="chartRevenue"
+              :items="chartItems"
+              :orders="chartOrders"
+            />
+
+            <div class="manager-analytics__summary">
+              <div class="summary-card">
+                <span class="summary-card__label">Выручка за период</span>
+                <span class="summary-card__value">{{ formattedTotalRevenue }}</span>
+              </div>
+              <div class="summary-card">
+                <span class="summary-card__label">Заказов</span>
+                <span class="summary-card__value">{{ reportsTotalOrders }}</span>
+              </div>
+              <div class="summary-card">
+                <span class="summary-card__label">Продано единиц</span>
+                <span class="summary-card__value">{{ reportsTotalItems }}</span>
+              </div>
+              <div class="summary-card">
+                <span class="summary-card__label">Последняя продажа</span>
+                <span class="summary-card__value">{{ formattedLastSaleDate ?? '—' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="manager-empty">
+            <p class="manager-empty__title">Продажи ещё не зарегистрированы</p>
+            <p class="manager-empty__subtitle">
+              Как только появятся первые заказы, здесь появится интерактивный график с динамикой и
+              итогами продаж.
+            </p>
+            <button class="btn btn-outline-light" type="button" @click="refreshDailySales">
+              Проверить ещё раз
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   </section>
@@ -653,8 +726,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
+import SalesChart from '../components/SalesChart.vue';
 import {
   fetchProducts,
   createProduct,
@@ -680,6 +755,7 @@ import {
   type UpdateOrderPayload,
 } from '../api/orders';
 import { extractErrorMessage } from '../api/http';
+import { useReportsStore } from '../store/reportsStore';
 
 interface EditableProductSize {
   id: number | null;
@@ -767,6 +843,50 @@ const addOrderForm = reactive<NewOrderFormState>({
   comment: '',
   addressId: '',
 });
+
+const reportsStore = useReportsStore();
+const {
+  dailySales: reportDailySales,
+  loading: reportsLoading,
+  exportLoading: reportsExportLoading,
+  error: reportsError,
+  hasData: reportsHasData,
+  totalRevenue: reportTotalRevenue,
+  lastSaleDate: reportLastSaleDate,
+} = storeToRefs(reportsStore);
+
+const chartLabels = computed(() =>
+  reportDailySales.value.map((point) =>
+    new Date(point.saleDate).toLocaleDateString('ru-RU'),
+  ),
+);
+const chartRevenue = computed(() =>
+  reportDailySales.value.map((point) => Number(point.totalAmount.toFixed(2))),
+);
+const chartItems = computed(() =>
+  reportDailySales.value.map((point) => point.totalItems),
+);
+const chartOrders = computed(() =>
+  reportDailySales.value.map((point) => point.totalOrders),
+);
+const formattedTotalRevenue = computed(() =>
+  new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 2,
+  }).format(reportTotalRevenue.value),
+);
+const formattedLastSaleDate = computed(() =>
+  reportLastSaleDate.value
+    ? new Date(reportLastSaleDate.value).toLocaleDateString('ru-RU')
+    : null,
+);
+const reportsTotalOrders = computed(() =>
+  reportDailySales.value.reduce((sum, item) => sum + item.totalOrders, 0),
+);
+const reportsTotalItems = computed(() =>
+  reportDailySales.value.reduce((sum, item) => sum + item.totalItems, 0),
+);
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('ru-RU', {
@@ -957,6 +1077,7 @@ const loadInitialData = async () => {
     orderCustomers.value = customersData;
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     resetAddOrderForm();
+    await reportsStore.loadDailySales();
   } catch (error) {
     showError(error);
   } finally {
@@ -983,10 +1104,42 @@ const refreshOrders = async () => {
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     showSuccess('Список заказов обновлён.');
     await refreshOrderCustomers(true);
+    await reportsStore.loadDailySales();
   } catch (error) {
     showError(error);
   } finally {
     ordersLoading.value = false;
+  }
+};
+
+const refreshDailySales = async () => {
+  const result = await reportsStore.loadDailySales();
+  if (result && result.length) {
+    showSuccess('Данные продаж обновлены.');
+  } else if (reportsError.value) {
+    showError(reportsError.value);
+  }
+};
+
+const downloadSalesExcel = async () => {
+  try {
+    const blob = await reportsStore.downloadDailySalesReport();
+    const url = URL.createObjectURL(blob);
+    const filename = `sales-report-${
+      reportLastSaleDate.value ?? new Date().toISOString().split('T')[0]
+    }.xlsx`;
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showSuccess('Excel-отчёт сформирован.');
+  } catch (error) {
+    showError(error);
   }
 };
 
@@ -1129,6 +1282,7 @@ const saveNewOrder = async () => {
     orders.value.forEach((order) => ensureShippingStatusOption(order.shippingStatus));
     showSuccess('Заказ создан.');
     toggleAddOrderModal(false);
+    await reportsStore.loadDailySales();
   } catch (error) {
     showError(error);
   } finally {
@@ -1227,6 +1381,12 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.manager-block__subtitle {
+  margin: -0.25rem 0 0;
+  color: var(--color-text-muted);
+  max-width: 58rem;
+}
+
 .manager-table {
   table-layout: fixed;
   min-width: 100%;
@@ -1282,6 +1442,65 @@ onMounted(() => {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+}
+
+.manager-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.manager-analytics__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  background: color-mix(in srgb, var(--color-surface-alt) 88%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.summary-card__label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.summary-card__value {
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-weight: 600;
+}
+
+.manager-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 2.5rem 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface-alt) 85%, transparent);
+}
+
+.manager-empty__title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.manager-empty__subtitle {
+  margin: 0;
+  max-width: 30rem;
+  color: var(--color-text-muted);
 }
 
 .manager-sizes {

@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS roles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
+ALTER TABLE roles
+    ADD COLUMN IF NOT EXISTS description TEXT;
+
 CREATE TABLE IF NOT EXISTS permissions (
     id SERIAL PRIMARY KEY,
     code VARCHAR(100) NOT NULL UNIQUE,
@@ -47,6 +50,32 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     CONSTRAINT chk_email_format CHECK (position('@' IN email) > 1)
 );
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS public_id UUID DEFAULT uuid_generate_v4();
+
+ALTER TABLE users
+    ALTER COLUMN public_id SET DEFAULT uuid_generate_v4();
+
+UPDATE users
+SET public_id = uuid_generate_v4()
+WHERE public_id IS NULL;
+
+ALTER TABLE users
+    ALTER COLUMN public_id SET NOT NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'users_public_id_key'
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT users_public_id_key UNIQUE (public_id);
+    END IF;
+END;
+$$;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS passport_number_encrypted BYTEA;
 
 CREATE TABLE IF NOT EXISTS user_addresses (
     id SERIAL PRIMARY KEY,
@@ -116,6 +145,26 @@ CREATE TABLE IF NOT EXISTS product_sizes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     UNIQUE (product_id, size)
 );
+
+ALTER TABLE product_sizes
+    ALTER COLUMN product_id SET NOT NULL;
+
+ALTER TABLE product_sizes
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL;
+
+ALTER TABLE product_sizes
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'product_sizes_product_id_size_key'
+    ) THEN
+        ALTER TABLE product_sizes
+            ADD CONSTRAINT product_sizes_product_id_size_key UNIQUE (product_id, size);
+    END IF;
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS size_stock (
     id SERIAL PRIMARY KEY,
@@ -217,6 +266,29 @@ CREATE TABLE IF NOT EXISTS reviews (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     UNIQUE (user_id, product_id)
 );
+
+ALTER TABLE reviews
+    ALTER COLUMN user_id SET NOT NULL;
+
+ALTER TABLE reviews
+    ALTER COLUMN product_id SET NOT NULL;
+
+ALTER TABLE reviews
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL;
+
+ALTER TABLE reviews
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'reviews_user_id_product_id_key'
+    ) THEN
+        ALTER TABLE reviews
+            ADD CONSTRAINT reviews_user_id_product_id_key UNIQUE (user_id, product_id);
+    END IF;
+END;
+$$;
 
 -- ============================================================================
 -- Audit log
@@ -332,6 +404,7 @@ LEFT JOIN payments p ON p.order_id = o.id;
 CREATE OR REPLACE VIEW vw_sales_by_day AS
 SELECT
     DATE(o.placed_at) AS sale_date,
+    COUNT(DISTINCT o.id) AS total_orders,
     SUM(oi.quantity) AS total_items,
     SUM(oi.quantity * oi.unit_price) AS total_amount
 FROM orders o
@@ -687,6 +760,168 @@ ON CONFLICT (user_id, product_id) DO UPDATE SET
     comment = EXCLUDED.comment,
     status = EXCLUDED.status,
     updated_at = NOW();
+
+-- Seed example orders only if the table is empty to power analytics and reports
+DO $$
+DECLARE
+    v_customer_id INTEGER;
+    v_status_delivered INTEGER;
+    v_status_shipped INTEGER;
+    v_status_processing INTEGER;
+    v_order_id INTEGER;
+BEGIN
+    IF (SELECT COUNT(*) FROM orders) = 0 THEN
+        SELECT id INTO v_customer_id FROM users WHERE email = 'customer@slipknot-shop.ru';
+        SELECT id INTO v_status_delivered FROM order_statuses WHERE name = 'Доставлен';
+        SELECT id INTO v_status_shipped FROM order_statuses WHERE name = 'Отправлен';
+        SELECT id INTO v_status_processing FROM order_statuses WHERE name = 'В обработке';
+
+        -- Order #1: repeat customer purchase delivered last week
+        INSERT INTO orders (
+            user_id,
+            status_id,
+            total_amount,
+            payment_method,
+            shipping_status,
+            shipping_updated_at,
+            comment,
+            placed_at
+        )
+        VALUES (
+            v_customer_id,
+            v_status_delivered,
+            0,
+            'Банковская карта',
+            'Доставлен',
+            NOW() - INTERVAL '5 days',
+            'Повторная покупка футболок',
+            NOW() - INTERVAL '6 days'
+        )
+        RETURNING id INTO v_order_id;
+
+        INSERT INTO order_items (order_id, product_id, product_size_id, quantity, unit_price)
+        VALUES
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-TSHIRT-001'),
+                (
+                    SELECT ps.id
+                    FROM product_sizes ps
+                    JOIN products p ON p.id = ps.product_id
+                    WHERE p.sku = 'SKU-TSHIRT-001' AND ps.size = 'M'
+                    LIMIT 1
+                ),
+                2,
+                2990.00
+            ),
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-CAP-003'),
+                NULL,
+                1,
+                1990.00
+            );
+
+        PERFORM sp_recalculate_order_total(v_order_id);
+
+        -- Order #2: shipment currently in transit
+        INSERT INTO orders (
+            user_id,
+            status_id,
+            total_amount,
+            payment_method,
+            shipping_status,
+            shipping_updated_at,
+            comment,
+            placed_at
+        )
+        VALUES (
+            v_customer_id,
+            v_status_shipped,
+            0,
+            'СБП',
+            'В пути',
+            NOW() - INTERVAL '2 days',
+            'Доставка в другой регион',
+            NOW() - INTERVAL '3 days'
+        )
+        RETURNING id INTO v_order_id;
+
+        INSERT INTO order_items (order_id, product_id, product_size_id, quantity, unit_price)
+        VALUES
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-HOODIE-002'),
+                (
+                    SELECT ps.id
+                    FROM product_sizes ps
+                    JOIN products p ON p.id = ps.product_id
+                    WHERE p.sku = 'SKU-HOODIE-002' AND ps.size = 'L'
+                    LIMIT 1
+                ),
+                1,
+                5490.00
+            ),
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-VINYL-004'),
+                NULL,
+                1,
+                4290.00
+            );
+
+        PERFORM sp_recalculate_order_total(v_order_id);
+
+        -- Order #3: awaiting shipment preparation
+        INSERT INTO orders (
+            user_id,
+            status_id,
+            total_amount,
+            payment_method,
+            shipping_status,
+            shipping_updated_at,
+            comment,
+            placed_at
+        )
+        VALUES (
+            v_customer_id,
+            v_status_processing,
+            0,
+            'Банковская карта',
+            'Готовится к отправке',
+            NOW() - INTERVAL '12 hours',
+            'Ожидает комплектацию склада',
+            NOW() - INTERVAL '1 day'
+        )
+        RETURNING id INTO v_order_id;
+
+        INSERT INTO order_items (order_id, product_id, product_size_id, quantity, unit_price)
+        VALUES
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-MASK-005'),
+                NULL,
+                1,
+                12990.00
+            ),
+            (
+                v_order_id,
+                (SELECT id FROM products WHERE sku = 'SKU-TSHIRT-001'),
+                (
+                    SELECT ps.id
+                    FROM product_sizes ps
+                    JOIN products p ON p.id = ps.product_id
+                    WHERE p.sku = 'SKU-TSHIRT-001' AND ps.size = 'S'
+                    LIMIT 1
+                ),
+                1,
+                2990.00
+            );
+
+        PERFORM sp_recalculate_order_total(v_order_id);
+    END IF;
+END;
+$$;
 
 -- Ensure audit log view has at least one entry for history by writing a seed update
 DO $$
