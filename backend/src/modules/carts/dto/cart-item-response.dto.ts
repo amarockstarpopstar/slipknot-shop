@@ -10,7 +10,10 @@ class CartItemProductDto {
   })
   title: string;
 
-  @ApiProperty({ example: 2990, description: 'Цена товара' })
+  @ApiProperty({
+    example: 3190,
+    description: 'Текущая цена товара с учётом выбранного размера',
+  })
   price: number;
 
   @ApiPropertyOptional({
@@ -30,6 +33,12 @@ class CartItemSizeDto {
 
   @ApiProperty({ example: 'L', description: 'Название выбранного размера' })
   size: string;
+
+  @ApiProperty({
+    example: 3190,
+    description: 'Цена для выбранного размера',
+  })
+  price: number;
 
   @ApiProperty({
     example: 8,

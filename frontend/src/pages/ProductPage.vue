@@ -44,6 +44,7 @@
                   @click="selectSize(size.id)"
                 >
                   <span class="product-sizes__label">{{ size.size }}</span>
+                  <span class="product-sizes__price">{{ formatCurrency(size.price) }}</span>
                   <small class="product-sizes__stock">Остаток: {{ size.stock }}</small>
                 </button>
               </div>
@@ -65,7 +66,7 @@
               <p class="product-details__stock">Универсальный размер, доступен для заказа.</p>
             </div>
             <div class="product-details__actions">
-              <span class="product-details__price">{{ product.price.toLocaleString('ru-RU') }} ₽</span>
+              <span class="product-details__price">{{ formatCurrency(displayPrice) }}</span>
               <div class="product-details__buttons">
                 <button
                   class="btn btn-danger btn-lg"
@@ -247,7 +248,7 @@
             <section class="modal-body">
               <p class="mb-3">
                 Вы собираетесь оформить заказ на товар «{{ product?.title }}» стоимостью
-                {{ product ? product.price.toLocaleString('ru-RU') : '' }} ₽.
+                {{ product ? formatCurrency(displayPrice) : '' }}.
               </p>
               <p v-if="selectedSize" class="text-muted mb-3">
                 Выбранный размер: {{ selectedSize.size }}
@@ -332,6 +333,9 @@ const hasAvailableSizes = computed(() =>
 const selectedSize = computed(() =>
   availableSizes.value.find((size) => size.id === selectedSizeId.value) ?? null,
 );
+const displayPrice = computed(() =>
+  selectedSize.value?.price ?? product.value?.price ?? 0,
+);
 const isOutOfStock = computed(() => {
   if (!hasSizes.value) {
     return false;
@@ -353,6 +357,8 @@ const selectSize = (sizeId: number) => {
   }
   selectedSizeId.value = sizeId;
 };
+
+const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
 const productReviews = computed(() => {
   const id = product.value?.id;
@@ -692,6 +698,13 @@ const submitReview = async () => {
 .product-sizes__label {
   font-weight: 600;
   letter-spacing: 0.08em;
+}
+
+.product-sizes__price {
+  display: block;
+  font-weight: 600;
+  margin-top: 0.2rem;
+  color: var(--color-text);
 }
 
 .product-sizes__stock {

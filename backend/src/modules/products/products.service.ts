@@ -20,6 +20,12 @@ import { ProductSize } from './entities/product-size.entity';
 import { SizeStock } from './entities/size-stock.entity';
 import { UpdateProductSizeStockDto } from './dto/update-size-stock.dto';
 
+interface NormalizedProductSize {
+  size: string;
+  price: number;
+  stock: number;
+}
+
 // service with product management logic
 @Injectable()
 export class ProductsService {
@@ -52,10 +58,17 @@ export class ProductsService {
         manager,
       );
 
+      const normalizedSizes = this.normalizeSizePayload(createProductDto.sizes);
+
+      const basePrice = this.determineBasePrice(
+        createProductDto.price,
+        normalizedSizes,
+      );
+
       const product = productsRepo.create({
         title: createProductDto.title.trim(),
         description: createProductDto.description?.trim() ?? null,
-        price: createProductDto.price.toFixed(2),
+        price: basePrice.toFixed(2),
         sku,
         imageUrl: createProductDto.imageUrl?.trim() ?? null,
         category,
@@ -63,7 +76,6 @@ export class ProductsService {
 
       const saved = await productsRepo.save(product);
 
-      const normalizedSizes = this.normalizeSizePayload(createProductDto.sizes);
       await this.createProductSizes(manager, saved, normalizedSizes);
 
       const productWithRelations = await productsRepo.findOne({
@@ -198,6 +210,12 @@ export class ProductsService {
         throw new NotFoundException('Товар не найден');
       }
 
+      let normalizedSizes: NormalizedProductSize[] | undefined;
+
+      if (updateProductDto.sizes !== undefined) {
+        normalizedSizes = this.normalizeSizePayload(updateProductDto.sizes);
+      }
+
       if (updateProductDto.sku) {
         const sku = updateProductDto.sku.trim();
         if (sku !== product.sku) {
@@ -219,8 +237,23 @@ export class ProductsService {
         product.description = updateProductDto.description?.trim() ?? null;
       }
 
-      if (updateProductDto.price !== undefined) {
-        product.price = updateProductDto.price.toFixed(2);
+      let priceToPersist: number | undefined;
+
+      if (normalizedSizes !== undefined) {
+        const fallbackPrice =
+          updateProductDto.price !== undefined
+            ? updateProductDto.price
+            : Number(product.price);
+        priceToPersist = this.determineBasePrice(
+          fallbackPrice,
+          normalizedSizes,
+        );
+      } else if (updateProductDto.price !== undefined) {
+        priceToPersist = updateProductDto.price;
+      }
+
+      if (priceToPersist !== undefined) {
+        product.price = priceToPersist.toFixed(2);
       }
 
       if (updateProductDto.imageUrl !== undefined) {
@@ -236,7 +269,7 @@ export class ProductsService {
 
       await productsRepo.save(product);
 
-      await this.replaceProductSizes(manager, product, updateProductDto.sizes);
+      await this.replaceProductSizes(manager, product, normalizedSizes);
 
       const reloaded = await productsRepo.findOne({
         where: { id: product.id },
@@ -289,7 +322,7 @@ export class ProductsService {
       id: product.id,
       title: product.title,
       description: product.description ?? null,
-      price: Number(product.price),
+      price: this.resolveBasePriceFromEntity(product),
       sku: product.sku,
       imageUrl: product.imageUrl ?? null,
       category: product.category
@@ -312,6 +345,7 @@ export class ProductsService {
     return {
       id: productSize.id,
       size: productSize.size,
+      price: Number(productSize.price),
       stock: productSize.stock?.stock ?? 0,
       stockId: productSize.stock?.id ?? null,
       stockUpdatedAt: productSize.stock?.updatedAt ?? null,
@@ -320,12 +354,12 @@ export class ProductsService {
 
   private normalizeSizePayload(
     sizes?: ProductSizeWithStockDto[],
-  ): { size: string; stock: number }[] {
+  ): NormalizedProductSize[] {
     if (!sizes || sizes.length === 0) {
       return [];
     }
 
-    const normalized: { size: string; stock: number }[] = [];
+    const normalized: NormalizedProductSize[] = [];
     const seen = new Set<string>();
 
     for (const size of sizes) {
@@ -339,8 +373,26 @@ export class ProductsService {
         throw new BadRequestException('Размеры не должны повторяться');
       }
 
+      const priceValue = Number(size.price);
+      if (!Number.isFinite(priceValue) || priceValue <= 0) {
+        throw new BadRequestException(
+          `Некорректная цена для размера "${trimmed}"`,
+        );
+      }
+
+      const stockValue = Number(size.stock);
+      if (!Number.isFinite(stockValue) || stockValue < 0) {
+        throw new BadRequestException(
+          `Некорректный остаток для размера "${trimmed}"`,
+        );
+      }
+
       seen.add(key);
-      normalized.push({ size: trimmed, stock: size.stock });
+      normalized.push({
+        size: trimmed,
+        price: Number(priceValue.toFixed(2)),
+        stock: Math.floor(stockValue),
+      });
     }
 
     return normalized;
@@ -349,7 +401,7 @@ export class ProductsService {
   private async createProductSizes(
     manager: EntityManager,
     product: Product,
-    sizes: { size: string; stock: number }[],
+    sizes: NormalizedProductSize[],
   ): Promise<void> {
     if (!sizes.length) {
       return;
@@ -358,10 +410,11 @@ export class ProductsService {
     const productSizesRepo = manager.getRepository(ProductSize);
     const sizeStockRepo = manager.getRepository(SizeStock);
 
-    for (const { size, stock } of sizes) {
+    for (const { size, stock, price } of sizes) {
       const productSize = productSizesRepo.create({
         product,
         size,
+        price: price.toFixed(2),
       });
       const savedSize = await productSizesRepo.save(productSize);
 
@@ -376,7 +429,7 @@ export class ProductsService {
   private async replaceProductSizes(
     manager: EntityManager,
     product: Product,
-    sizes?: ProductSizeWithStockDto[],
+    sizes?: NormalizedProductSize[],
   ): Promise<void> {
     if (sizes === undefined) {
       return;
@@ -390,7 +443,37 @@ export class ProductsService {
       .where('product_id = :productId', { productId: product.id })
       .execute();
 
-    const normalized = this.normalizeSizePayload(sizes);
-    await this.createProductSizes(manager, product, normalized);
+    await this.createProductSizes(manager, product, sizes);
+  }
+
+  private determineBasePrice(
+    requestedPrice: number,
+    sizes: NormalizedProductSize[],
+  ): number {
+    if (!sizes.length) {
+      return requestedPrice;
+    }
+
+    const sizePrices = sizes
+      .map((size) => size.price)
+      .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (!sizePrices.length) {
+      return requestedPrice;
+    }
+
+    return Math.min(...sizePrices);
+  }
+
+  private resolveBasePriceFromEntity(product: Product): number {
+    const sizePrices = (product.productSizes ?? [])
+      .map((size) => Number(size.price))
+      .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (sizePrices.length) {
+      return Math.min(...sizePrices);
+    }
+
+    return Number(product.price);
   }
 }

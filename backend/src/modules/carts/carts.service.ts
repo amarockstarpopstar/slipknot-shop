@@ -121,9 +121,14 @@ export class CartsService {
         product,
         productSize: productSize ?? null,
         quantity: quantityToAdd,
-        unitPrice: product.price,
+        unitPrice: this.resolveUnitPrice(product, productSize ?? null),
       });
     }
+
+    cartItem.unitPrice = this.resolveUnitPrice(
+      product,
+      productSize ?? cartItem.productSize ?? null,
+    );
 
     await this.cartItemsRepository.save(cartItem);
 
@@ -169,6 +174,10 @@ export class CartsService {
     }
 
     cartItem.quantity = dto.quantity;
+    cartItem.unitPrice = this.resolveUnitPrice(
+      cartItem.product,
+      cartItem.productSize ?? null,
+    );
     await this.cartItemsRepository.save(cartItem);
 
     return this.getCart(userId);
@@ -362,6 +371,22 @@ export class CartsService {
     }
   }
 
+  private resolveUnitPrice(product: Product, size: ProductSize | null): string {
+    if (size) {
+      const sizePrice = Number(size.price);
+      if (Number.isFinite(sizePrice)) {
+        return sizePrice.toFixed(2);
+      }
+    }
+
+    const basePrice = Number(product.price);
+    if (Number.isFinite(basePrice)) {
+      return basePrice.toFixed(2);
+    }
+
+    return '0.00';
+  }
+
   private async findCartByUser(userId: number): Promise<Cart | null> {
     return this.cartsRepository.findOne({
       where: { user: { id: userId } },
@@ -381,13 +406,14 @@ export class CartsService {
       product: {
         id: item.product?.id ?? 0,
         title: item.product?.title ?? 'Товар недоступен',
-        price: Number(item.product?.price ?? item.unitPrice),
+        price: Number(item.unitPrice),
         imageUrl: item.product?.imageUrl ?? null,
       },
       size: item.productSize
         ? {
             id: item.productSize.id,
             size: item.productSize.size,
+            price: Number(item.productSize.price ?? item.unitPrice),
             stock: item.productSize.stock?.stock ?? 0,
           }
         : null,

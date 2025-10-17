@@ -27,8 +27,12 @@
               <div v-else class="cart-item__placeholder">Фото</div>
               <div class="cart-item__content">
                 <h2 class="cart-item__title">{{ item.product.title }}</h2>
-                <p class="cart-item__meta">Цена: {{ formatCurrency(item.product.price) }}</p>
-                <p v-if="item.size" class="cart-item__meta">Размер: {{ item.size.size }}</p>
+                <p class="cart-item__meta">
+                  Цена: {{ formatCurrency(item.unitPrice) }}
+                </p>
+                <p v-if="item.size" class="cart-item__meta">
+                  Размер: {{ item.size.size }} — {{ formatCurrency(item.size.price) }}
+                </p>
                 <p v-if="item.size" class="cart-item__stock">Остаток: {{ item.size.stock }} шт.</p>
                 <div class="cart-item__controls">
                   <span class="cart-item__label">Количество</span>

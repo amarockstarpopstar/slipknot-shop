@@ -161,6 +161,24 @@
                       <div class="col-md-3 col-sm-6">
                         <label
                           class="form-label"
+                          :for="`productSizePrice-${productForm.id}-${index}`"
+                        >
+                          Цена, ₽
+                        </label>
+                        <input
+                          :id="`productSizePrice-${productForm.id}-${index}`"
+                          v-model="sizeRow.price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="form-control"
+                          placeholder="0.00"
+                          :disabled="productSaving"
+                        />
+                      </div>
+                      <div class="col-md-3 col-sm-6">
+                        <label
+                          class="form-label"
                           :for="`productSizeStock-${productForm.id}-${index}`"
                         >
                           Остаток
@@ -461,6 +479,24 @@
                       <div class="col-md-3 col-sm-6">
                         <label
                           class="form-label"
+                          :for="`newProductSizePrice-${index}`"
+                        >
+                          Цена, ₽
+                        </label>
+                        <input
+                          :id="`newProductSizePrice-${index}`"
+                          v-model="sizeRow.price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="form-control"
+                          placeholder="0.00"
+                          :disabled="creatingProduct"
+                        />
+                      </div>
+                      <div class="col-md-3 col-sm-6">
+                        <label
+                          class="form-label"
                           :for="`newProductSizeStock-${index}`"
                         >
                           Остаток
@@ -684,6 +720,7 @@ import { extractErrorMessage } from '../api/http';
 interface EditableProductSize {
   id: number | null;
   size: string;
+  price: string;
   stock: string;
 }
 
@@ -802,12 +839,13 @@ const showSuccess = (message: string) => {
 
 const toEditableSizes = (sizes: ProductDto['sizes']): EditableProductSize[] => {
   if (!sizes.length) {
-    return [{ id: null, size: '', stock: '' }];
+    return [{ id: null, size: '', price: '', stock: '' }];
   }
 
   return sizes.map((size) => ({
     id: size.id,
     size: size.size,
+    price: size.price.toString(),
     stock: size.stock.toString(),
   }));
 };
@@ -827,25 +865,36 @@ const buildSizePayload = (sizes: EditableProductSize[]): ProductSizePayload[] =>
       throw new Error(`Размер "${trimmed}" указан несколько раз.`);
     }
 
+    const priceValue = Number(size.price);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      throw new Error(`Некорректная цена для размера "${trimmed}".`);
+    }
+
     const stockValue = Number(size.stock);
     if (!Number.isFinite(stockValue) || stockValue < 0) {
-      throw new Error(`Некорректное значение остатка для размера "${trimmed}".`);
+      throw new Error(
+        `Некорректное значение остатка для размера "${trimmed}".`,
+      );
     }
 
     seen.add(normalizedName);
-    payload.push({ size: trimmed, stock: Math.floor(stockValue) });
+    payload.push({
+      size: trimmed,
+      price: Number(priceValue.toFixed(2)),
+      stock: Math.floor(stockValue),
+    });
   }
 
   return payload;
 };
 
 const addSizeRow = (rows: EditableProductSize[]) => {
-  rows.push({ id: null, size: '', stock: '' });
+  rows.push({ id: null, size: '', price: '', stock: '' });
 };
 
 const removeSizeRow = (rows: EditableProductSize[], index: number) => {
   if (rows.length <= 1) {
-    rows.splice(0, rows.length, { id: null, size: '', stock: '' });
+    rows.splice(0, rows.length, { id: null, size: '', price: '', stock: '' });
     return;
   }
 
@@ -861,7 +910,10 @@ const summarizeSizes = (product: ProductDto): string => {
   }
 
   return product.sizes
-    .map((size) => `${size.size} — ${size.stock}`)
+    .map(
+      (size) =>
+        `${size.size} — ${size.stock} шт. (${formatCurrency(size.price)})`,
+    )
     .join(', ');
 };
 
@@ -876,7 +928,7 @@ const resetAddProductForm = () => {
     sku: '',
     imageUrl: '',
     categoryId: '',
-    sizes: [{ id: null, size: '', stock: '' }],
+    sizes: [{ id: null, size: '', price: '', stock: '' }],
   });
 };
 

@@ -18,6 +18,7 @@ export interface CartItemDto {
 export interface CartItemSizeDto {
   id: number;
   size: string;
+  price: number;
   stock: number;
 }
 

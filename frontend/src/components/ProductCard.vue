@@ -9,7 +9,7 @@
       <p class="product-card__category">{{ product.category?.name ?? 'Категория не указана' }}</p>
       <p class="product-card__description">{{ product.description ?? 'Описание появится позже' }}</p>
       <div class="product-card__footer">
-        <span class="product-card__price">{{ product.price.toLocaleString('ru-RU') }} ₽</span>
+        <span class="product-card__price">{{ priceLabel }}</span>
         <div class="product-card__actions">
           <slot name="actions"></slot>
         </div>
@@ -19,11 +19,20 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { ProductDto } from '../api/products';
 
-defineProps<{
+const props = defineProps<{
   product: ProductDto;
 }>();
+
+const priceLabel = computed(() => {
+  const formatted = props.product.price.toLocaleString('ru-RU');
+  if (props.product.sizes.length) {
+    return `от ${formatted} ₽`;
+  }
+  return `${formatted} ₽`;
+});
 </script>
 
 <style scoped>
