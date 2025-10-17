@@ -29,7 +29,7 @@ export class AuditLog {
   @Column({ name: 'new_data', type: 'jsonb', nullable: true })
   newData: Record<string, unknown> | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'user_id' })
   user?: User | null;
 

@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     operation TEXT NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
     old_data JSONB,
     new_data JSONB,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
@@ -247,11 +247,17 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    RETURN NULLIF(v_user, '')::INTEGER;
+    IF v_user = '0' THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN v_user::INTEGER;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION trg_log_changes()
+DROP FUNCTION IF EXISTS trg_log_changes();
+
+CREATE OR REPLACE FUNCTION fn_audit_trigger()
 RETURNS TRIGGER AS $$
 DECLARE
     v_user_id INTEGER;
@@ -277,37 +283,37 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_audit_users ON users;
 CREATE TRIGGER trg_audit_users
 AFTER INSERT OR UPDATE OR DELETE ON users
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_products ON products;
 CREATE TRIGGER trg_audit_products
 AFTER INSERT OR UPDATE OR DELETE ON products
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_product_sizes ON product_sizes;
 CREATE TRIGGER trg_audit_product_sizes
 AFTER INSERT OR UPDATE OR DELETE ON product_sizes
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_size_stock ON size_stock;
 CREATE TRIGGER trg_audit_size_stock
 AFTER INSERT OR UPDATE OR DELETE ON size_stock
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_orders ON orders;
 CREATE TRIGGER trg_audit_orders
 AFTER INSERT OR UPDATE OR DELETE ON orders
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_order_items ON order_items;
 CREATE TRIGGER trg_audit_order_items
 AFTER INSERT OR UPDATE OR DELETE ON order_items
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_reviews ON reviews;
 CREATE TRIGGER trg_audit_reviews
 AFTER INSERT OR UPDATE OR DELETE ON reviews
-FOR EACH ROW EXECUTE FUNCTION trg_log_changes();
+FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 -- ============================================================================
 -- Views for reporting
@@ -462,7 +468,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION set_current_app_user(p_user_id INTEGER)
 RETURNS VOID AS $$
 BEGIN
-    PERFORM set_config('app.current_user_id', COALESCE(p_user_id, 0)::TEXT, true);
+    PERFORM set_config('app.current_user_id', COALESCE(p_user_id::TEXT, ''), true);
 END;
 $$ LANGUAGE plpgsql;
 
