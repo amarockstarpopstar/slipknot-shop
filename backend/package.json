@@ -6,6 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "db:reset": "ts-node --project tsconfig.json ./scripts/db-reset.ts",
+    "prestart": "npm run db:reset",
+    "prestart:dev": "npm run db:reset",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @Injectable()
 export class UsersService {
   private readonly saltRounds = 10;
+  private readonly logger = new Logger(UsersService.name);
 
   constructor(
     @InjectRepository(User)
@@ -27,6 +29,8 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    this.logger.log(`Создание пользователя ${createUserDto.email}`);
+
     const existing = await this.findByEmail(createUserDto.email);
     if (existing) {
       throw new ConflictException('Пользователь с таким email уже существует');
@@ -48,8 +52,17 @@ export class UsersService {
       role,
     });
 
-    const saved = await this.usersRepository.save(user);
-    return this.findById(saved.id);
+    try {
+      const saved = await this.usersRepository.save(user);
+      this.logger.log(
+        `Пользователь ${saved.email} сохранён с идентификатором ${saved.id}. Подготовка ответа`,
+      );
+      return this.findById(saved.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Ошибка при сохранении пользователя ${createUserDto.email}: ${message}`);
+      throw error;
+    }
   }
 
   async findAll(): Promise<UserResponseDto[]> {
