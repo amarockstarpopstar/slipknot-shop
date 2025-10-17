@@ -7,6 +7,10 @@ export interface OrderItemDto {
     title: string;
     sku: string;
   };
+  size: {
+    id: number;
+    size: string;
+  } | null;
   quantity: number;
   unitPrice: number;
 }

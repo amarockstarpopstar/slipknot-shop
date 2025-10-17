@@ -1,6 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Product } from '../../products/entities/product.entity';
+import { ApiProperty } from '@nestjs/swagger';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 // size entity describing optional product sizes
 @Entity({ name: 'sizes' })
@@ -15,8 +14,5 @@ export class SizeEntity {
   @ApiProperty({ example: 'L', description: 'Название размера' })
   name: string;
 
-  // products assigned to this size
-  @OneToMany(() => Product, (product) => product.size)
-  @ApiPropertyOptional({ type: () => [Product], description: 'Список товаров с данным размером' })
-  products: Product[];
+  // standalone справочник размеров без прямой связи с товарами
 }

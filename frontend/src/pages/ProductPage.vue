@@ -25,16 +25,62 @@
             <p class="product-details__description">{{ product.description ?? 'Описание будет добавлено позже.' }}</p>
             <div class="product-details__meta">
               <span>Артикул: {{ product.sku }}</span>
-              <span>Размер: {{ product.size?.name ?? 'универсальный' }}</span>
-              <span>Остаток: {{ product.stockCount }} шт.</span>
+              <span v-if="hasSizes">Размеров в наличии: {{ availableSizes.length }}</span>
+              <span v-else>Размер: универсальный</span>
+            </div>
+            <div v-if="hasSizes" class="product-details__inventory">
+              <p class="product-details__inventory-label">Выберите размер</p>
+              <div class="product-sizes" role="group" aria-label="Выбор размера товара">
+                <button
+                  v-for="size in availableSizes"
+                  :key="size.id"
+                  type="button"
+                  class="product-sizes__option"
+                  :class="{
+                    'product-sizes__option--selected': size.id === selectedSizeId,
+                    'product-sizes__option--empty': size.stock <= 0,
+                  }"
+                  :disabled="size.stock <= 0"
+                  @click="selectSize(size.id)"
+                >
+                  <span class="product-sizes__label">{{ size.size }}</span>
+                  <small class="product-sizes__stock">Остаток: {{ size.stock }}</small>
+                </button>
+              </div>
+              <p
+                v-if="selectedSize"
+                class="product-details__stock"
+                :class="{ 'product-details__stock--empty': selectedSize.stock <= 0 }"
+              >
+                Остаток выбранного размера: {{ selectedSize.stock }} шт.
+              </p>
+              <p
+                v-if="!hasAvailableSizes"
+                class="product-details__stock product-details__stock--empty"
+              >
+                Все размеры временно отсутствуют.
+              </p>
+            </div>
+            <div v-else class="product-details__inventory">
+              <p class="product-details__stock">Универсальный размер, доступен для заказа.</p>
             </div>
             <div class="product-details__actions">
               <span class="product-details__price">{{ product.price.toLocaleString('ru-RU') }} ₽</span>
               <div class="product-details__buttons">
-                <button class="btn btn-danger btn-lg" type="button" @click="openConfirm">
+                <button
+                  class="btn btn-danger btn-lg"
+                  type="button"
+                  @click="openConfirm"
+                  :disabled="isPurchaseDisabled"
+                >
                   Оформить
                 </button>
-                <button class="btn btn-outline-light btn-lg" type="button" @click="addToCart(product)">
+                <button
+                  class="btn btn-outline-light btn-lg"
+                  type="button"
+                  @click="addToCart(product)"
+                  :disabled="isAddToCartDisabled"
+                >
                   Добавить в корзину
                 </button>
               </div>
@@ -198,6 +244,9 @@
                 Вы собираетесь оформить заказ на товар «{{ product?.title }}» стоимостью
                 {{ product ? product.price.toLocaleString('ru-RU') : '' }} ₽.
               </p>
+              <p v-if="selectedSize" class="text-muted mb-3">
+                Выбранный размер: {{ selectedSize.size }}
+              </p>
               <p class="mb-4 text-muted">
                 После подтверждения товар будет добавлен в корзину, и вы перейдёте к оплате.
               </p>
@@ -268,6 +317,38 @@ const reviewSubmitting = ref(false);
 const reviewSuccess = ref<string | null>(null);
 const reviewError = ref<string | null>(null);
 
+const selectedSizeId = ref<number | null>(null);
+
+const availableSizes = computed(() => product.value?.sizes ?? []);
+const hasSizes = computed(() => availableSizes.value.length > 0);
+const hasAvailableSizes = computed(() =>
+  availableSizes.value.some((size) => size.stock > 0),
+);
+const selectedSize = computed(() =>
+  availableSizes.value.find((size) => size.id === selectedSizeId.value) ?? null,
+);
+const isOutOfStock = computed(() => {
+  if (!hasSizes.value) {
+    return false;
+  }
+
+  if (!hasAvailableSizes.value) {
+    return true;
+  }
+
+  return !selectedSize.value || selectedSize.value.stock <= 0;
+});
+const isAddToCartDisabled = computed(() => isOutOfStock.value);
+const isPurchaseDisabled = computed(() => isOutOfStock.value);
+
+const selectSize = (sizeId: number) => {
+  const size = availableSizes.value.find((item) => item.id === sizeId);
+  if (!size || size.stock <= 0) {
+    return;
+  }
+  selectedSizeId.value = sizeId;
+};
+
 const productReviews = computed(() => {
   const id = product.value?.id;
   if (!id) {
@@ -315,11 +396,18 @@ const loadProduct = async (id: number) => {
 };
 
 const addToCart = async (item: NonNullable<typeof product.value>) => {
-  await cartStore.addProduct(item.id);
+  if (isOutOfStock.value) {
+    return;
+  }
+
+  await cartStore.addProduct(item.id, 1, selectedSize.value?.id ?? null);
 };
 
 const openConfirm = () => {
   if (!product.value) {
+    return;
+  }
+  if (isOutOfStock.value) {
     return;
   }
   if (!isAuthenticated.value) {
@@ -345,7 +433,11 @@ const confirmPurchase = async () => {
   confirmLoading.value = true;
   confirmError.value = null;
   cartError.value = null;
-  await cartStore.addProduct(product.value.id);
+  await cartStore.addProduct(
+    product.value.id,
+    1,
+    selectedSize.value?.id ?? null,
+  );
   if (cartError.value) {
     confirmError.value = cartError.value;
     confirmLoading.value = false;
@@ -371,6 +463,34 @@ watch(
       await loadProduct(id);
     }
   },
+);
+
+watch(
+  () => product.value?.sizes,
+  (sizes) => {
+    if (!sizes || sizes.length === 0) {
+      selectedSizeId.value = null;
+      return;
+    }
+
+    const current = sizes.find(
+      (size) => size.id === selectedSizeId.value && size.stock > 0,
+    );
+
+    if (current) {
+      selectedSizeId.value = current.id;
+      return;
+    }
+
+    const firstAvailable = sizes.find((size) => size.stock > 0);
+    if (firstAvailable) {
+      selectedSizeId.value = firstAvailable.id;
+      return;
+    }
+
+    selectedSizeId.value = sizes[0]?.id ?? null;
+  },
+  { immediate: true, deep: true },
 );
 
 watch(
@@ -514,6 +634,75 @@ const submitReview = async () => {
   gap: 1rem 2rem;
   font-size: 0.95rem;
   color: var(--color-text-muted);
+}
+
+.product-details__inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.product-details__inventory-label {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.product-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.product-sizes__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--radius-lg) * 0.6);
+  border: 1px solid var(--color-surface-border);
+  background: color-mix(in srgb, var(--color-surface-alt) 85%, transparent);
+  color: inherit;
+  transition: transform var(--transition-base), border-color var(--transition-base),
+    background var(--transition-base);
+}
+
+.product-sizes__option:hover:not(:disabled),
+.product-sizes__option--selected {
+  transform: translateY(-2px);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.product-sizes__option:disabled,
+.product-sizes__option--empty {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.product-sizes__label {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.product-sizes__stock {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.product-details__stock {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.product-details__stock--empty {
+  color: #f87171;
+  font-weight: 600;
 }
 
 .product-details__actions {

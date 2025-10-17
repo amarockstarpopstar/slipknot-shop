@@ -18,6 +18,7 @@ import {
 } from './dto/product-size.dto';
 import { ProductSize } from './entities/product-size.entity';
 import { SizeStock } from './entities/size-stock.entity';
+import { UpdateProductSizeStockDto } from './dto/update-size-stock.dto';
 
 // service with product management logic
 @Injectable()
@@ -145,6 +146,37 @@ export class ProductsService {
     return (product.productSizes ?? []).map((size) =>
       this.toProductSizeResponse(size),
     );
+  }
+
+  async updateSizeStock(
+    productId: number,
+    sizeId: number,
+    dto: UpdateProductSizeStockDto,
+  ): Promise<ProductSizeStockResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const productSizesRepo = manager.getRepository(ProductSize);
+      const sizeStockRepo = manager.getRepository(SizeStock);
+
+      const productSize = await productSizesRepo.findOne({
+        where: { id: sizeId },
+        relations: { product: true, stock: true },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!productSize || productSize.product?.id !== productId) {
+        throw new NotFoundException('Размер не найден для выбранного товара');
+      }
+
+      const stockEntity = productSize.stock
+        ? sizeStockRepo.merge(productSize.stock, { stock: dto.stock })
+        : sizeStockRepo.create({ size: productSize, stock: dto.stock });
+
+      const savedStock = await sizeStockRepo.save(stockEntity);
+
+      productSize.stock = savedStock;
+
+      return this.toProductSizeResponse(productSize);
+    });
   }
 
   async update(

@@ -24,6 +24,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
 import { ProductSizeStockResponseDto } from './dto/product-size.dto';
+import { UpdateProductSizeStockDto } from './dto/update-size-stock.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -81,6 +82,25 @@ export class ProductsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ProductSizeStockResponseDto[]> {
     return this.productsService.findSizes(id);
+  }
+
+  @Put(':id/sizes/:sizeId/stock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Менеджер')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Обновить остаток выбранного размера' })
+  @ApiOkResponse({
+    description: 'Остаток размера обновлён',
+    type: ProductSizeStockResponseDto,
+  })
+  @ApiNotFoundResponse({ description: 'Товар или размер не найдены' })
+  @ApiBadRequestResponse({ description: 'Некорректные данные остатка' })
+  updateSizeStock(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('sizeId', ParseIntPipe) sizeId: number,
+    @Body() dto: UpdateProductSizeStockDto,
+  ): Promise<ProductSizeStockResponseDto> {
+    return this.productsService.updateSizeStock(id, sizeId, dto);
   }
 
   @Put(':id')

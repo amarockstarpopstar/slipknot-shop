@@ -9,6 +9,7 @@ import { Cart } from './entities/cart.entity';
 import { CartItem } from '../cart-items/entities/cart-item.entity';
 import { Product } from '../products/entities/product.entity';
 import { ProductSize } from '../products/entities/product-size.entity';
+import { SizeStock } from '../products/entities/size-stock.entity';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartResponseDto } from './dto/cart-response.dto';
@@ -80,8 +81,41 @@ export class CartsService {
     );
 
     if (cartItem) {
+      if (productSize) {
+        const availableStock = productSize.stock?.stock ?? 0;
+        const desiredQuantity = cartItem.quantity + quantityToAdd;
+
+        if (availableStock <= 0) {
+          throw new BadRequestException(
+            'Выбранный размер закончился на складе',
+          );
+        }
+
+        if (desiredQuantity > availableStock) {
+          throw new BadRequestException(
+            'Недостаточно товара выбранного размера на складе',
+          );
+        }
+      }
+
       cartItem.quantity += quantityToAdd;
     } else {
+      if (productSize) {
+        const availableStock = productSize.stock?.stock ?? 0;
+
+        if (availableStock <= 0) {
+          throw new BadRequestException(
+            'Выбранный размер закончился на складе',
+          );
+        }
+
+        if (quantityToAdd > availableStock) {
+          throw new BadRequestException(
+            'Недостаточно товара выбранного размера на складе',
+          );
+        }
+      }
+
       cartItem = this.cartItemsRepository.create({
         cart,
         product,
@@ -118,6 +152,20 @@ export class CartsService {
 
     if (!cartItem) {
       throw new NotFoundException('Товар в корзине не найден');
+    }
+
+    if (cartItem.productSize) {
+      const availableStock = cartItem.productSize.stock?.stock ?? 0;
+
+      if (availableStock <= 0) {
+        throw new BadRequestException('Выбранный размер закончился на складе');
+      }
+
+      if (dto.quantity > availableStock) {
+        throw new BadRequestException(
+          'Недостаточно товара выбранного размера на складе',
+        );
+      }
     }
 
     cartItem.quantity = dto.quantity;
@@ -207,6 +255,36 @@ export class CartsService {
       });
 
       const savedOrder = await ordersRepo.save(order);
+
+      const sizeStockRepo = manager.getRepository(SizeStock);
+
+      for (const item of cart.items) {
+        if (!item.productSize) {
+          continue;
+        }
+
+        const stockEntity = await sizeStockRepo
+          .createQueryBuilder('stock')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('stock.size', 'size')
+          .where('stock.size_id = :sizeId', { sizeId: item.productSize.id })
+          .getOne();
+
+        if (!stockEntity) {
+          throw new BadRequestException(
+            `Не найден остаток для выбранного размера ${item.productSize.size}`,
+          );
+        }
+
+        if (stockEntity.stock < item.quantity) {
+          throw new BadRequestException(
+            `Недостаточно товара размера ${item.productSize.size} на складе`,
+          );
+        }
+
+        stockEntity.stock -= item.quantity;
+        await sizeStockRepo.save(stockEntity);
+      }
 
       const orderItems = cart.items.map((item) =>
         orderItemsRepo.create({

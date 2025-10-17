@@ -5,23 +5,30 @@ export interface CategoryDto {
   name: string;
 }
 
-export interface SizeDto {
-  id: number;
-  name: string;
-}
-
 export interface ProductDto {
   id: number;
   title: string;
   description: string | null;
   price: number;
   sku: string;
-  stockCount: number;
   imageUrl: string | null;
   category: CategoryDto | null;
-  size: SizeDto | null;
+  sizes: ProductSizeDto[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductSizeDto {
+  id: number;
+  size: string;
+  stock: number;
+  stockId: number | null;
+  stockUpdatedAt: string | null;
+}
+
+export interface ProductSizePayload {
+  size: string;
+  stock: number;
 }
 
 export const fetchProducts = async (): Promise<ProductDto[]> => {
@@ -39,10 +46,9 @@ export interface UpdateProductPayload {
   description?: string;
   price?: number;
   sku?: string;
-  stockCount?: number;
   imageUrl?: string;
   categoryId?: number;
-  sizeId?: number | null;
+  sizes?: ProductSizePayload[];
 }
 
 export interface CreateProductPayload {
@@ -50,10 +56,9 @@ export interface CreateProductPayload {
   description?: string;
   price: number;
   sku: string;
-  stockCount: number;
   imageUrl?: string;
   categoryId: number;
-  sizeId?: number | null;
+  sizes?: ProductSizePayload[];
 }
 
 export const createProduct = async (payload: CreateProductPayload): Promise<ProductDto> => {
