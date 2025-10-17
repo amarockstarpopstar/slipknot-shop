@@ -105,11 +105,17 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
-  const addProduct = async (productId: number, quantity = 1) => {
+  const addProduct = async (
+    productId: number,
+    quantity = 1,
+    productSizeId?: number | null,
+  ) => {
     if (!ensureAuthenticated()) {
       return;
     }
-    const cart = await withUpdate(() => addCartItem({ productId, quantity }));
+    const cart = await withUpdate(() =>
+      addCartItem({ productId, quantity, productSizeId }),
+    );
     if (cart) {
       setCartState(cart);
     }

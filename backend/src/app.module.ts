@@ -11,6 +11,8 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { OrderStatusesModule } from './modules/order-statuses/order-statuses.module';
 import { CartsModule } from './modules/carts/carts.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { buildTypeOrmOptions } from './config/typeorm.config';
@@ -35,7 +37,9 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
     OrdersModule,
     OrderStatusesModule,
     CartsModule,
+    ReviewsModule,
     AuditLogModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [

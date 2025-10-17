@@ -52,6 +52,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, allowedRoles: ['Менеджер'] },
   },
   {
+    path: '/manager/reports',
+    name: 'reports',
+    component: () => import('../pages/ReportsPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Менеджер', 'Администратор'] },
+  },
+  {
     path: '/admin/users',
     name: 'admin-users',
     component: () => import('../pages/AdminUsersPage.vue'),
@@ -61,6 +67,12 @@ const routes: RouteRecordRaw[] = [
     path: '/admin/audit',
     name: 'admin-audit',
     component: () => import('../pages/AdminAuditPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
+  },
+  {
+    path: '/admin/reviews',
+    name: 'admin-reviews',
+    component: () => import('../pages/AdminReviewsPage.vue'),
     meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
   },
 ];

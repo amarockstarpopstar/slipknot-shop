@@ -1,5 +1,10 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { OrdersService } from './orders.service';
 import { CustomerOrderResponseDto } from './dto/customer-order-response.dto';
@@ -19,8 +24,14 @@ export class CustomerOrdersController {
 
   @Get()
   @ApiOperation({ summary: 'Получить историю заказов текущего пользователя' })
-  @ApiOkResponse({ description: 'История заказов', type: CustomerOrderResponseDto, isArray: true })
-  findMyOrders(@Req() req: AuthenticatedRequest): Promise<CustomerOrderResponseDto[]> {
+  @ApiOkResponse({
+    description: 'История заказов',
+    type: CustomerOrderResponseDto,
+    isArray: true,
+  })
+  findMyOrders(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<CustomerOrderResponseDto[]> {
     return this.ordersService.findForUser(req.user.id);
   }
 }

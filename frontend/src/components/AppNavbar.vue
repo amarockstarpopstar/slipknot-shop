@@ -30,11 +30,20 @@
           <li v-if="user?.role?.name === 'Менеджер'" class="nav-item">
             <RouterLink class="nav-link" to="/manager">Панель менеджера</RouterLink>
           </li>
+          <li
+            v-if="user?.role?.name === 'Менеджер' || user?.role?.name === 'Администратор'"
+            class="nav-item"
+          >
+            <RouterLink class="nav-link" to="/manager/reports">Отчётность</RouterLink>
+          </li>
           <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
             <RouterLink class="nav-link" to="/admin/users">Управление пользователями</RouterLink>
           </li>
           <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
             <RouterLink class="nav-link" to="/admin/audit">Журнал аудита</RouterLink>
+          </li>
+          <li v-if="user?.role?.name === 'Администратор'" class="nav-item">
+            <RouterLink class="nav-link" to="/admin/reviews">Отзывы</RouterLink>
           </li>
         </ul>
         <div class="d-flex align-items-center flex-wrap gap-2">

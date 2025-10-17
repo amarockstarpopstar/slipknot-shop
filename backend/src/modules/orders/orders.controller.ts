@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
@@ -37,14 +47,22 @@ export class OrdersController {
 
   @Get()
   @ApiOperation({ summary: 'Получить список заказов' })
-  @ApiOkResponse({ description: 'Список заказов', type: OrderResponseDto, isArray: true })
+  @ApiOkResponse({
+    description: 'Список заказов',
+    type: OrderResponseDto,
+    isArray: true,
+  })
   findAll(): Promise<OrderResponseDto[]> {
     return this.ordersService.findAll();
   }
 
   @Get('customers')
   @ApiOperation({ summary: 'Получить список покупателей' })
-  @ApiOkResponse({ description: 'Покупатели для выбора при создании заказа', type: OrderCustomerDto, isArray: true })
+  @ApiOkResponse({
+    description: 'Покупатели для выбора при создании заказа',
+    type: OrderCustomerDto,
+    isArray: true,
+  })
   findCustomers(): Promise<OrderCustomerDto[]> {
     return this.ordersService.findCustomers();
   }
