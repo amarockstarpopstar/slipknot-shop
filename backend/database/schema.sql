@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS product_sizes (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     size VARCHAR(20) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     UNIQUE (product_id, size)
@@ -634,20 +635,21 @@ upserted_products AS (
 SELECT 1;
 
 WITH size_data AS (
-    SELECT 'SKU-TSHIRT-001'::text AS sku, 'S'::text AS size, 12::integer AS stock UNION ALL
-    SELECT 'SKU-TSHIRT-001', 'M', 18 UNION ALL
-    SELECT 'SKU-TSHIRT-001', 'L', 15 UNION ALL
-    SELECT 'SKU-HOODIE-002', 'M', 14 UNION ALL
-    SELECT 'SKU-HOODIE-002', 'L', 10 UNION ALL
-    SELECT 'SKU-HOODIE-002', 'XL', 8
+    SELECT 'SKU-TSHIRT-001'::text AS sku, 'S'::text AS size, 12::integer AS stock, 2990.00::numeric(10, 2) AS price UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'M', 18, 3090.00 UNION ALL
+    SELECT 'SKU-TSHIRT-001', 'L', 15, 3190.00 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'M', 14, 5490.00 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'L', 10, 5690.00 UNION ALL
+    SELECT 'SKU-HOODIE-002', 'XL', 8, 5890.00
 )
-INSERT INTO product_sizes (product_id, size)
+INSERT INTO product_sizes (product_id, size, price)
 SELECT DISTINCT
     p.id,
-    sd.size
+    sd.size,
+    sd.price
 FROM size_data sd
 JOIN products p ON p.sku = sd.sku
-ON CONFLICT (product_id, size) DO UPDATE SET updated_at = NOW();
+ON CONFLICT (product_id, size) DO UPDATE SET price = EXCLUDED.price, updated_at = NOW();
 
 WITH size_data AS (
     SELECT 'SKU-TSHIRT-001'::text AS sku, 'S'::text AS size, 12::integer AS stock UNION ALL

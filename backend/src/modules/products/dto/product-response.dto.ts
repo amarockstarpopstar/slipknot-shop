@@ -27,7 +27,10 @@ export class ProductResponseDto {
   })
   description: string | null;
 
-  @ApiProperty({ example: 2990, description: 'Цена товара' })
+  @ApiProperty({
+    example: 2990,
+    description: 'Базовая цена товара (минимальная среди размеров)',
+  })
   price: number;
 
   @ApiProperty({ example: 'SLP-TS-002', description: 'Артикул товара' })

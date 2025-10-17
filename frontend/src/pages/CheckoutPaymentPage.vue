@@ -39,7 +39,12 @@
                 <div v-else class="checkout-item__placeholder">Фото</div>
                 <div class="checkout-item__content">
                   <h2 class="checkout-item__title">{{ item.product.title }}</h2>
-                  <p class="checkout-item__price">Цена: {{ formatCurrency(item.product.price) }}</p>
+                  <p class="checkout-item__price">
+                    Цена: {{ formatCurrency(item.unitPrice) }}
+                  </p>
+                  <p v-if="item.size" class="checkout-item__meta">
+                    Размер: {{ item.size.size }} — {{ formatCurrency(item.size.price) }}
+                  </p>
                   <p class="checkout-item__meta">Количество: {{ item.quantity }}</p>
                 </div>
               </article>

@@ -29,6 +29,9 @@ export class ProductSize {
   @Column({ type: 'varchar', length: 20 })
   size: string;
 
+  @Column({ type: 'numeric', precision: 10, scale: 2 })
+  price: string;
+
   @OneToOne(() => SizeStock, (stock) => stock.size, {
     cascade: true,
   })

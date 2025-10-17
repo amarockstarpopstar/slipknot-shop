@@ -21,6 +21,7 @@ export interface ProductDto {
 export interface ProductSizeDto {
   id: number;
   size: string;
+  price: number;
   stock: number;
   stockId: number | null;
   stockUpdatedAt: string | null;
@@ -28,6 +29,7 @@ export interface ProductSizeDto {
 
 export interface ProductSizePayload {
   size: string;
+  price: number;
   stock: number;
 }
 
