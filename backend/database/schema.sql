@@ -530,36 +530,36 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO users (name, email, password_hash, phone, country, city, address, passport_number_encrypted, role_id)
 VALUES
     (
-        'Алексей Админ',
-        'admin@slipknot-shop.ru',
-        '$2b$10$W7sSfO96GfWMYdBTtJR70Oy7/ayMYbg7K4Y3QxcJ2DsbSxhVhoGQi',
+        'Тестовый Администратор',
+        'admin@shop.local',
+        '$2b$10$JXUrjbeNvqRz6ppnu3GS1uJ.KsRyyh7YtZ4hg6bNJPpgGG4FNm52y',
         '+7 (900) 100-00-01',
         'Россия',
         'Москва',
         'ул. Арбат, д. 1',
-        pgp_sym_encrypt('AA1234567', 'slipknot_secret_key'),
+        pgp_sym_encrypt('ADMIN0001', 'slipknot_secret_key'),
         (SELECT id FROM roles WHERE name = 'Администратор')
     ),
     (
-        'Мария Менеджер',
-        'manager@slipknot-shop.ru',
-        '$2b$10$XHwr1ItKuGuYL7D/zHROMOc4bYpNbv/yaIP6JNVtkuDqfWuN9/47O',
+        'Тестовый Менеджер',
+        'manager@shop.local',
+        '$2b$10$5uhYy/ErOnXW5DsuaNIhkOp7R/5e88FJQRn3WbtQZuIy/b5b0.FRS',
         '+7 (901) 200-00-02',
         'Россия',
         'Санкт-Петербург',
         'Невский проспект, д. 10',
-        pgp_sym_encrypt('MM7654321', 'slipknot_secret_key'),
+        pgp_sym_encrypt('MANAGER02', 'slipknot_secret_key'),
         (SELECT id FROM roles WHERE name = 'Менеджер')
     ),
     (
-        'Иван Покупатель',
-        'customer@slipknot-shop.ru',
-        '$2b$10$EbCqo2VQSRRy0npX/JelO./ShlsIuXIDY5cihK0fnbjeQuUJp8hsm',
+        'Тестовый Покупатель',
+        'user@shop.local',
+        '$2b$10$8PmvoO7KL0aDA8udMSuAjOJQs0rw0WA18hr/q2HIvfq2vdoVcqdgi',
         '+7 (902) 300-00-03',
         'Россия',
         'Екатеринбург',
         'ул. Ленина, д. 25',
-        pgp_sym_encrypt('CC9988776', 'slipknot_secret_key'),
+        pgp_sym_encrypt('USER00003', 'slipknot_secret_key'),
         (SELECT id FROM roles WHERE name = 'Покупатель')
     )
 ON CONFLICT (email) DO UPDATE SET
@@ -685,8 +685,8 @@ SELECT
     review_data.status
 FROM (
     VALUES
-        ('customer@slipknot-shop.ru', 'SKU-TSHIRT-001', 5, 'Отличное качество и яркий принт!', 'approved'),
-        ('customer@slipknot-shop.ru', 'SKU-HOODIE-002', 4, 'Худи очень тёплое, но хотелось бы больше цветов.', 'pending')
+        ('user@shop.local', 'SKU-TSHIRT-001', 5, 'Отличное качество и яркий принт!', 'approved'),
+        ('user@shop.local', 'SKU-HOODIE-002', 4, 'Худи очень тёплое, но хотелось бы больше цветов.', 'pending')
 ) AS review_data(email, sku, rating, comment, status)
 JOIN users u ON u.email = review_data.email
 JOIN products p ON p.sku = review_data.sku
@@ -701,7 +701,7 @@ DO $$
 DECLARE
     v_admin_id INTEGER;
 BEGIN
-    SELECT id INTO v_admin_id FROM users WHERE email = 'admin@slipknot-shop.ru';
+    SELECT id INTO v_admin_id FROM users WHERE email = 'admin@shop.local';
     PERFORM set_current_app_user(v_admin_id);
     UPDATE size_stock
     SET stock = stock
