@@ -25,7 +25,10 @@ async function ensureDatabaseExists({
   password: string;
   database: string;
 }): Promise<void> {
-  const adminDatabase = getEnv(['PGDATABASE', 'POSTGRES_DB', 'DATABASE_TEMPLATE'], 'postgres')!;
+  const adminDatabase = getEnv(
+    ['PGDATABASE', 'POSTGRES_DB', 'DATABASE_TEMPLATE'],
+    'postgres',
+  )!;
   const adminPool = new Pool({ host, port, user, password, database: adminDatabase });
   try {
     await adminPool.query(`CREATE DATABASE "${database}" WITH ENCODING 'UTF8' TEMPLATE template0`);
@@ -74,12 +77,12 @@ async function runSchema({
 }
 
 async function main() {
-  const host = getEnv(['DATABASE_HOST', 'DB_HOST'], '127.0.0.1')!;
+  const host = getEnv(['DATABASE_HOST', 'DB_HOST'], 'localhost')!;
   const portValue = getEnv(['DATABASE_PORT', 'DB_PORT'], '5432');
   const port = Number.parseInt(portValue ?? '5432', 10);
   const user = getEnv(['DATABASE_USER', 'DB_USER'], 'postgres')!;
   const password = getEnv(['DATABASE_PASSWORD', 'DB_PASSWORD'], 'postgres')!;
-  const database = getEnv(['DATABASE_NAME', 'DB_NAME'], 'slipknot_merch')!;
+  const database = getEnv(['DATABASE_NAME', 'DB_NAME'], 'slipknot_shop')!;
 
   const connection = { host, port: Number.isNaN(port) ? 5432 : port, user, password, database };
 

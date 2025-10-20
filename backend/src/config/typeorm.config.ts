@@ -19,14 +19,14 @@ export const buildTypeOrmOptions = (
   const port = portValue ? Number.parseInt(portValue, 10) : 5432;
 
   const host =
-    resolveValue(configService, ['DATABASE_HOST', 'DB_HOST']) ?? '127.0.0.1';
+    resolveValue(configService, ['DATABASE_HOST', 'DB_HOST']) ?? 'localhost';
   const username =
     resolveValue(configService, ['DATABASE_USER', 'DB_USER']) ?? 'postgres';
   const password =
     resolveValue(configService, ['DATABASE_PASSWORD', 'DB_PASSWORD']) ??
     'postgres';
   const database =
-    resolveValue(configService, ['DATABASE_NAME', 'DB_NAME']) ?? 'slipknot_merch';
+    resolveValue(configService, ['DATABASE_NAME', 'DB_NAME']) ?? 'slipknot_shop';
 
   return {
     type: 'postgres',
