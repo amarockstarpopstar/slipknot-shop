@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Injectable, Module, OnApplicationBootstrap } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -20,6 +20,33 @@ import { AuditContextService } from './common/audit/audit-context.service';
 import { AuditContextInterceptor } from './common/audit/audit-context.interceptor';
 import { AuditSubscriber } from './common/audit/audit.subscriber';
 import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
+import { DataSource } from 'typeorm';
+
+@Injectable()
+export class DatabaseConnectionLogger implements OnApplicationBootstrap {
+  constructor(private readonly dataSource: DataSource) {}
+
+  public async onApplicationBootstrap(): Promise<void> {
+    if (!this.dataSource.isInitialized) {
+      await this.dataSource.initialize();
+    }
+
+    console.log('✅ Connected to local PostgreSQL successfully!');
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      const result: Array<{ table_name: string }> = await queryRunner.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name",
+      );
+      const tableList = result.map(({ table_name }) => table_name);
+      console.log(
+        `📦 Public tables: ${tableList.length > 0 ? tableList.join(', ') : 'none'}`,
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+}
 
 @Module({
   imports: [
@@ -46,6 +73,7 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
     AppService,
     AuditContextService,
     AuditSubscriber,
+    DatabaseConnectionLogger,
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestLoggingInterceptor,
