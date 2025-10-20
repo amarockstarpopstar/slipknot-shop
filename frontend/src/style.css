@@ -52,11 +52,18 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: #050711;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   font-family: inherit;
-  background: var(--color-background);
+  background: radial-gradient(120% 120% at 15% 10%, rgba(38, 56, 112, 0.35) 0%, transparent 62%),
+    radial-gradient(100% 110% at 85% 0%, rgba(97, 119, 196, 0.22) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(10, 10, 25, 0.68) 0%, rgba(5, 8, 18, 0.92) 54%, rgba(0, 0, 0, 0.95) 100%);
   color: var(--color-text);
   transition: background var(--transition-base), color var(--transition-base);
   position: relative;
@@ -68,11 +75,38 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(120% 120% at 20% 10%, color-mix(in srgb, var(--color-accent) 25%, transparent) 0%, transparent 70%),
-    radial-gradient(80% 90% at 80% 0%, color-mix(in srgb, var(--color-glow) 40%, transparent) 0%, transparent 65%),
-    linear-gradient(120deg, transparent 0%, color-mix(in srgb, var(--color-glow) 18%, transparent) 45%, transparent 90%);
-  opacity: 0.6;
+  background: linear-gradient(180deg, rgba(10, 10, 25, 0.6) 0%, rgba(0, 0, 0, 0.8) 100%);
+  backdrop-filter: blur(20px);
   z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(160% 180% at 50% 10%, rgba(86, 106, 201, 0.18) 0%, transparent 60%),
+    radial-gradient(140% 160% at 50% 120%, rgba(8, 12, 32, 0.65) 0%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  z-index: 0;
+}
+
+:root[data-theme='light'] body {
+  background: radial-gradient(120% 120% at 15% 10%, rgba(199, 215, 255, 0.6) 0%, transparent 60%),
+    radial-gradient(110% 130% at 85% 0%, rgba(185, 205, 255, 0.35) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(236, 242, 255, 0.95) 0%, rgba(214, 226, 255, 0.88) 45%, rgba(190, 206, 255, 0.92) 100%);
+}
+
+:root[data-theme='light'] body::before {
+  background: linear-gradient(180deg, rgba(218, 229, 255, 0.85) 0%, rgba(208, 222, 255, 0.75) 100%);
+}
+
+:root[data-theme='light'] body::after {
+  background: radial-gradient(140% 180% at 50% 8%, rgba(198, 214, 255, 0.42) 0%, transparent 60%),
+    radial-gradient(160% 200% at 50% 120%, rgba(164, 187, 255, 0.35) 0%, transparent 70%);
+  mix-blend-mode: normal;
+  opacity: 0.75;
 }
 
 #app {
@@ -432,39 +466,181 @@ textarea {
   font-weight: 500;
 }
 
+
 .modal {
-  backdrop-filter: blur(var(--blur-radius));
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  display: grid;
+  place-items: center;
+  --modal-padding: clamp(1rem, 4vw, 3.25rem);
+  padding: var(--modal-padding);
+  padding-top: calc(var(--modal-padding) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--modal-padding) + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(var(--modal-padding) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--modal-padding) + env(safe-area-inset-right, 0px));
+  overflow-y: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior: contain;
+}
+
+.modal.show {
+  display: grid;
+}
+
+.modal .modal-dialog {
+  position: relative;
+  margin: 0 !important;
+  width: min(560px, 100%);
+  max-width: min(560px, calc(100vw - (var(--modal-padding) * 2)));
+  max-height: min(
+    calc(100vh - (var(--modal-padding) * 2)),
+    calc(100dvh - (var(--modal-padding) * 2))
+  );
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-self: center;
+  align-self: center;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.modal.show .modal-dialog,
+.modal.fade .modal-dialog {
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.modal-dialog-centered {
+  align-items: stretch !important;
+  min-height: 0 !important;
+}
+
+.modal .modal-dialog.modal-lg {
+  width: min(720px, 100%);
+  max-width: min(720px, calc(100vw - (var(--modal-padding) * 2)));
+}
+
+.modal .modal-dialog.modal-xl {
+  width: min(880px, 100%);
+  max-width: min(880px, calc(100vw - (var(--modal-padding) * 2)));
 }
 
 .modal-backdrop.show {
-  background: rgba(4, 8, 15, 0.55);
-  backdrop-filter: blur(var(--blur-radius));
+  background: linear-gradient(180deg, rgba(6, 8, 20, 0.78) 0%, rgba(0, 0, 0, 0.85) 100%);
+  backdrop-filter: blur(16px);
 }
 
 .modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 100%;
   overflow: hidden;
+  border-radius: 14px;
+  background: rgba(15, 20, 30, 0.9) !important;
+  color: #f5f8ff;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px) saturate(120%);
+  transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
 .modal-header,
 .modal-footer {
-  border-color: color-mix(in srgb, var(--color-surface-border) 65%, transparent) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: transparent;
+  color: inherit;
+  flex-shrink: 0;
+  padding: clamp(1rem, 3vw, 1.75rem);
+}
+
+.modal-body {
+  color: rgba(245, 248, 255, 0.86);
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.modal-body > * {
+  min-width: 0;
+}
+
+.modal-title {
+  color: #ffffff;
+  font-size: clamp(1.35rem, 2.5vw, 1.6rem);
+  line-height: 1.3;
+}
+
+.modal .btn-close {
+  filter: invert(1) brightness(1.1);
+  opacity: 0.7;
+}
+
+.modal .btn-close:hover {
+  opacity: 1;
+}
+
+.modal .form-control,
+.modal .form-select,
+.modal textarea {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.modal .form-control::placeholder,
+.modal .form-select option,
+.modal textarea::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus,
+.modal textarea:focus {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: 0 0 0 3px rgba(147, 175, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.modal .form-label,
+.modal .form-text,
+.modal .form-check-label,
+.modal .modal-subtitle,
+.modal .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.modal .modal-subtitle {
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  line-height: 1.5;
+}
+
+.modal .badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+body.modal-open {
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .glass-modal .modal-dialog {
-  animation: glassModalIn 0.38s ease forwards;
+  animation: modalGlassIn 0.32s ease;
   will-change: transform, opacity;
 }
 
 .glass-modal .modal-content {
   position: relative;
-  background: linear-gradient(
-      155deg,
-      color-mix(in srgb, var(--color-surface-strong) 94%, transparent),
-      color-mix(in srgb, var(--color-surface) 82%, transparent)
-    );
-  border: 1px solid color-mix(in srgb, var(--color-surface-border) 72%, transparent);
-  box-shadow: 0 28px 48px rgba(8, 12, 20, 0.32), var(--shadow-hover);
-  backdrop-filter: blur(var(--blur-radius));
+  background: rgba(15, 20, 30, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(147, 175, 255, 0.08);
 }
 
 .glass-modal .modal-content::before {
@@ -473,33 +649,27 @@ textarea {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: radial-gradient(
-    circle at top right,
-    color-mix(in srgb, var(--color-accent) 22%, transparent) 0%,
-    transparent 60%
-  );
-  opacity: 0.55;
+  background: radial-gradient(circle at 18% 18%, rgba(147, 175, 255, 0.22), transparent 55%),
+    radial-gradient(circle at 82% 86%, rgba(88, 198, 141, 0.12), transparent 60%);
+  opacity: 0.65;
 }
 
 .glass-modal .modal-content::after {
   content: '';
   position: absolute;
-  inset: 2px;
+  inset: 1px;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-surface-border) 35%, transparent),
-    inset 0 18px 48px rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 20px 50px rgba(255, 255, 255, 0.06);
 }
 
 .glass-modal .modal-header,
 .glass-modal .modal-footer {
-  border-color: color-mix(in srgb, var(--color-surface-border) 38%, transparent) !important;
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  background: transparent;
 }
 
 .glass-modal .modal-body {
-  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
-  border-radius: calc(var(--radius-lg) * 0.8);
+  background: transparent;
 }
 
 .modal-subtitle {
@@ -511,7 +681,7 @@ textarea {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.75rem;
+  gap: clamp(0.5rem, 2vw, 0.9rem);
   flex-wrap: wrap;
 }
 
@@ -519,14 +689,95 @@ textarea {
   min-width: 8.5rem;
 }
 
-@keyframes glassModalIn {
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(0.85rem, 3vw, 1.5rem);
+  align-items: start;
+}
+
+.modal-form-grid__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-form-grid__item--full {
+  grid-column: 1 / -1;
+}
+
+.modal-inline-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.65rem, 3vw, 1rem);
+  align-items: stretch;
+}
+
+.modal-inline-field .form-control,
+.modal-inline-field .form-select {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.modal-inline-field .btn {
+  flex: 0 0 auto;
+  min-height: 42px;
+}
+
+@keyframes modalGlassIn {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.97);
+    transform: translateY(22px) scale(0.96);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .modal {
+    --modal-padding: clamp(0.75rem, 5vw, 1.5rem);
+  }
+
+  .modal .modal-dialog {
+    width: min(420px, 100%);
+    max-width: min(420px, calc(100vw - (var(--modal-padding) * 2)));
+    max-height: min(
+      calc(100vh - (var(--modal-padding) * 2)),
+      calc(100dvh - (var(--modal-padding) * 2))
+    );
+  }
+
+  .modal .modal-content {
+    border-radius: 12px;
+  }
+
+  .modal .modal-header,
+  .modal .modal-body,
+  .modal .modal-footer {
+    padding: clamp(0.85rem, 4vw, 1.35rem);
+  }
+
+  .modal-footer--stacked {
+    justify-content: center;
+  }
+
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-inline-field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-inline-field .btn {
+    width: 100%;
+  }
+
+  .modal .modal-body {
+    gap: clamp(0.65rem, 3vw, 1rem);
   }
 }
 
@@ -538,6 +789,19 @@ textarea {
 
   .modal-footer--stacked .btn {
     width: 100%;
+  }
+
+  .modal .modal-dialog {
+    width: 100%;
+    max-width: calc(100vw - (var(--modal-padding) * 2));
+    max-height: min(
+      calc(100vh - (var(--modal-padding) * 2)),
+      calc(100dvh - (var(--modal-padding) * 2))
+    );
+  }
+
+  .modal .modal-title {
+    font-size: clamp(1.2rem, 5vw, 1.45rem);
   }
 }
 

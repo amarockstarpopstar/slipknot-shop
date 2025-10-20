@@ -6,7 +6,7 @@
     <transition name="scale">
       <div
         v-if="visible"
-        class="modal d-block glass-modal"
+        class="modal glass-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="logout-modal-title"
@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, watch } from 'vue';
+import { useScrollLock } from '../composables/useScrollLock';
 
 const props = defineProps<{ visible: boolean }>();
 const emit = defineEmits<{
@@ -47,15 +48,15 @@ const handleKeyup = (event: KeyboardEvent) => {
   }
 };
 
+useScrollLock(visible);
+
 watch(
   visible,
   (value) => {
     if (value) {
       window.addEventListener('keyup', handleKeyup);
-      document.body.classList.add('modal-open');
     } else {
       window.removeEventListener('keyup', handleKeyup);
-      document.body.classList.remove('modal-open');
     }
   },
   { immediate: true },
@@ -63,7 +64,6 @@ watch(
 
 onBeforeUnmount(() => {
   window.removeEventListener('keyup', handleKeyup);
-  document.body.classList.remove('modal-open');
 });
 
 const emitConfirm = () => {
@@ -78,7 +78,7 @@ const emitCancel = () => {
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.28s ease;
 }
 
 .fade-enter-from,
@@ -88,23 +88,13 @@ const emitCancel = () => {
 
 .scale-enter-active,
 .scale-leave-active {
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .scale-enter-from,
 .scale-leave-to {
-  transform: translateY(16px) scale(0.96);
+  transform: translateY(18px) scale(0.95);
   opacity: 0;
 }
 
-.glass-modal .modal-content {
-  background: color-mix(in srgb, var(--color-surface-strong) 90%, transparent);
-  border: 1px solid var(--color-surface-border);
-  box-shadow: var(--shadow-hover);
-  backdrop-filter: blur(var(--blur-radius));
-}
-
-:global(body.modal-open) {
-  overflow: hidden;
-}
 </style>

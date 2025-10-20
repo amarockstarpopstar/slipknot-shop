@@ -228,7 +228,7 @@
     <Teleport to="body">
       <div
         v-if="showConfirm"
-        class="modal fade show d-block glass-modal"
+        class="modal fade show glass-modal"
         tabindex="-1"
         role="dialog"
         aria-modal="true"
@@ -258,8 +258,8 @@
               </p>
               <p v-if="confirmError" class="alert alert-danger mb-0">{{ confirmError }}</p>
             </section>
-            <footer class="modal-footer">
-              <button type="button" class="btn btn-outline-light" @click="closeConfirm" :disabled="confirmLoading">
+            <footer class="modal-footer modal-footer--stacked">
+              <button type="button" class="btn btn-outline-secondary" @click="closeConfirm" :disabled="confirmLoading">
                 Отмена
               </button>
               <button type="button" class="btn btn-danger" @click="confirmPurchase" :disabled="confirmLoading">
@@ -290,6 +290,7 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useNavigation } from '../composables/useNavigation';
 import { useReviewsStore } from '../store/reviewsStore';
+import { useScrollLock } from '../composables/useScrollLock';
 
 const route = useRoute();
 const { safePush, goToCheckout } = useNavigation();
@@ -312,6 +313,8 @@ const eligibilityError = reviewsRefs.eligibilityError;
 const showConfirm = ref(false);
 const confirmLoading = ref(false);
 const confirmError = ref<string | null>(null);
+
+useScrollLock(showConfirm);
 
 const ratingOptions = [5, 4, 3, 2, 1];
 

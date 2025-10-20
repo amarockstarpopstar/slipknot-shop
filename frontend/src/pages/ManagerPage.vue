@@ -375,7 +375,7 @@
     </div>
   </section>
 
-  <div v-if="addProductModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+  <div v-if="addProductModalVisible" class="modal fade show glass-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
@@ -562,7 +562,7 @@
   </div>
   <div v-if="addProductModalVisible" class="modal-backdrop fade show"></div>
 
-  <div v-if="addOrderModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
+  <div v-if="addOrderModalVisible" class="modal fade show glass-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
@@ -716,6 +716,7 @@ import {
   type UpdateOrderPayload,
 } from '../api/orders';
 import { extractErrorMessage } from '../api/http';
+import { useScrollLock } from '../composables/useScrollLock';
 
 interface EditableProductSize {
   id: number | null;
@@ -786,6 +787,9 @@ const productForm = ref<ProductFormState | null>(null);
 const orderForm = ref<OrderFormState | null>(null);
 const addProductModalVisible = ref(false);
 const addOrderModalVisible = ref(false);
+
+useScrollLock(addProductModalVisible);
+useScrollLock(addOrderModalVisible);
 const addProductForm = reactive<NewProductFormState>({
   title: '',
   description: '',

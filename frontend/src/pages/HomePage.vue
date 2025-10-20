@@ -33,7 +33,19 @@
           <div v-else class="products-grid">
             <ProductCard v-for="product in products" :key="product.id" :product="product">
               <template #actions>
-                <button class="btn btn-danger btn-sm" @click="addToCart(product)">В корзину</button>
+                <button
+                  class="btn btn-danger btn-sm"
+                  :disabled="isProductBeingAdded(product.id) || cartUpdating"
+                  @click="addToCart(product)"
+                >
+                  <span
+                    v-if="isProductBeingAdded(product.id)"
+                    class="spinner-border spinner-border-sm me-1"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  В корзину
+                </button>
                 <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
                   Подробнее
                 </RouterLink>
@@ -46,11 +58,18 @@
         </div>
       </div>
     </section>
+    <ProductSizeModal
+      :visible="showSizeModal"
+      :product="selectedProduct"
+      :disabled="cartUpdating"
+      @select="handleSizeSelect"
+      @close="closeSizeModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, type LocationQuery } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -58,6 +77,9 @@ import ProductCard from '../components/ProductCard.vue';
 import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 import { useNavigation } from '../composables/useNavigation';
+import ProductSizeModal from '../components/ProductSizeModal.vue';
+
+import type { ProductDto, ProductSizeDto } from '../api/products';
 
 const productStore = useProductStore();
 const cartStore = useCartStore();
@@ -65,14 +87,63 @@ const route = useRoute();
 const { safeReplace } = useNavigation();
 
 const { items: products, loading, error } = storeToRefs(productStore);
+const { updating: cartUpdatingRef } = storeToRefs(cartStore);
+
+const selectedProduct = ref<ProductDto | null>(null);
+const showSizeModal = ref(false);
+const pendingProductId = ref<number | null>(null);
 
 const refreshProducts = async () => {
   await productStore.loadAll();
 };
 
-const addToCart = (product: (typeof products.value)[number]) => {
-  cartStore.addProduct(product.id);
+const resolveDefaultSizeId = (sizes: ProductSizeDto[]): number | null => {
+  if (!sizes.length) {
+    return null;
+  }
+  const inStock = sizes.find((size) => size.stock > 0);
+  return (inStock ?? sizes[0]).id;
 };
+
+const addProductToCart = async (product: ProductDto, sizeId: number | null) => {
+  pendingProductId.value = product.id;
+  try {
+    await cartStore.addProduct(product.id, 1, sizeId);
+  } finally {
+    pendingProductId.value = null;
+  }
+};
+
+const addToCart = (product: (typeof products.value)[number]) => {
+  if (product.sizes && product.sizes.length > 1) {
+    selectedProduct.value = product;
+    showSizeModal.value = true;
+    return;
+  }
+
+  const sizeId = product.sizes ? resolveDefaultSizeId(product.sizes) : null;
+  void addProductToCart(product, sizeId);
+};
+
+const closeSizeModal = () => {
+  if (cartUpdatingRef.value) {
+    return;
+  }
+  showSizeModal.value = false;
+  selectedProduct.value = null;
+};
+
+const handleSizeSelect = async (sizeId: number) => {
+  if (!selectedProduct.value) {
+    return;
+  }
+  await addProductToCart(selectedProduct.value, sizeId);
+  closeSizeModal();
+};
+
+const cartUpdating = computed(() => cartUpdatingRef.value);
+
+const isProductBeingAdded = (productId: number) => pendingProductId.value === productId;
 
 const infoMessage = computed(() => {
   const message = route.query.message;
