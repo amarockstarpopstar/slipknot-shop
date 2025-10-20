@@ -79,199 +79,220 @@
     </div>
   </section>
 
-  <div v-if="createModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title h5">Новый пользователь</h2>
-          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCreateModal"></button>
-        </div>
-        <form @submit.prevent="createUserAction">
-          <div class="modal-body">
-            <p class="modal-subtitle text-muted">
-              Укажите контактные данные, роль и временный пароль для новой учетной записи.
-            </p>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label for="createUserName" class="form-label">Имя</label>
-                <input
-                  id="createUserName"
-                  v-model="createForm.name"
-                  type="text"
-                  class="form-control"
-                  placeholder="Имя и фамилия"
-                  required
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserEmail" class="form-label">Email</label>
-                <input
-                  id="createUserEmail"
-                  v-model="createForm.email"
-                  type="email"
-                  class="form-control"
-                  placeholder="name@example.com"
-                  required
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserPhone" class="form-label">Телефон</label>
-                <input
-                  id="createUserPhone"
-                  v-model="createForm.phone"
-                  type="tel"
-                  class="form-control"
-                  placeholder="Например, +7 900 000-00-00"
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserRole" class="form-label">Роль</label>
-                <select
-                  id="createUserRole"
-                  v-model="createForm.roleName"
-                  class="form-select"
-                  required
-                  :disabled="creating"
-                >
-                  <option value="">Выберите роль</option>
-                  <option v-for="role in roles" :key="role.id" :value="role.name">
-                    {{ role.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label for="createUserPassword" class="form-label">Пароль</label>
-                <input
-                  id="createUserPassword"
-                  v-model="createForm.password"
-                  type="password"
-                  class="form-control"
-                  placeholder="Минимум 6 символов"
-                  required
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserCountry" class="form-label">Страна</label>
-                <input
-                  id="createUserCountry"
-                  v-model="createForm.country"
-                  type="text"
-                  class="form-control"
-                  placeholder="Например, Россия"
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserCity" class="form-label">Город</label>
-                <input
-                  id="createUserCity"
-                  v-model="createForm.city"
-                  type="text"
-                  class="form-control"
-                  placeholder="Например, Москва"
-                  :disabled="creating"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="createUserAddress" class="form-label">Адрес</label>
-                <input
-                  id="createUserAddress"
-                  v-model="createForm.address"
-                  type="text"
-                  class="form-control"
-                  placeholder="Улица, дом, квартира"
-                  :disabled="creating"
-                />
+  <Teleport to="body">
+    <div
+      v-if="createModalVisible"
+      class="modal fade show glass-modal"
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-user-modal-title"
+      @click.self="closeCreateModal"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <form @submit.prevent="createUserAction">
+            <div class="modal-header">
+              <h2 id="create-user-modal-title" class="modal-title h5 mb-0">Новый пользователь</h2>
+              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCreateModal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="modal-subtitle text-muted">
+                Укажите контактные данные, роль и временный пароль для новой учетной записи.
+              </p>
+              <div class="modal-form-grid">
+                <div class="modal-form-grid__item">
+                  <label for="createUserName" class="form-label">Имя</label>
+                  <input
+                    id="createUserName"
+                    v-model="createForm.name"
+                    type="text"
+                    class="form-control"
+                    placeholder="Имя и фамилия"
+                    required
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserEmail" class="form-label">Email</label>
+                  <input
+                    id="createUserEmail"
+                    v-model="createForm.email"
+                    type="email"
+                    class="form-control"
+                    placeholder="name@example.com"
+                    required
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserPhone" class="form-label">Телефон</label>
+                  <input
+                    id="createUserPhone"
+                    v-model="createForm.phone"
+                    type="tel"
+                    class="form-control"
+                    placeholder="Например, +7 900 000-00-00"
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserRole" class="form-label">Роль</label>
+                  <select
+                    id="createUserRole"
+                    v-model="createForm.roleName"
+                    class="form-select"
+                    required
+                    :disabled="creating"
+                  >
+                    <option value="">Выберите роль</option>
+                    <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
+                  </select>
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserPassword" class="form-label">Пароль</label>
+                  <input
+                    id="createUserPassword"
+                    v-model="createForm.password"
+                    type="password"
+                    class="form-control"
+                    placeholder="Минимум 6 символов"
+                    required
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserCountry" class="form-label">Страна</label>
+                  <input
+                    id="createUserCountry"
+                    v-model="createForm.country"
+                    type="text"
+                    class="form-control"
+                    placeholder="Например, Россия"
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="createUserCity" class="form-label">Город</label>
+                  <input
+                    id="createUserCity"
+                    v-model="createForm.city"
+                    type="text"
+                    class="form-control"
+                    placeholder="Например, Москва"
+                    :disabled="creating"
+                  />
+                </div>
+                <div class="modal-form-grid__item modal-form-grid__item--full">
+                  <label for="createUserAddress" class="form-label">Адрес</label>
+                  <input
+                    id="createUserAddress"
+                    v-model="createForm.address"
+                    type="text"
+                    class="form-control"
+                    placeholder="Улица, дом, квартира"
+                    :disabled="creating"
+                  />
+                </div>
               </div>
             </div>
+            <div class="modal-footer modal-footer--stacked">
+              <button type="button" class="btn btn-outline-secondary" @click="closeCreateModal" :disabled="creating">
+                Отмена
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="creating">
+                Сохранить
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div v-if="createModalVisible" class="modal-backdrop fade show"></div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="editModalVisible"
+      class="modal fade show glass-modal"
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-user-modal-title"
+      @click.self="closeEditModal"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <form @submit.prevent="saveUser">
+            <div class="modal-header">
+              <h2 id="edit-user-modal-title" class="modal-title h5 mb-0">Редактирование пользователя</h2>
+              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeEditModal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-form-grid">
+                <div class="modal-form-grid__item">
+                  <label for="userName" class="form-label">Имя</label>
+                  <input id="userName" v-model="editForm.name" type="text" class="form-control" required />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="userEmail" class="form-label">Email</label>
+                  <input id="userEmail" v-model="editForm.email" type="email" class="form-control" required />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="userPhone" class="form-label">Телефон</label>
+                  <input id="userPhone" v-model="editForm.phone" type="tel" class="form-control" />
+                </div>
+                <div class="modal-form-grid__item">
+                  <label for="userRole" class="form-label">Роль</label>
+                  <select id="userRole" v-model="editForm.roleName" class="form-select" required>
+                    <option value="">Выберите роль</option>
+                    <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer modal-footer--stacked">
+              <button type="button" class="btn btn-outline-secondary" @click="closeEditModal">Отмена</button>
+              <button type="submit" class="btn btn-primary" :disabled="saving">Сохранить изменения</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div v-if="editModalVisible" class="modal-backdrop fade show"></div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="deleteModalVisible"
+      class="modal fade show glass-modal"
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-user-modal-title"
+      @click.self="closeDeleteModal"
+    >
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="delete-user-modal-title" class="modal-title h5 mb-0">Удаление пользователя</h2>
+            <button type="button" class="btn-close" aria-label="Закрыть" @click="closeDeleteModal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-3">Вы уверены, что хотите удалить пользователя «{{ deletingUser?.name }}»?</p>
+            <p class="text-muted mb-0">Это действие нельзя отменить.</p>
           </div>
           <div class="modal-footer modal-footer--stacked">
-            <button type="button" class="btn btn-outline-secondary" @click="closeCreateModal" :disabled="creating">
-              Отмена
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="creating">
-              Сохранить
+            <button type="button" class="btn btn-outline-secondary" @click="closeDeleteModal">Отменить</button>
+            <button type="button" class="btn btn-danger" :disabled="deleting" @click="confirmDelete">
+              Удалить
             </button>
           </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  <div v-if="createModalVisible" class="modal-backdrop fade show"></div>
-
-  <div v-if="editModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title h5">Редактирование пользователя</h2>
-          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeEditModal"></button>
-        </div>
-        <form @submit.prevent="saveUser">
-          <div class="modal-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label for="userName" class="form-label">Имя</label>
-                <input id="userName" v-model="editForm.name" type="text" class="form-control" required />
-              </div>
-              <div class="col-md-6">
-                <label for="userEmail" class="form-label">Email</label>
-                <input id="userEmail" v-model="editForm.email" type="email" class="form-control" required />
-              </div>
-              <div class="col-md-6">
-                <label for="userPhone" class="form-label">Телефон</label>
-                <input
-                  id="userPhone"
-                  v-model="editForm.phone"
-                  type="tel"
-                  class="form-control"
-                  placeholder="Например, +7 900 000-00-00"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="userRole" class="form-label">Роль</label>
-                <select id="userRole" v-model="editForm.roleName" class="form-select" required>
-                  <option value="">Выберите роль</option>
-                  <option v-for="role in roles" :key="role.id" :value="role.name">
-                    {{ role.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" @click="closeEditModal">Отменить</button>
-            <button type="submit" class="btn btn-primary" :disabled="saving">Сохранить изменения</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  <div v-if="editModalVisible" class="modal-backdrop fade show"></div>
-
-  <div v-if="deleteModalVisible" class="modal fade show d-block glass-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title h5">Удаление пользователя</h2>
-          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeDeleteModal"></button>
-        </div>
-        <div class="modal-body">
-          <p class="mb-0">Вы уверены, что хотите удалить пользователя «{{ deletingUser?.name }}»?</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" @click="closeDeleteModal">Отменить</button>
-          <button type="button" class="btn btn-danger" :disabled="deleting" @click="confirmDelete">
-            Удалить
-          </button>
         </div>
       </div>
     </div>
-  </div>
-  <div v-if="deleteModalVisible" class="modal-backdrop fade show"></div>
+    <div v-if="deleteModalVisible" class="modal-backdrop fade show"></div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -289,6 +310,7 @@ import {
   updateUser,
 } from '../api/users';
 import { extractErrorMessage } from '../api/http';
+import { useScrollLock } from '../composables/useScrollLock';
 
 const users = ref<UserListItem[]>([]);
 const roles = ref<UserRole[]>([]);
@@ -302,6 +324,10 @@ const successMessage = ref<string | null>(null);
 const editModalVisible = ref(false);
 const deleteModalVisible = ref(false);
 const createModalVisible = ref(false);
+
+useScrollLock(editModalVisible);
+useScrollLock(deleteModalVisible);
+useScrollLock(createModalVisible);
 const editingUserId = ref<number | null>(null);
 const deletingUser = ref<UserListItem | null>(null);
 
