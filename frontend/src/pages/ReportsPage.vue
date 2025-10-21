@@ -47,16 +47,14 @@
             <h2 class="h5 card-title">Продажи по дням</h2>
             <p class="text-muted small">Сумма заказов и количество товаров, оформленных в выбранный день.</p>
             <div v-if="hasData" class="chart-wrapper">
-              <div class="chart-surface">
-                <ApexChart
-                  type="line"
-                  height="360"
-                  :options="chartOptions"
-                  :series="chartSeries"
-                  aria-label="График продаж"
-                  role="img"
-                />
-              </div>
+              <ApexChart
+                type="line"
+                height="360"
+                :options="chartOptions"
+                :series="chartSeries"
+                aria-label="График продаж"
+                role="img"
+              />
             </div>
             <p v-else class="text-muted text-center mt-3 mb-0">
               Данных о продажах пока нет. Попробуйте оформить несколько заказов.
@@ -158,45 +156,24 @@ const chartOptions = computed(() => {
       background: 'transparent',
       toolbar: { show: false },
       foreColor: '#ffffff',
-      dropShadow: {
-        enabled: true,
-        top: 12,
-        left: 0,
-        blur: 12,
-        color: 'rgba(244, 63, 94, 0.45)',
-        opacity: 0.65,
-      },
     },
     theme: {
       mode: 'dark',
     },
-    colors: ['#f43f5e', '#fcd34d'],
+    colors: ['#ef4444', '#fbbf24'],
     stroke: {
-      width: [0, 4],
+      width: [0, 3],
       curve: 'smooth',
       lineCap: 'round',
     },
     markers: {
-      size: 6,
-      strokeWidth: 3,
-      strokeColors: '#0f172a',
+      size: 4,
+      strokeWidth: 2,
+      strokeColors: '#111827',
       colors: ['#fef3c7'],
-      hover: {
-        sizeOffset: 2,
-      },
     },
     dataLabels: {
-      enabled: true,
-      enabledOnSeries: [1],
-      background: { enabled: false },
-      style: {
-        colors: ['#ffffff'],
-        fontWeight: 600,
-        fontSize: '13px',
-      },
-      offsetY: -8,
-      formatter: (value: number, opts: { seriesIndex: number }) =>
-        opts.seriesIndex === 0 ? currencyFormatter.format(value) : `${Math.round(value)} шт.`,
+      enabled: false,
     },
     legend: {
       position: 'top',
@@ -213,18 +190,14 @@ const chartOptions = computed(() => {
       },
     },
     grid: {
-      borderColor: 'rgba(255, 255, 255, 0.12)',
-      strokeDashArray: 6,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      strokeDashArray: 4,
       position: 'back',
       xaxis: { lines: { show: false } },
       yaxis: { lines: { show: true } },
       padding: {
-        left: 20,
-        right: 20,
-      },
-      row: {
-        colors: ['rgba(255, 255, 255, 0.04)', 'transparent'],
-        opacity: 0.4,
+        left: 16,
+        right: 16,
       },
     },
     plotOptions: {
@@ -235,28 +208,20 @@ const chartOptions = computed(() => {
       },
     },
     fill: {
-      type: ['gradient', 'solid'],
-      gradient: {
-        shade: 'dark',
-        type: 'vertical',
-        shadeIntensity: 0.75,
-        gradientToColors: ['#7f1d1d'],
-        opacityFrom: 0.95,
-        opacityTo: 0.35,
-        stops: [0, 45, 90],
-      },
+      type: ['solid', 'solid'],
+      opacity: [0.9, 1],
     },
     xaxis: {
       categories,
       labels: {
         style: {
-          colors: Array.from({ length: categories.length }, () => '#ffffff'),
+          colors: Array.from({ length: categories.length }, () => 'rgba(255, 255, 255, 0.72)'),
           fontWeight: 500,
         },
         offsetY: 4,
       },
       axisBorder: {
-        color: 'rgba(255, 255, 255, 0.1)',
+        color: 'rgba(255, 255, 255, 0.08)',
         height: 1,
       },
       axisTicks: {
@@ -332,22 +297,10 @@ const chartOptions = computed(() => {
       {
         breakpoint: 768,
         options: {
-          chart: {
-            dropShadow: {
-              top: 8,
-              blur: 10,
-            },
-          },
           legend: {
             position: 'bottom',
             horizontalAlign: 'center',
             offsetY: 8,
-          },
-          dataLabels: {
-            style: {
-              fontSize: '12px',
-            },
-            offsetY: -4,
           },
         },
       },
@@ -392,54 +345,17 @@ onMounted(async () => {
 }
 
 .chart-card {
-  position: relative;
-  background: radial-gradient(120% 120% at 50% 0%, rgba(244, 63, 94, 0.35) 0%, rgba(12, 12, 24, 0.95) 55%, rgba(12, 12, 24, 0.98) 100%);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  box-shadow: 0 24px 60px -30px rgba(244, 63, 94, 0.65);
-  overflow: hidden;
-}
-
-.chart-card::before {
-  content: '';
-  position: absolute;
-  inset: -40% -20% auto -20%;
-  height: 220px;
-  background: radial-gradient(70% 70% at 50% 50%, rgba(252, 211, 77, 0.28) 0%, transparent 70%);
-  opacity: 0.7;
-  filter: blur(0.5px);
-}
-
-.chart-card .card-body {
-  position: relative;
-  z-index: 1;
+  background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.88) 60%, rgba(17, 24, 39, 0.95) 100%);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.65);
 }
 
 .chart-wrapper {
   min-height: 320px;
-  max-height: 420px;
-}
-
-.chart-surface {
-  position: relative;
-  padding: 1.5rem;
-  border-radius: 20px;
-  border: 1px solid rgba(252, 211, 77, 0.25);
-  background: linear-gradient(155deg, rgba(16, 16, 32, 0.9) 0%, rgba(30, 16, 30, 0.82) 45%, rgba(16, 16, 32, 0.9) 100%);
-  backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 32px -24px rgba(15, 23, 42, 0.8);
-}
-
-.chart-surface::after {
-  content: '';
-  position: absolute;
-  inset: 12px;
-  border-radius: 16px;
-  border: 1px dashed rgba(252, 211, 77, 0.15);
-  pointer-events: none;
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -461,13 +377,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 767.98px) {
-  .chart-surface {
-    padding: 1.25rem;
-    border-radius: 16px;
-  }
-
   .chart-card {
-    box-shadow: 0 18px 48px -28px rgba(244, 63, 94, 0.55);
+    box-shadow: 0 12px 28px -20px rgba(15, 23, 42, 0.7);
   }
 }
 </style>
