@@ -33,3 +33,12 @@ export const fetchCustomerOrders = async (): Promise<CustomerOrderDto[]> => {
   const { data } = await http.get<CustomerOrderDto[]>('/customer/orders');
   return data;
 };
+
+export const cancelCustomerOrder = async (
+  orderId: number,
+): Promise<CustomerOrderDto> => {
+  const { data } = await http.patch<CustomerOrderDto>(
+    `/customer/orders/${orderId}/cancel`,
+  );
+  return data;
+};

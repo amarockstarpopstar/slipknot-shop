@@ -53,6 +53,22 @@
 
             <div class="order-card__actions">
               <button
+                v-if="isCancellable(order)"
+                class="btn btn-outline-danger btn-sm"
+                type="button"
+                @click="cancelOrder(order.id)"
+                :disabled="isCancelling(order.id)"
+              >
+                <span
+                  v-if="isCancelling(order.id)"
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ isCancelling(order.id) ? 'Отменяем…' : 'Отменить заказ' }}</span>
+              </button>
+
+              <button
                 class="btn btn-outline-secondary btn-sm"
                 type="button"
                 @click="toggleOrder(order.id)"
@@ -96,6 +112,7 @@
 import { onMounted, ref } from 'vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
+  cancelCustomerOrder,
   fetchCustomerOrders,
   type CustomerOrderDto,
   type CustomerOrderItemDto,
@@ -106,6 +123,10 @@ const orders = ref<CustomerOrderDto[]>([]);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 const expandedOrderIds = ref<number[]>([]);
+const cancellingOrderIds = ref<number[]>([]);
+
+const DEFAULT_SHIPPING_STATUS = 'Готовится к отправке';
+const CANCELLED_STATUS_NAME = 'Отменен';
 
 const formatCurrency = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
@@ -124,10 +145,41 @@ const toggleOrder = (orderId: number) => {
   }
 };
 
+const isCancellable = (order: CustomerOrderDto) => {
+  const shippingStatus = order.shippingStatus?.trim().toLowerCase();
+  const orderStatus = order.status.name?.trim().toLowerCase();
+  return (
+    shippingStatus === DEFAULT_SHIPPING_STATUS.toLowerCase() &&
+    orderStatus !== CANCELLED_STATUS_NAME.toLowerCase()
+  );
+};
+
+const isCancelling = (orderId: number) =>
+  cancellingOrderIds.value.includes(orderId);
+
 const getTotalQuantity = (order: CustomerOrderDto) =>
   order.items.reduce((sum, item) => sum + item.quantity, 0);
 
 const getItemSubtotal = (item: CustomerOrderItemDto) => item.unitPrice * item.quantity;
+
+const cancelOrder = async (orderId: number) => {
+  if (isCancelling(orderId)) {
+    return;
+  }
+
+  try {
+    cancellingOrderIds.value = [...cancellingOrderIds.value, orderId];
+    const updatedOrder = await cancelCustomerOrder(orderId);
+    orders.value = orders.value.map((order) =>
+      order.id === updatedOrder.id ? updatedOrder : order,
+    );
+    errorMessage.value = null;
+  } catch (error) {
+    errorMessage.value = extractErrorMessage(error);
+  } finally {
+    cancellingOrderIds.value = cancellingOrderIds.value.filter((id) => id !== orderId);
+  }
+};
 
 const loadOrders = async () => {
   try {
@@ -268,6 +320,9 @@ onMounted(() => {
 
 .order-card__actions {
   margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .order-card__items {

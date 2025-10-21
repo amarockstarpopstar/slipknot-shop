@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -6,7 +10,11 @@ import { OrderResponseDto } from './dto/order-response.dto';
 import { OrderItemResponseDto } from './dto/order-item-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
-import { DEFAULT_SHIPPING_STATUS } from './orders.constants';
+import {
+  CANCELLED_SHIPPING_STATUS,
+  CANCELLED_STATUS_NAME,
+  DEFAULT_SHIPPING_STATUS,
+} from './orders.constants';
 import { CustomerOrderResponseDto } from './dto/customer-order-response.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderCustomerDto } from './dto/order-customer.dto';
@@ -165,6 +173,45 @@ export class OrdersService {
     });
 
     return orders.map((order) => this.toCustomerOrderResponse(order));
+  }
+
+  async cancelForUser(
+    id: number,
+    userId: number,
+  ): Promise<CustomerOrderResponseDto> {
+    const order = await this.ordersRepository.findOne({
+      where: { id },
+      relations: {
+        user: true,
+        status: true,
+        items: { product: true, productSize: true },
+      },
+    });
+
+    if (!order || order.user?.id !== userId) {
+      throw new NotFoundException('Заказ не найден');
+    }
+
+    const shippingStatus = order.shippingStatus?.trim() ?? '';
+    if (shippingStatus.toLowerCase() !== DEFAULT_SHIPPING_STATUS.toLowerCase()) {
+      throw new BadRequestException('Заказ нельзя отменить на текущем этапе.');
+    }
+
+    const cancelledStatus = await this.statusesRepository.findOne({
+      where: { name: CANCELLED_STATUS_NAME },
+    });
+
+    if (!cancelledStatus) {
+      throw new NotFoundException('Статус отмены заказа не найден');
+    }
+
+    order.status = cancelledStatus;
+    order.shippingStatus = CANCELLED_SHIPPING_STATUS;
+    order.shippingUpdatedAt = new Date();
+
+    const saved = await this.ordersRepository.save(order);
+
+    return this.toCustomerOrderResponse(saved);
   }
 
   async remove(id: number): Promise<void> {
