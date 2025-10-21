@@ -16,34 +16,34 @@
 
 :root[data-theme='light'] {
   --color-background: #ffffff;
-  --color-surface: rgba(234, 240, 255, 0.9);
-  --color-surface-strong: rgba(234, 240, 255, 0.97);
-  --color-surface-alt: rgba(255, 255, 255, 0.8);
-  --color-surface-border: rgba(176, 199, 255, 0.45);
-  --color-accent: #b0c7ff;
-  --color-accent-strong: #8aaaff;
-  --color-text: #001133;
-  --color-text-muted: rgba(0, 17, 51, 0.62);
-  --color-outline: rgba(176, 199, 255, 0.7);
-  --color-glow: rgba(147, 175, 255, 0.55);
-  --color-danger: #ff4d6d;
+  --color-surface: rgba(255, 255, 255, 0.92);
+  --color-surface-strong: rgba(255, 255, 255, 0.98);
+  --color-surface-alt: rgba(248, 248, 248, 0.86);
+  --color-surface-border: rgba(214, 214, 214, 0.7);
+  --color-accent: #d62828;
+  --color-accent-strong: #f6535d;
+  --color-text: #111111;
+  --color-text-muted: rgba(17, 17, 17, 0.62);
+  --color-outline: rgba(214, 41, 62, 0.4);
+  --color-glow: rgba(246, 83, 93, 0.45);
+  --color-danger: #d62828;
   --color-success: #2bc866;
 }
 
 :root[data-theme='dark'] {
-  --color-background: #000000;
-  --color-surface: rgba(10, 15, 26, 0.88);
-  --color-surface-strong: rgba(10, 15, 26, 0.96);
-  --color-surface-alt: rgba(11, 18, 30, 0.78);
-  --color-surface-border: rgba(27, 42, 65, 0.7);
-  --color-accent: #1b2a41;
-  --color-accent-strong: #274063;
-  --color-text: rgba(255, 255, 255, 0.85);
-  --color-text-muted: rgba(255, 255, 255, 0.6);
-  --color-outline: rgba(27, 42, 65, 0.9);
-  --color-glow: rgba(44, 86, 148, 0.65);
-  --color-danger: #ff5c6c;
-  --color-success: #58d68d;
+  --color-background: #050505;
+  --color-surface: rgba(12, 12, 12, 0.9);
+  --color-surface-strong: rgba(15, 15, 15, 0.96);
+  --color-surface-alt: rgba(20, 20, 20, 0.82);
+  --color-surface-border: rgba(72, 72, 72, 0.65);
+  --color-accent: #ff2d4d;
+  --color-accent-strong: #ff526a;
+  --color-text: rgba(255, 255, 255, 0.88);
+  --color-text-muted: rgba(255, 255, 255, 0.62);
+  --color-outline: rgba(255, 45, 77, 0.38);
+  --color-glow: rgba(255, 45, 77, 0.32);
+  --color-danger: #ff2d4d;
+  --color-success: #3ddf84;
 }
 
 *,
@@ -54,16 +54,16 @@
 
 html {
   min-height: 100%;
-  background: #050711;
+  background: #030303;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: inherit;
-  background: radial-gradient(120% 120% at 15% 10%, rgba(38, 56, 112, 0.35) 0%, transparent 62%),
-    radial-gradient(100% 110% at 85% 0%, rgba(97, 119, 196, 0.22) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(10, 10, 25, 0.68) 0%, rgba(5, 8, 18, 0.92) 54%, rgba(0, 0, 0, 0.95) 100%);
+  background: radial-gradient(120% 120% at 20% 18%, rgba(120, 8, 27, 0.32) 0%, transparent 55%),
+    radial-gradient(110% 120% at 80% 0%, rgba(90, 0, 18, 0.42) 0%, transparent 58%),
+    linear-gradient(180deg, #111111 0%, #080808 45%, #020202 100%);
   color: var(--color-text);
   transition: background var(--transition-base), color var(--transition-base);
   position: relative;
@@ -75,7 +75,7 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(10, 10, 25, 0.6) 0%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.92) 100%);
   backdrop-filter: blur(20px);
   z-index: 0;
 }
@@ -85,28 +85,28 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(160% 180% at 50% 10%, rgba(86, 106, 201, 0.18) 0%, transparent 60%),
-    radial-gradient(140% 160% at 50% 120%, rgba(8, 12, 32, 0.65) 0%, transparent 70%);
+  background: radial-gradient(160% 200% at 40% -10%, rgba(170, 16, 45, 0.25) 0%, transparent 65%),
+    radial-gradient(140% 200% at 60% 130%, rgba(45, 0, 9, 0.6) 0%, transparent 75%);
   mix-blend-mode: screen;
-  opacity: 0.85;
+  opacity: 0.75;
   z-index: 0;
 }
 
 :root[data-theme='light'] body {
-  background: radial-gradient(120% 120% at 15% 10%, rgba(199, 215, 255, 0.6) 0%, transparent 60%),
-    radial-gradient(110% 130% at 85% 0%, rgba(185, 205, 255, 0.35) 0%, transparent 62%),
-    linear-gradient(180deg, rgba(236, 242, 255, 0.95) 0%, rgba(214, 226, 255, 0.88) 45%, rgba(190, 206, 255, 0.92) 100%);
+  background: radial-gradient(120% 120% at 18% 16%, rgba(255, 204, 210, 0.45) 0%, transparent 58%),
+    radial-gradient(120% 140% at 82% 4%, rgba(255, 179, 188, 0.35) 0%, transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f7f7f7 48%, #f1f1f1 100%);
 }
 
 :root[data-theme='light'] body::before {
-  background: linear-gradient(180deg, rgba(218, 229, 255, 0.85) 0%, rgba(208, 222, 255, 0.75) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 240, 240, 0.85) 100%);
 }
 
 :root[data-theme='light'] body::after {
-  background: radial-gradient(140% 180% at 50% 8%, rgba(198, 214, 255, 0.42) 0%, transparent 60%),
-    radial-gradient(160% 200% at 50% 120%, rgba(164, 187, 255, 0.35) 0%, transparent 70%);
+  background: radial-gradient(150% 190% at 40% 0%, rgba(252, 207, 212, 0.35) 0%, transparent 62%),
+    radial-gradient(150% 210% at 60% 125%, rgba(235, 80, 90, 0.18) 0%, transparent 70%);
   mix-blend-mode: normal;
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 #app {
