@@ -42,14 +42,21 @@
 
     <section v-else class="row g-4">
       <div class="col-12 col-xl-8">
-        <div class="card bg-dark border-secondary h-100">
+        <div class="card chart-card h-100">
           <div class="card-body">
             <h2 class="h5 card-title">Продажи по дням</h2>
             <p class="text-muted small">Сумма заказов и количество товаров, оформленных в выбранный день.</p>
-            <div class="chart-wrapper">
-              <canvas ref="chartCanvas" class="sales-chart" aria-label="График продаж" role="img"></canvas>
+            <div v-if="hasData" class="chart-wrapper">
+              <ApexChart
+                type="line"
+                height="360"
+                :options="chartOptions"
+                :series="chartSeries"
+                aria-label="График продаж"
+                role="img"
+              />
             </div>
-            <p v-if="!dailySales.length" class="text-muted text-center mt-3 mb-0">
+            <p v-else class="text-muted text-center mt-3 mb-0">
               Данных о продажах пока нет. Попробуйте оформить несколько заказов.
             </p>
           </div>
@@ -79,8 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch, computed } from 'vue';
-import Chart from 'chart.js/auto';
+import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useReportsStore } from '../store/reportsStore';
 
@@ -88,15 +94,28 @@ const reportsStore = useReportsStore();
 const { dailySales, loading, error, downloading, downloadError, totalItems, totalAmount } =
   storeToRefs(reportsStore);
 
-const chartCanvas = ref<HTMLCanvasElement | null>(null);
-const chartInstance = ref<{ destroy: () => void } | null>(null);
 const successMessage = ref<string | null>(null);
 
-const formattedAmount = computed(() =>
-  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(
-    totalAmount.value,
-  ),
-);
+const hasData = computed(() => dailySales.value.length > 0);
+
+const currencyFormatter = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  maximumFractionDigits: 0,
+});
+
+const chartDateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: 'short',
+});
+
+const tooltipDateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+});
+
+const formattedAmount = computed(() => currencyFormatter.format(totalAmount.value));
 
 const averageOrderValue = computed(() => {
   if (!dailySales.value.length) {
@@ -106,115 +125,188 @@ const averageOrderValue = computed(() => {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(average);
 });
 
-const buildChart = () => {
-  if (!chartCanvas.value) {
-    return;
+const chartSeries = computed(() => {
+  if (!hasData.value) {
+    return [];
   }
 
-  if (chartInstance.value) {
-    chartInstance.value.destroy();
-  }
-
-  const labels = dailySales.value.map((point) => point.saleDate);
-  const totals = dailySales.value.map((point) => point.totalAmount);
-  const quantities = dailySales.value.map((point) => point.totalItems);
-
-  chartInstance.value = new Chart(chartCanvas.value, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Сумма продаж, ₽',
-          data: totals,
-          borderColor: '#f50000',
-          backgroundColor: 'rgba(245, 0, 0, 0.2)',
-          tension: 0.3,
-          yAxisID: 'amountAxis',
-          fill: true,
-        },
-        {
-          label: 'Количество товаров',
-          data: quantities,
-          borderColor: '#ffffff',
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          tension: 0.3,
-          yAxisID: 'countAxis',
-        },
-      ],
+  return [
+    {
+      name: 'Сумма продаж, ₽',
+      type: 'column',
+      data: dailySales.value.map((point) => point.totalAmount),
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      scales: {
-        amountAxis: {
-          type: 'linear',
-          position: 'left',
-          ticks: {
-            callback: (value: string | number) =>
-              new Intl.NumberFormat('ru-RU', {
-                style: 'currency',
-                currency: 'RUB',
-                maximumFractionDigits: 0,
-              }).format(Number(value)),
-          },
-        },
-        countAxis: {
-          type: 'linear',
-          position: 'right',
-          grid: {
-            drawOnChartArea: false,
-          },
-        },
-        x: {
-          ticks: {
-            callback: (_value: string | number, index: number) => {
-              const label = labels[index];
-              if (!label) {
-                return '';
-              }
-              return new Date(label).toLocaleDateString('ru-RU');
-            },
-          },
-        },
-      },
-      plugins: {
-        legend: {
-          labels: {
-            color: '#ffffff',
-          },
-        },
-        tooltip: {
-          callbacks: {
-            title: (tooltipItems: Array<{ dataIndex: number }>) => {
-              const item = tooltipItems[0];
-              const label = labels[item.dataIndex];
-              return label ? new Date(label).toLocaleDateString('ru-RU') : '';
-            },
-          },
-        },
-      },
-      color: '#ffffff',
+    {
+      name: 'Количество товаров',
+      type: 'line',
+      data: dailySales.value.map((point) => point.totalItems),
     },
+  ];
+});
+
+const chartOptions = computed(() => {
+  const categories = dailySales.value.map((point) => {
+    const date = new Date(`${point.saleDate}T00:00:00`);
+    return chartDateFormatter.format(date);
   });
-};
 
-watch(
-  dailySales,
-  () => {
-    if (dailySales.value.length) {
-      buildChart();
-    } else if (chartInstance.value) {
-      chartInstance.value.destroy();
-      chartInstance.value = null;
-    }
-  },
-  { deep: true },
-);
+  return {
+    chart: {
+      type: 'line',
+      background: 'transparent',
+      toolbar: { show: false },
+      foreColor: '#ffffff',
+    },
+    theme: {
+      mode: 'dark',
+    },
+    colors: ['#ef4444', '#fbbf24'],
+    stroke: {
+      width: [0, 3],
+      curve: 'smooth',
+      lineCap: 'round',
+    },
+    markers: {
+      size: 4,
+      strokeWidth: 2,
+      strokeColors: '#111827',
+      colors: ['#fef3c7'],
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'left',
+      fontSize: '13px',
+      labels: { colors: '#ffffff' },
+      markers: {
+        width: 12,
+        height: 12,
+        radius: 12,
+      },
+      itemMargin: {
+        horizontal: 12,
+      },
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      strokeDashArray: 4,
+      position: 'back',
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } },
+      padding: {
+        left: 16,
+        right: 16,
+      },
+    },
+    plotOptions: {
+      bar: {
+        columnWidth: '42%',
+        borderRadius: 12,
+        borderRadiusApplication: 'end',
+      },
+    },
+    fill: {
+      type: ['solid', 'solid'],
+      opacity: [0.9, 1],
+    },
+    xaxis: {
+      categories,
+      labels: {
+        style: {
+          colors: Array.from({ length: categories.length }, () => 'rgba(255, 255, 255, 0.72)'),
+          fontWeight: 500,
+        },
+        offsetY: 4,
+      },
+      axisBorder: {
+        color: 'rgba(255, 255, 255, 0.08)',
+        height: 1,
+      },
+      axisTicks: {
+        show: false,
+      },
+    },
+    yaxis: [
+      {
+        seriesName: 'Сумма продаж, ₽',
+        labels: {
+          formatter: (value: number) => currencyFormatter.format(value),
+          style: { color: '#ffffff', fontWeight: 500 },
+        },
+        title: {
+          text: 'Сумма продаж, ₽',
+          style: { color: '#ffffff', fontWeight: 600 },
+        },
+        axisTicks: {
+          show: false,
+        },
+      },
+      {
+        opposite: true,
+        seriesName: 'Количество товаров',
+        labels: {
+          formatter: (value: number) => `${Math.round(value)}`,
+          style: { color: '#ffffff', fontWeight: 500 },
+        },
+        title: {
+          text: 'Количество товаров',
+          style: { color: '#ffffff', fontWeight: 600 },
+        },
+        axisTicks: {
+          show: false,
+        },
+      },
+    ],
+    tooltip: {
+      shared: true,
+      intersect: false,
+      theme: 'dark',
+      x: {
+        formatter: (_value: string, opts: { dataPointIndex: number }) => {
+          const point = dailySales.value[opts.dataPointIndex];
+          if (!point) {
+            return '';
+          }
+          const date = new Date(`${point.saleDate}T00:00:00`);
+          return tooltipDateFormatter.format(date);
+        },
+      },
+      y: {
+        formatter: (value: number, opts: { seriesIndex: number }) =>
+          opts.seriesIndex === 0 ? currencyFormatter.format(value) : `${Math.round(value)} шт.`,
+      },
+    },
+    states: {
+      hover: {
+        filter: {
+          type: 'lighten',
+          value: 0.1,
+        },
+      },
+      active: {
+        allowMultipleDataPointsSelection: false,
+        filter: {
+          type: 'darken',
+          value: 0.35,
+        },
+      },
+    },
+    responsive: [
+      {
+        breakpoint: 768,
+        options: {
+          legend: {
+            position: 'bottom',
+            horizontalAlign: 'center',
+            offsetY: 8,
+          },
+        },
+      },
+    ],
+  };
+});
 
 const refreshData = async () => {
   await reportsStore.loadDailySales();
@@ -244,16 +336,6 @@ const resetDownload = () => {
 
 onMounted(async () => {
   await reportsStore.loadDailySales();
-  if (dailySales.value.length) {
-    buildChart();
-  }
-});
-
-onBeforeUnmount(() => {
-  if (chartInstance.value) {
-    chartInstance.value.destroy();
-    chartInstance.value = null;
-  }
 });
 </script>
 
@@ -262,18 +344,18 @@ onBeforeUnmount(() => {
   min-height: 100%;
 }
 
-.chart-wrapper {
-  min-height: 320px;
-  max-height: 420px;
+.chart-card {
+  background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.88) 60%, rgba(17, 24, 39, 0.95) 100%);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.65);
 }
 
-.sales-chart {
-  width: 100%;
-  height: 100%;
+.chart-wrapper {
+  min-height: 320px;
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -292,5 +374,11 @@ onBeforeUnmount(() => {
   font-size: 1.5rem;
   font-weight: 600;
   color: #ffffff;
+}
+
+@media (max-width: 767.98px) {
+  .chart-card {
+    box-shadow: 0 12px 28px -20px rgba(15, 23, 42, 0.7);
+  }
 }
 </style>
