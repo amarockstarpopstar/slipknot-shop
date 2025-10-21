@@ -1,205 +1,207 @@
 <template>
-  <section class="section fade-in-up">
-    <div class="layout-container">
-      <header class="page-header">
-        <div>
-          <span class="chip mb-2">Оплата</span>
-          <h1 class="section-title">Оплата заказа</h1>
-        </div>
-      </header>
-
-      <LoadingSpinner v-if="loading && !hasItems && !paymentSuccess" />
-
-      <div v-else>
-        <div v-if="paymentSuccess" class="payment-success">
-          <div class="alert alert-success" role="alert">
-            Заказ №{{ lastOrder?.orderId }} успешно оплачен. Сумма: {{ formatCurrency(lastOrder?.totalAmount ?? 0) }}
+  <div class="checkout-payment-page">
+    <section class="section fade-in-up">
+      <div class="layout-container">
+        <header class="page-header">
+          <div>
+            <span class="chip mb-2">Оплата</span>
+            <h1 class="section-title">Оплата заказа</h1>
           </div>
-          <div class="payment-status">
-            <h2 class="payment-status__title">Статус отправки</h2>
-            <p class="payment-status__value">{{ lastOrder?.shippingStatus }}</p>
-            <p class="payment-status__meta">Обновлено: {{ formatDate(lastOrder?.shippingUpdatedAt ?? '') }}</p>
-            <div class="payment-status__actions">
-              <RouterLink class="btn btn-outline-light" to="/orders">Перейти к истории заказов</RouterLink>
-              <RouterLink class="btn btn-danger" to="/">Продолжить покупки</RouterLink>
-            </div>
-          </div>
-        </div>
+        </header>
+
+        <LoadingSpinner v-if="loading && !hasItems && !paymentSuccess" />
 
         <div v-else>
-          <div v-if="!items.length" class="alert alert-info" role="alert">
-            Корзина пуста. Добавьте товары, чтобы оформить заказ.
-          </div>
-          <div v-else class="checkout-layout">
-            <div class="checkout-items">
-              <article v-for="item in items" :key="item.id" class="checkout-item">
-                <div class="checkout-item__image" v-if="item.product.imageUrl">
-                  <img :src="item.product.imageUrl" :alt="item.product.title" loading="lazy" />
-                </div>
-                <div v-else class="checkout-item__placeholder">Фото</div>
-                <div class="checkout-item__content">
-                  <h2 class="checkout-item__title">{{ item.product.title }}</h2>
-                  <p class="checkout-item__price">
-                    Цена: {{ formatCurrency(item.unitPrice) }}
-                  </p>
-                  <p v-if="item.size" class="checkout-item__meta">
-                    Размер: {{ item.size.size }} — {{ formatCurrency(item.size.price) }}
-                  </p>
-                  <p class="checkout-item__meta">Количество: {{ item.quantity }}</p>
-                </div>
-              </article>
+          <div v-if="paymentSuccess" class="payment-success">
+            <div class="alert alert-success" role="alert">
+              Заказ №{{ lastOrder?.orderId }} успешно оплачен. Сумма: {{ formatCurrency(lastOrder?.totalAmount ?? 0) }}
             </div>
-            <aside class="checkout-summary">
-              <h2 class="checkout-summary__title">К оплате</h2>
-              <p class="checkout-summary__line">Товаров: <span>{{ totalQuantity }}</span></p>
-              <p class="checkout-summary__line">Сумма: <span>{{ formatCurrency(totalAmount) }}</span></p>
-              <button
-                type="button"
-                class="btn btn-danger w-100"
-                @click="payOrder"
-                :disabled="updating || !items.length || addressSaving"
-              >
-                Оплатить
-              </button>
-            </aside>
+            <div class="payment-status">
+              <h2 class="payment-status__title">Статус отправки</h2>
+              <p class="payment-status__value">{{ lastOrder?.shippingStatus }}</p>
+              <p class="payment-status__meta">Обновлено: {{ formatDate(lastOrder?.shippingUpdatedAt ?? '') }}</p>
+              <div class="payment-status__actions">
+                <RouterLink class="btn btn-outline-light" to="/orders">Перейти к истории заказов</RouterLink>
+                <RouterLink class="btn btn-danger" to="/">Продолжить покупки</RouterLink>
+              </div>
+            </div>
           </div>
+
+          <div v-else>
+            <div v-if="!items.length" class="alert alert-info" role="alert">
+              Корзина пуста. Добавьте товары, чтобы оформить заказ.
+            </div>
+            <div v-else class="checkout-layout">
+              <div class="checkout-items">
+                <article v-for="item in items" :key="item.id" class="checkout-item">
+                  <div class="checkout-item__image" v-if="item.product.imageUrl">
+                    <img :src="item.product.imageUrl" :alt="item.product.title" loading="lazy" />
+                  </div>
+                  <div v-else class="checkout-item__placeholder">Фото</div>
+                  <div class="checkout-item__content">
+                    <h2 class="checkout-item__title">{{ item.product.title }}</h2>
+                    <p class="checkout-item__price">
+                      Цена: {{ formatCurrency(item.unitPrice) }}
+                    </p>
+                    <p v-if="item.size" class="checkout-item__meta">
+                      Размер: {{ item.size.size }} — {{ formatCurrency(item.size.price) }}
+                    </p>
+                    <p class="checkout-item__meta">Количество: {{ item.quantity }}</p>
+                  </div>
+                </article>
+              </div>
+              <aside class="checkout-summary">
+                <h2 class="checkout-summary__title">К оплате</h2>
+                <p class="checkout-summary__line">Товаров: <span>{{ totalQuantity }}</span></p>
+                <p class="checkout-summary__line">Сумма: <span>{{ formatCurrency(totalAmount) }}</span></p>
+                <button
+                  type="button"
+                  class="btn btn-danger w-100"
+                  @click="payOrder"
+                  :disabled="updating || !items.length || addressSaving"
+                >
+                  Оплатить
+                </button>
+              </aside>
+            </div>
+          </div>
+
+          <p v-if="localError" class="alert alert-danger mt-4 mb-0">{{ localError }}</p>
         </div>
-
-        <p v-if="localError" class="alert alert-danger mt-4 mb-0">{{ localError }}</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <Teleport to="body">
-    <div
-      v-if="showCountryModal"
-      class="modal fade show glass-modal"
-      tabindex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="country-limit-modal"
-      @click.self="closeCountryModal"
-    >
-      <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 id="country-limit-modal" class="modal-title h5 mb-0">Заказ недоступен</h2>
-            <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
-          </div>
-          <div class="modal-body">
-            <p class="mb-0">{{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}</p>
-          </div>
-          <div class="modal-footer modal-footer--stacked">
-            <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
-            <button type="button" class="btn btn-danger" @click="handleCountryModalProfileRedirect">
-              Перейти в профиль
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-if="showCountryModal" class="modal-backdrop fade show"></div>
-  </Teleport>
-
-  <Teleport to="body">
-    <div
-      v-if="showAddressModal"
-      class="modal fade show glass-modal"
-      tabindex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="checkout-address-modal"
-      @click.self="closeAddressModal"
-    >
-      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <form @submit.prevent="submitAddress">
+    <Teleport to="body">
+      <div
+        v-if="showCountryModal"
+        class="modal fade show glass-modal"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="country-limit-modal"
+        @click.self="closeCountryModal"
+      >
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
             <div class="modal-header">
-              <h2 id="checkout-address-modal" class="modal-title h5 mb-0">Укажите адрес доставки</h2>
-              <button
-                type="button"
-                class="btn-close"
-                aria-label="Закрыть"
-                @click="closeAddressModal"
-                :disabled="addressSaving"
-              ></button>
+              <h2 id="country-limit-modal" class="modal-title h5 mb-0">Заказ недоступен</h2>
+              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
             </div>
             <div class="modal-body">
-              <p class="modal-subtitle text-muted">Для оформления заказа заполните все поля.</p>
-              <div class="modal-form-grid">
-                <div class="modal-form-grid__item">
-                  <label for="checkoutCountry" class="form-label">Страна</label>
-                  <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
-                    <option value="">Выберите страну</option>
-                    <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
-                  </select>
-                </div>
-                <div class="modal-form-grid__item">
-                  <label :for="addressForm.useCustomCity ? 'checkoutCityCustom' : 'checkoutCity'" class="form-label">
-                    Город
-                  </label>
-                  <div class="modal-inline-field">
-                    <select
-                      v-if="!addressForm.useCustomCity"
-                      id="checkoutCity"
-                      v-model="addressForm.city"
-                      class="form-select"
-                      :disabled="!addressForm.country"
-                      required
-                    >
-                      <option value="">Выберите город</option>
-                      <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
-                        {{ cityOption }}
-                      </option>
-                    </select>
-                    <input
-                      v-else
-                      id="checkoutCityCustom"
-                      v-model="addressForm.customCity"
-                      type="text"
-                      class="form-control"
-                      placeholder="Введите город"
-                      required
-                    />
-                    <button type="button" class="btn btn-outline-secondary" @click="toggleAddressCityInput">
-                      {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
-                    </button>
-                  </div>
-                  <small class="text-muted">Выберите город или введите свой</small>
-                </div>
-                <div class="modal-form-grid__item modal-form-grid__item--full">
-                  <label for="checkoutAddress" class="form-label">Адрес</label>
-                  <textarea
-                    id="checkoutAddress"
-                    v-model="addressForm.address"
-                    class="form-control"
-                    rows="3"
-                    placeholder="Улица, дом, квартира"
-                    required
-                  ></textarea>
-                </div>
-              </div>
-              <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
+              <p class="mb-0">{{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}</p>
             </div>
             <div class="modal-footer modal-footer--stacked">
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="closeAddressModal"
-                :disabled="addressSaving"
-              >
-                Отмена
-              </button>
-              <button type="submit" class="btn btn-danger" :disabled="addressSaving">
-                {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
+              <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
+              <button type="button" class="btn btn-danger" @click="handleCountryModalProfileRedirect">
+                Перейти в профиль
               </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
-    </div>
-    <div v-if="showAddressModal" class="modal-backdrop fade show"></div>
-  </Teleport>
+      <div v-if="showCountryModal" class="modal-backdrop fade show"></div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showAddressModal"
+        class="modal fade show glass-modal"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkout-address-modal"
+        @click.self="closeAddressModal"
+      >
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <form @submit.prevent="submitAddress">
+              <div class="modal-header">
+                <h2 id="checkout-address-modal" class="modal-title h5 mb-0">Укажите адрес доставки</h2>
+                <button
+                  type="button"
+                  class="btn-close"
+                  aria-label="Закрыть"
+                  @click="closeAddressModal"
+                  :disabled="addressSaving"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <p class="modal-subtitle text-muted">Для оформления заказа заполните все поля.</p>
+                <div class="modal-form-grid">
+                  <div class="modal-form-grid__item">
+                    <label for="checkoutCountry" class="form-label">Страна</label>
+                    <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
+                      <option value="">Выберите страну</option>
+                      <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
+                    </select>
+                  </div>
+                  <div class="modal-form-grid__item">
+                    <label :for="addressForm.useCustomCity ? 'checkoutCityCustom' : 'checkoutCity'" class="form-label">
+                      Город
+                    </label>
+                    <div class="modal-inline-field">
+                      <select
+                        v-if="!addressForm.useCustomCity"
+                        id="checkoutCity"
+                        v-model="addressForm.city"
+                        class="form-select"
+                        :disabled="!addressForm.country"
+                        required
+                      >
+                        <option value="">Выберите город</option>
+                        <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
+                          {{ cityOption }}
+                        </option>
+                      </select>
+                      <input
+                        v-else
+                        id="checkoutCityCustom"
+                        v-model="addressForm.customCity"
+                        type="text"
+                        class="form-control"
+                        placeholder="Введите город"
+                        required
+                      />
+                      <button type="button" class="btn btn-outline-secondary" @click="toggleAddressCityInput">
+                        {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
+                      </button>
+                    </div>
+                    <small class="text-muted">Выберите город или введите свой</small>
+                  </div>
+                  <div class="modal-form-grid__item modal-form-grid__item--full">
+                    <label for="checkoutAddress" class="form-label">Адрес</label>
+                    <textarea
+                      id="checkoutAddress"
+                      v-model="addressForm.address"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Улица, дом, квартира"
+                      required
+                    ></textarea>
+                  </div>
+                </div>
+                <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
+              </div>
+              <div class="modal-footer modal-footer--stacked">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  @click="closeAddressModal"
+                  :disabled="addressSaving"
+                >
+                  Отмена
+                </button>
+                <button type="submit" class="btn btn-danger" :disabled="addressSaving">
+                  {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div v-if="showAddressModal" class="modal-backdrop fade show"></div>
+    </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">
