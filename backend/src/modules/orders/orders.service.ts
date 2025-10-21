@@ -160,7 +160,7 @@ export class OrdersService {
   async findForUser(userId: number): Promise<CustomerOrderResponseDto[]> {
     const orders = await this.ordersRepository.find({
       where: { user: { id: userId } },
-      relations: { status: true },
+      relations: { status: true, items: { product: true, productSize: true } },
       order: { placedAt: 'DESC', id: 'DESC' },
     });
 
@@ -207,8 +207,8 @@ export class OrdersService {
     return address;
   }
 
-  private toOrderResponse(order: Order): OrderResponseDto {
-    const items: OrderItemResponseDto[] = (order.items ?? []).map((item) => ({
+  private mapOrderItems(order: Order): OrderItemResponseDto[] {
+    return (order.items ?? []).map((item) => ({
       id: item.id,
       product: {
         id: item.product?.id ?? 0,
@@ -224,6 +224,10 @@ export class OrdersService {
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
     }));
+  }
+
+  private toOrderResponse(order: Order): OrderResponseDto {
+    const items = this.mapOrderItems(order);
 
     return {
       id: order.id,
@@ -258,6 +262,8 @@ export class OrdersService {
   }
 
   private toCustomerOrderResponse(order: Order): CustomerOrderResponseDto {
+    const items = this.mapOrderItems(order);
+
     return {
       id: order.id,
       totalAmount: Number(order.totalAmount),
@@ -269,6 +275,7 @@ export class OrdersService {
       shippingStatus: order.shippingStatus,
       shippingUpdatedAt: order.shippingUpdatedAt,
       placedAt: order.placedAt,
+      items,
     };
   }
 }

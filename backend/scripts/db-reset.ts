@@ -12,6 +12,57 @@ const getEnv = (keys: string[], fallback?: string): string | undefined => {
   return fallback;
 };
 
+const parseBoolean = (value?: string): boolean | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized.length) {
+    return undefined;
+  }
+
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+};
+
+async function isDatabaseInitialized({
+  host,
+  port,
+  user,
+  password,
+  database,
+}: {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+}): Promise<boolean> {
+  const pool = new Pool({ host, port, user, password, database });
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query<{ count: string }>(
+      `SELECT COUNT(*) AS count
+         FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE';`,
+    );
+
+    return Number.parseInt(result.rows[0]?.count ?? '0', 10) > 0;
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+
 async function ensureDatabaseExists({
   host,
   port,
@@ -88,6 +139,25 @@ async function main() {
 
   try {
     await ensureDatabaseExists(connection);
+    const forceReset =
+      parseBoolean(
+        getEnv(
+          ['RESET_DB_ON_START', 'DB_RESET_ON_START', 'RESET_DATABASE_ON_START'],
+        ),
+      ) ?? false;
+
+    if (!forceReset) {
+      const initialized = await isDatabaseInitialized(connection);
+
+      if (initialized) {
+        console.log(
+          'Database already contains tables. Skipping automatic reset. ' +
+            'Set RESET_DB_ON_START=true to force schema reapply.',
+        );
+        return;
+      }
+    }
+
     await runSchema(connection);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

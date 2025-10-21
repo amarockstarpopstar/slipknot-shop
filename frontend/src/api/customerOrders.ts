@@ -1,5 +1,20 @@
 import { http } from './http';
 
+export interface CustomerOrderItemDto {
+  id: number;
+  product: {
+    id: number;
+    title: string;
+    sku: string;
+  };
+  size: {
+    id: number;
+    size: string;
+  } | null;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface CustomerOrderDto {
   id: number;
   totalAmount: number;
@@ -11,6 +26,7 @@ export interface CustomerOrderDto {
   shippingStatus: string;
   shippingUpdatedAt: string;
   placedAt: string;
+  items: CustomerOrderItemDto[];
 }
 
 export const fetchCustomerOrders = async (): Promise<CustomerOrderDto[]> => {
