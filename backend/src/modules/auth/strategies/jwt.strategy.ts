@@ -20,8 +20,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Недействительный токен');
     }
 
+    const userId = payload.sub;
+
     return {
-      userId: payload.sub,
+      id: userId,
+      userId,
       email: payload.email,
       role: payload.role,
     };
