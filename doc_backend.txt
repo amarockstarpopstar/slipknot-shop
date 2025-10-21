@@ -1,0 +1,95 @@
+SLIPKNOT SHOP — ДОКУМЕНТ ДЛЯ БЭКЕНДА (doc_backend.txt)
+======================================================
+
+Цель
+----
+Сконцентрированная справка по бэкенду для Codex: как поднять среду, как устроены сущности,
+какие эндпоинты и роли, на что обратить внимание при развитии функционала.
+
+Общее описание
+--------------
+• Стек: Node.js + NestJS (TypeScript). БД — PostgreSQL (локальная установка, без Docker).
+• Миграции: в проекте могли отсутствовать — проверить. Если миграций нет, использовать SQL‑скрипты
+  или автосоздание схемы ORM (TypeORM/Prisma — определить по package.json).
+• Роли и доступы: Admin, Manager, User; JWT‑авторизация (ожидаемо).
+
+Локальная установка PostgreSQL (без Docker)
+-------------------------------------------
+1) Установить PostgreSQL 16+ локально.
+2) Создать пользователя и БД, например:
+   • user: slipknot_user
+   • password: slipknot_pass
+   • db: slipknot_shop
+3) Выдать права пользователю на БД.
+4) Опционально — включить расширение uuid‑ossp (если используется).
+
+Переменные окружения (.env в `backend/`)
+----------------------------------------
+Уточнить по коду/конфигу, обычно нужны:
+• DATABASE_URL=postgres://slipknot_user:slipknot_pass@localhost:5432/slipknot_shop
+  или отдельные PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE
+• PORT=3000
+• JWT_SECRET=... (и JWT_EXPIRES_IN)
+• CORS_ORIGIN=http://localhost:5173 (или порт фронтенда)
+
+Запуск (уточнить по package.json)
+---------------------------------
+• Установка:   <PM> install
+• Дев‑режим:   <PM> run start:dev
+• Прод:        <PM> run build && <PM> run start:prod
+• Линтер/тесты (если есть): <PM> run lint / <PM> test
+
+Сущности/таблицы (ожидаемая модель)
+-----------------------------------
+• users           — id, email, password_hash, role_id, created_at, ...
+• roles           — id, name (admin/manager/user)
+• products        — id, title, slug, base_price, description, images, ...
+• product_sizes   — id, product_id, size (S/M/L/...), price_delta ИЛИ финальная price
+• orders          — id, user_id, status, total, created_at, address, country, ...
+• order_items     — id, order_id, product_id, size, qty, unit_price
+• cart_items      — id, user_id (или session_id), product_id, size, qty, price_snapshot
+• wishlists       — id, user_id
+• wishlist_items  — id, wishlist_id, product_id, created_at
+
+Ключевая бизнес‑логика
+----------------------
+• Цены зависят от выбранного размера товара:
+  – Вариант A: цена = base_price + price_delta(size)
+  – Вариант B: цена хранится отдельно в product_sizes.price
+• При добавлении в корзину сохранять цену на момент добавления (price_snapshot).
+• Валидация при оформлении: страна/адрес обязательны; корректная обработка ошибок.
+• Разграничение прав:
+  – Admin: управление пользователями/ролями/товарами.
+  – Manager: управление товарами/заказами, без прав на роли.
+  – User: покупки/история заказов.
+
+Эндпоинты (примерная карта)
+---------------------------
+• /auth        POST /login, POST /register, POST /refresh, POST /logout
+• /products    GET /        (список), GET /:id|slug, POST/PUT/DELETE (admin/manager)
+• /cart        GET /mine, POST /add, POST /remove, POST /update
+• /orders      GET /mine, POST /checkout, GET /:id
+• /wishlist    GET /mine, POST /add, POST /remove
+• /admin/users GET /, POST /, PUT /:id, DELETE /:id (admin)
+
+Тестовые пользователи (рекомендация)
+------------------------------------
+Создать заготовки для всех ролей (email/пароль в .env.local или seed‑скрипте), чтобы QA и
+скриншоты можно было делать быстро. Пример:
+• admin@example.com / Admin!234
+• manager@example.com / Manager!234
+• user@example.com / User!234
+
+Известные проблемы/предосторожности
+-----------------------------------
+• Частая ошибка: ECONNREFUSED :5432 при старте — локальный PostgreSQL не поднят.
+• Если ранее использовался docker-compose, убедиться, что подключение переведено на локальный PG.
+• Включить CORS для фронтенд‑происхождения (порт Vite).
+
+Чек‑лист для Codex перед коммитом (backend)
+-------------------------------------------
+[ ] Сборка и запуск проходят без ошибок, .env настроен.
+[ ] Таблицы/миграции соответствуют размер‑зависимой цене.
+[ ] Эндпоинты валидируют входные данные (class-validator/DTO).
+[ ] Ролевые guard’ы закрывают админские/менеджерские маршруты.
+[ ] Подготовлены/обновлены тестовые пользователи (seed).
