@@ -1,4 +1,12 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -33,5 +41,15 @@ export class CustomerOrdersController {
     @Req() req: AuthenticatedRequest,
   ): Promise<CustomerOrderResponseDto[]> {
     return this.ordersService.findForUser(req.user.id);
+  }
+
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Отменить заказ текущего пользователя' })
+  @ApiOkResponse({ description: 'Заказ отменён', type: CustomerOrderResponseDto })
+  cancelMyOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<CustomerOrderResponseDto> {
+    return this.ordersService.cancelForUser(id, req.user.id);
   }
 }
