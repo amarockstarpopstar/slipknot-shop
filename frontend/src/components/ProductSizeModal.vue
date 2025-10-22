@@ -166,7 +166,7 @@ const handleDialogClose = () => {
   transform: translateY(0) scale(1);
 }
 
-.modal-layer {
+:global(.modal-layer) {
   position: fixed;
   inset: 0;
   z-index: 1050;
@@ -395,12 +395,12 @@ const handleDialogClose = () => {
 
 @media (max-width: 575.98px) {
   .modal-layer__container {
-    padding: clamp(16px, 6vw, 28px) clamp(14px, 5vw, 22px) calc(24px + env(safe-area-inset-bottom));
-    align-items: flex-end;
+    padding: clamp(18px, 6vw, 30px) clamp(14px, 5vw, 22px) calc(24px + env(safe-area-inset-bottom));
+    align-items: center;
   }
 
   .size-dialog {
-    padding: clamp(22px, 6vw, 28px);
+    padding: clamp(22px, 6vw, 30px);
     border-radius: 20px;
     gap: 1.25rem;
     max-height: min(88vh, 560px);
