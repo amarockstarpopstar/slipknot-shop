@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -55,8 +56,8 @@ export class ProductsController {
     type: ProductResponseDto,
     isArray: true,
   })
-  findAll(): Promise<ProductResponseDto[]> {
-    return this.productsService.findAll();
+  findAll(@Query('search') search?: string): Promise<ProductResponseDto[]> {
+    return this.productsService.findAll(search);
   }
 
   @Get(':id')

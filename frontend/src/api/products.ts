@@ -33,8 +33,10 @@ export interface ProductSizePayload {
   stock: number;
 }
 
-export const fetchProducts = async (): Promise<ProductDto[]> => {
-  const { data } = await http.get<ProductDto[]>('/products');
+export const fetchProducts = async (search?: string): Promise<ProductDto[]> => {
+  const { data } = await http.get<ProductDto[]>('/products', {
+    params: search ? { search } : undefined,
+  });
   return data;
 };
 
