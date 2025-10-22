@@ -71,150 +71,161 @@
       </div>
     </section>
 
-    <Teleport to="body">
-      <div
-        v-if="showCountryModal"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="country-limit-modal"
-        @click.self="closeCountryModal"
-      >
-        <div class="modal-dialog modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h2 id="country-limit-modal" class="modal-title h5 mb-0">Заказ недоступен</h2>
-              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCountryModal"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-0">{{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}</p>
-            </div>
-            <div class="modal-footer modal-footer--stacked">
-              <button type="button" class="btn btn-outline-secondary" @click="closeCountryModal">Понятно</button>
-              <button type="button" class="btn btn-danger" @click="handleCountryModalProfileRedirect">
-                Перейти в профиль
-              </button>
-            </div>
-          </div>
+        <GlassModal
+      :visible="showCountryModal"
+      max-width="520px"
+      @close="closeCountryModal"
+    >
+      <div class="confirm-modal">
+        <div class="confirm-modal__icon" aria-hidden="true">
+          <GlobeAltIcon />
+        </div>
+        <DialogTitle id="country-limit-modal" as="h2" class="confirm-modal__title">
+          Заказ недоступен
+        </DialogTitle>
+        <p class="confirm-modal__subtitle">
+          {{ countryModalMessage || 'Оформление заказов доступно только пользователям из России.' }}
+        </p>
+        <div class="confirm-modal__actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeCountryModal">
+            Понятно
+          </button>
+          <button type="button" class="dialog-button dialog-button--danger" @click="handleCountryModalProfileRedirect">
+            Перейти в профиль
+          </button>
         </div>
       </div>
-      <div v-if="showCountryModal" class="modal-backdrop fade show"></div>
-    </Teleport>
+    </GlassModal>
 
-    <Teleport to="body">
-      <div
-        v-if="showAddressModal"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="checkout-address-modal"
-        @click.self="closeAddressModal"
-      >
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <form @submit.prevent="submitAddress">
-              <div class="modal-header">
-                <h2 id="checkout-address-modal" class="modal-title h5 mb-0">Укажите адрес доставки</h2>
-                <button
-                  type="button"
-                  class="btn-close"
-                  aria-label="Закрыть"
-                  @click="closeAddressModal"
-                  :disabled="addressSaving"
-                ></button>
-              </div>
-              <div class="modal-body">
-                <p class="modal-subtitle text-muted">Для оформления заказа заполните все поля.</p>
-                <div class="modal-form-grid">
-                  <div class="modal-form-grid__item">
-                    <label for="checkoutCountry" class="form-label">Страна</label>
-                    <select id="checkoutCountry" v-model="addressForm.country" class="form-select" required>
-                      <option value="">Выберите страну</option>
-                      <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
-                    </select>
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label :for="addressForm.useCustomCity ? 'checkoutCityCustom' : 'checkoutCity'" class="form-label">
-                      Город
-                    </label>
-                    <div class="modal-inline-field">
-                      <select
-                        v-if="!addressForm.useCustomCity"
-                        id="checkoutCity"
-                        v-model="addressForm.city"
-                        class="form-select"
-                        :disabled="!addressForm.country"
-                        required
-                      >
-                        <option value="">Выберите город</option>
-                        <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
-                          {{ cityOption }}
-                        </option>
-                      </select>
-                      <input
-                        v-else
-                        id="checkoutCityCustom"
-                        v-model="addressForm.customCity"
-                        type="text"
-                        class="form-control"
-                        placeholder="Введите город"
-                        required
-                      />
-                      <button type="button" class="btn btn-outline-secondary" @click="toggleAddressCityInput">
-                        {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
-                      </button>
-                    </div>
-                    <small class="text-muted">Выберите город или введите свой</small>
-                  </div>
-                  <div class="modal-form-grid__item modal-form-grid__item--full">
-                    <label for="checkoutAddress" class="form-label">Адрес</label>
-                    <textarea
-                      id="checkoutAddress"
-                      v-model="addressForm.address"
-                      class="form-control"
-                      rows="3"
-                      placeholder="Улица, дом, квартира"
-                      required
-                    ></textarea>
-                  </div>
-                </div>
-                <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
-              </div>
-              <div class="modal-footer modal-footer--stacked">
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  @click="closeAddressModal"
-                  :disabled="addressSaving"
-                >
-                  Отмена
-                </button>
-                <button type="submit" class="btn btn-danger" :disabled="addressSaving">
-                  {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
-                </button>
-              </div>
-            </form>
+
+
+        <GlassModal
+      :visible="showAddressModal"
+      max-width="780px"
+      :prevent-close="addressSaving"
+      @close="closeAddressModal"
+    >
+      <form class="form-dialog" @submit.prevent="submitAddress">
+        <header class="form-dialog__header">
+          <div class="form-dialog__heading">
+            <span class="form-dialog__icon" aria-hidden="true">
+              <HomeModernIcon />
+            </span>
+            <div class="form-dialog__title-wrap">
+              <DialogTitle id="checkout-address-modal" as="h2" class="form-dialog__title">
+                Укажите адрес доставки
+              </DialogTitle>
+              <p class="form-dialog__subtitle">Для оформления заказа заполните все поля.</p>
+            </div>
           </div>
-        </div>
-      </div>
-      <div v-if="showAddressModal" class="modal-backdrop fade show"></div>
-    </Teleport>
+          <button
+            type="button"
+            class="form-dialog__close"
+            aria-label="Закрыть"
+            :disabled="addressSaving"
+            @click="closeAddressModal"
+          >
+            <XMarkIcon aria-hidden="true" />
+          </button>
+        </header>
+        <section class="form-dialog__body" aria-labelledby="checkout-address-modal">
+          <div class="form-grid">
+            <div class="form-grid__item">
+              <label for="checkoutCountry" class="form-field__label">Страна</label>
+              <select
+                id="checkoutCountry"
+                v-model="addressForm.country"
+                class="form-input form-input--select"
+                required
+              >
+                <option value="">Выберите страну</option>
+                <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
+              </select>
+            </div>
+            <div class="form-grid__item">
+              <label :for="addressForm.useCustomCity ? 'checkoutCityCustom' : 'checkoutCity'" class="form-field__label">
+                Город
+              </label>
+              <div class="address-city-field">
+                <select
+                  v-if="!addressForm.useCustomCity"
+                  id="checkoutCity"
+                  v-model="addressForm.city"
+                  class="form-input form-input--select"
+                  :disabled="!addressForm.country"
+                  required
+                >
+                  <option value="">Выберите город</option>
+                  <option v-for="cityOption in addressCityOptions" :key="cityOption" :value="cityOption">
+                    {{ cityOption }}
+                  </option>
+                </select>
+                <input
+                  v-else
+                  id="checkoutCityCustom"
+                  v-model="addressForm.customCity"
+                  type="text"
+                  class="form-input"
+                  placeholder="Введите город"
+                  required
+                />
+                <button
+                  type="button"
+                  class="dialog-button dialog-button--ghost dialog-button--sm address-city-field__toggle"
+                  @click="toggleAddressCityInput"
+                >
+                  {{ addressForm.useCustomCity ? 'Выбрать из списка' : 'Ввести' }}
+                </button>
+              </div>
+              <small class="address-city-field__hint">Выберите город или введите свой</small>
+            </div>
+            <div class="form-grid__item form-grid__item--full">
+              <label for="checkoutAddress" class="form-field__label">Адрес</label>
+              <textarea
+                id="checkoutAddress"
+                v-model="addressForm.address"
+                class="form-input form-input--textarea"
+                rows="3"
+                placeholder="Улица, дом, квартира"
+                required
+              ></textarea>
+            </div>
+          </div>
+          <p v-if="addressError" class="alert alert-danger mt-3 mb-0">{{ addressError }}</p>
+        </section>
+        <footer class="form-dialog__footer">
+          <button
+            type="button"
+            class="dialog-button dialog-button--ghost"
+            :disabled="addressSaving"
+            @click="closeAddressModal"
+          >
+            Отмена
+          </button>
+          <button type="submit" class="dialog-button dialog-button--danger" :disabled="addressSaving">
+            {{ addressSaving ? 'Сохранение...' : 'Сохранить адрес' }}
+          </button>
+        </footer>
+      </form>
+    </GlassModal>
+
+
   </div>
 </template>
 
 <script setup lang="ts">
+import { DialogTitle } from '@headlessui/vue';
+import { GlobeAltIcon, HomeModernIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
+import GlassModal from '../components/GlassModal.vue';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { extractErrorMessage } from '../api/http';
 import { SUPPORTED_COUNTRIES, getCitiesByCountry, isRussianCountry } from '../utils/location';
 import { useNavigation } from '../composables/useNavigation';
-import { useScrollLock } from '../composables/useScrollLock';
 
 const cartStore = useCartStore();
 const { items, totalAmount, totalQuantity, loading, updating, error, lastOrder } = storeToRefs(cartStore);
@@ -243,8 +254,6 @@ const showCountryModal = ref(false);
 const countryModalMessage = ref('');
 const showAddressModal = ref(false);
 
-useScrollLock(showCountryModal);
-useScrollLock(showAddressModal);
 
 const { goToProfile } = useNavigation();
 
@@ -551,6 +560,24 @@ onMounted(() => {
 
 .checkout-summary__line span {
   color: var(--color-text);
+}
+
+.address-city-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.address-city-field__toggle {
+  flex: 0 0 auto;
+}
+
+.address-city-field__hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 991.98px) {

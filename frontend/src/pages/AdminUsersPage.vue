@@ -80,225 +80,250 @@
       </div>
     </section>
 
-    <Teleport to="body">
-      <div
-        v-if="createModalVisible"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="create-user-modal-title"
-        @click.self="closeCreateModal"
-      >
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <form @submit.prevent="createUserAction">
-              <div class="modal-header">
-                <h2 id="create-user-modal-title" class="modal-title h5 mb-0">Новый пользователь</h2>
-                <button type="button" class="btn-close" aria-label="Закрыть" @click="closeCreateModal"></button>
-              </div>
-              <div class="modal-body">
-                <p class="modal-subtitle text-muted">
-                  Укажите контактные данные, роль и временный пароль для новой учетной записи.
-                </p>
-                <div class="modal-form-grid">
-                  <div class="modal-form-grid__item">
-                    <label for="createUserName" class="form-label">Имя</label>
-                    <input
-                      id="createUserName"
-                      v-model="createForm.name"
-                      type="text"
-                      class="form-control"
-                      placeholder="Имя и фамилия"
-                      required
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserEmail" class="form-label">Email</label>
-                    <input
-                      id="createUserEmail"
-                      v-model="createForm.email"
-                      type="email"
-                      class="form-control"
-                      placeholder="name@example.com"
-                      required
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserPhone" class="form-label">Телефон</label>
-                    <input
-                      id="createUserPhone"
-                      v-model="createForm.phone"
-                      type="tel"
-                      class="form-control"
-                      placeholder="Например, +7 900 000-00-00"
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserRole" class="form-label">Роль</label>
-                    <select
-                      id="createUserRole"
-                      v-model="createForm.roleName"
-                      class="form-select"
-                      required
-                      :disabled="creating"
-                    >
-                      <option value="">Выберите роль</option>
-                      <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
-                    </select>
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserPassword" class="form-label">Пароль</label>
-                    <input
-                      id="createUserPassword"
-                      v-model="createForm.password"
-                      type="password"
-                      class="form-control"
-                      placeholder="Минимум 6 символов"
-                      required
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserCountry" class="form-label">Страна</label>
-                    <input
-                      id="createUserCountry"
-                      v-model="createForm.country"
-                      type="text"
-                      class="form-control"
-                      placeholder="Например, Россия"
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="createUserCity" class="form-label">Город</label>
-                    <input
-                      id="createUserCity"
-                      v-model="createForm.city"
-                      type="text"
-                      class="form-control"
-                      placeholder="Например, Москва"
-                      :disabled="creating"
-                    />
-                  </div>
-                  <div class="modal-form-grid__item modal-form-grid__item--full">
-                    <label for="createUserAddress" class="form-label">Адрес</label>
-                    <input
-                      id="createUserAddress"
-                      v-model="createForm.address"
-                      type="text"
-                      class="form-control"
-                      placeholder="Улица, дом, квартира"
-                      :disabled="creating"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer modal-footer--stacked">
-                <button type="button" class="btn btn-outline-secondary" @click="closeCreateModal" :disabled="creating">
-                  Отмена
-                </button>
-                <button type="submit" class="btn btn-primary" :disabled="creating">
-                  Сохранить
-                </button>
-              </div>
-            </form>
+    <GlassModal
+      :visible="createModalVisible"
+      max-width="760px"
+      :prevent-close="creating"
+      @close="closeCreateModal"
+    >
+      <form class="form-dialog" @submit.prevent="createUserAction">
+        <header class="form-dialog__header">
+          <div class="form-dialog__heading">
+            <span class="form-dialog__icon form-dialog__icon--accent" aria-hidden="true">
+              <UserPlusIcon />
+            </span>
+            <div class="form-dialog__title-wrap">
+              <DialogTitle id="create-user-modal-title" as="h2" class="form-dialog__title">
+                Новый пользователь
+              </DialogTitle>
+              <p class="form-dialog__subtitle">
+                Укажите контактные данные, роль и временный пароль для новой учетной записи.
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
-      <div v-if="createModalVisible" class="modal-backdrop fade show"></div>
-    </Teleport>
+          <button
+            type="button"
+            class="form-dialog__close"
+            aria-label="Закрыть"
+            :disabled="creating"
+            @click="closeCreateModal"
+          >
+            <XMarkIcon aria-hidden="true" />
+          </button>
+        </header>
+        <section class="form-dialog__body" aria-labelledby="create-user-modal-title">
+          <div class="form-grid">
+            <div class="form-grid__item">
+              <label for="createUserName" class="form-field__label">Имя</label>
+              <input
+                id="createUserName"
+                v-model="createForm.name"
+                type="text"
+                class="form-input"
+                placeholder="Имя и фамилия"
+                required
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserEmail" class="form-field__label">Email</label>
+              <input
+                id="createUserEmail"
+                v-model="createForm.email"
+                type="email"
+                class="form-input"
+                placeholder="name@example.com"
+                required
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserPhone" class="form-field__label">Телефон</label>
+              <input
+                id="createUserPhone"
+                v-model="createForm.phone"
+                type="tel"
+                class="form-input"
+                placeholder="Например, +7 900 000-00-00"
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserRole" class="form-field__label">Роль</label>
+              <select
+                id="createUserRole"
+                v-model="createForm.roleName"
+                class="form-input form-input--select"
+                required
+                :disabled="creating"
+              >
+                <option value="">Выберите роль</option>
+                <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
+              </select>
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserPassword" class="form-field__label">Пароль</label>
+              <input
+                id="createUserPassword"
+                v-model="createForm.password"
+                type="password"
+                class="form-input"
+                placeholder="Минимум 6 символов"
+                required
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserCountry" class="form-field__label">Страна</label>
+              <input
+                id="createUserCountry"
+                v-model="createForm.country"
+                type="text"
+                class="form-input"
+                placeholder="Например, Россия"
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item">
+              <label for="createUserCity" class="form-field__label">Город</label>
+              <input
+                id="createUserCity"
+                v-model="createForm.city"
+                type="text"
+                class="form-input"
+                placeholder="Например, Москва"
+                :disabled="creating"
+              />
+            </div>
+            <div class="form-grid__item form-grid__item--full">
+              <label for="createUserAddress" class="form-field__label">Адрес</label>
+              <input
+                id="createUserAddress"
+                v-model="createForm.address"
+                type="text"
+                class="form-input"
+                placeholder="Улица, дом, квартира"
+                :disabled="creating"
+              />
+            </div>
+          </div>
+        </section>
+        <footer class="form-dialog__footer">
+          <button
+            type="button"
+            class="dialog-button dialog-button--ghost"
+            :disabled="creating"
+            @click="closeCreateModal"
+          >
+            Отмена
+          </button>
+          <button type="submit" class="dialog-button dialog-button--primary" :disabled="creating">
+            <span v-if="creating">Сохранение...</span>
+            <span v-else>Сохранить</span>
+          </button>
+        </footer>
+      </form>
+    </GlassModal>
 
-    <Teleport to="body">
-      <div
-        v-if="editModalVisible"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-user-modal-title"
-        @click.self="closeEditModal"
-      >
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <form @submit.prevent="saveUser">
-              <div class="modal-header">
-                <h2 id="edit-user-modal-title" class="modal-title h5 mb-0">Редактирование пользователя</h2>
-                <button type="button" class="btn-close" aria-label="Закрыть" @click="closeEditModal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="modal-form-grid">
-                  <div class="modal-form-grid__item">
-                    <label for="userName" class="form-label">Имя</label>
-                    <input id="userName" v-model="editForm.name" type="text" class="form-control" required />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="userEmail" class="form-label">Email</label>
-                    <input id="userEmail" v-model="editForm.email" type="email" class="form-control" required />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="userPhone" class="form-label">Телефон</label>
-                    <input id="userPhone" v-model="editForm.phone" type="tel" class="form-control" />
-                  </div>
-                  <div class="modal-form-grid__item">
-                    <label for="userRole" class="form-label">Роль</label>
-                    <select id="userRole" v-model="editForm.roleName" class="form-select" required>
-                      <option value="">Выберите роль</option>
-                      <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer modal-footer--stacked">
-                <button type="button" class="btn btn-outline-secondary" @click="closeEditModal">Отмена</button>
-                <button type="submit" class="btn btn-primary" :disabled="saving">Сохранить изменения</button>
-              </div>
-            </form>
+    <GlassModal
+      :visible="editModalVisible"
+      max-width="720px"
+      :prevent-close="saving"
+      @close="closeEditModal"
+    >
+      <form class="form-dialog" @submit.prevent="saveUser">
+        <header class="form-dialog__header">
+          <div class="form-dialog__heading">
+            <span class="form-dialog__icon" aria-hidden="true">
+              <PencilSquareIcon />
+            </span>
+            <div class="form-dialog__title-wrap">
+              <DialogTitle id="edit-user-modal-title" as="h2" class="form-dialog__title">
+                Редактирование пользователя
+              </DialogTitle>
+              <p class="form-dialog__subtitle">Обновите контактные данные и роль пользователя.</p>
+            </div>
           </div>
-        </div>
-      </div>
-      <div v-if="editModalVisible" class="modal-backdrop fade show"></div>
-    </Teleport>
+          <button
+            type="button"
+            class="form-dialog__close"
+            aria-label="Закрыть"
+            :disabled="saving"
+            @click="closeEditModal"
+          >
+            <XMarkIcon aria-hidden="true" />
+          </button>
+        </header>
+        <section class="form-dialog__body" aria-labelledby="edit-user-modal-title">
+          <div class="form-grid form-grid--compact">
+            <div class="form-grid__item">
+              <label for="userName" class="form-field__label">Имя</label>
+              <input id="userName" v-model="editForm.name" type="text" class="form-input" required />
+            </div>
+            <div class="form-grid__item">
+              <label for="userEmail" class="form-field__label">Email</label>
+              <input id="userEmail" v-model="editForm.email" type="email" class="form-input" required />
+            </div>
+            <div class="form-grid__item">
+              <label for="userPhone" class="form-field__label">Телефон</label>
+              <input id="userPhone" v-model="editForm.phone" type="tel" class="form-input" />
+            </div>
+            <div class="form-grid__item">
+              <label for="userRole" class="form-field__label">Роль</label>
+              <select id="userRole" v-model="editForm.roleName" class="form-input form-input--select" required>
+                <option value="">Выберите роль</option>
+                <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
+              </select>
+            </div>
+          </div>
+        </section>
+        <footer class="form-dialog__footer">
+          <button type="button" class="dialog-button dialog-button--ghost" :disabled="saving" @click="closeEditModal">
+            Отмена
+          </button>
+          <button type="submit" class="dialog-button dialog-button--primary" :disabled="saving">
+            <span v-if="saving">Сохранение...</span>
+            <span v-else>Сохранить изменения</span>
+          </button>
+        </footer>
+      </form>
+    </GlassModal>
 
-    <Teleport to="body">
-      <div
-        v-if="deleteModalVisible"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-user-modal-title"
-        @click.self="closeDeleteModal"
-      >
-        <div class="modal-dialog modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h2 id="delete-user-modal-title" class="modal-title h5 mb-0">Удаление пользователя</h2>
-              <button type="button" class="btn-close" aria-label="Закрыть" @click="closeDeleteModal"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-3">Вы уверены, что хотите удалить пользователя «{{ deletingUser?.name }}»?</p>
-              <p class="text-muted mb-0">Это действие нельзя отменить.</p>
-            </div>
-            <div class="modal-footer modal-footer--stacked">
-              <button type="button" class="btn btn-outline-secondary" @click="closeDeleteModal">Отменить</button>
-              <button type="button" class="btn btn-danger" :disabled="deleting" @click="confirmDelete">
-                Удалить
-              </button>
-            </div>
-          </div>
+    <GlassModal
+      :visible="deleteModalVisible"
+      max-width="520px"
+      :prevent-close="deleting"
+      @close="closeDeleteModal"
+    >
+      <div class="confirm-modal">
+        <div class="confirm-modal__icon" aria-hidden="true">
+          <ExclamationTriangleIcon />
+        </div>
+        <DialogTitle id="delete-user-modal-title" as="h2" class="confirm-modal__title">
+          Удалить пользователя?
+        </DialogTitle>
+        <p class="confirm-modal__subtitle">
+          Вы уверены, что хотите удалить пользователя «{{ deletingUser?.name ?? '' }}»? Это действие нельзя отменить.
+        </p>
+        <div class="confirm-modal__actions">
+          <button type="button" class="dialog-button dialog-button--ghost" :disabled="deleting" @click="closeDeleteModal">
+            Отменить
+          </button>
+          <button type="button" class="dialog-button dialog-button--danger" :disabled="deleting" @click="confirmDelete">
+            <span v-if="deleting">Удаление...</span>
+            <span v-else>Удалить</span>
+          </button>
         </div>
       </div>
-      <div v-if="deleteModalVisible" class="modal-backdrop fade show"></div>
-    </Teleport>
+    </GlassModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { DialogTitle } from '@headlessui/vue';
+import { ExclamationTriangleIcon, PencilSquareIcon, UserPlusIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import { onMounted, reactive, ref } from 'vue';
+import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
   createUser,
@@ -312,7 +337,6 @@ import {
   updateUser,
 } from '../api/users';
 import { extractErrorMessage } from '../api/http';
-import { useScrollLock } from '../composables/useScrollLock';
 
 const users = ref<UserListItem[]>([]);
 const roles = ref<UserRole[]>([]);
@@ -327,9 +351,6 @@ const editModalVisible = ref(false);
 const deleteModalVisible = ref(false);
 const createModalVisible = ref(false);
 
-useScrollLock(editModalVisible);
-useScrollLock(deleteModalVisible);
-useScrollLock(createModalVisible);
 const editingUserId = ref<number | null>(null);
 const deletingUser = ref<UserListItem | null>(null);
 
@@ -602,4 +623,5 @@ onMounted(async () => {
     width: 100%;
   }
 }
+
 </style>

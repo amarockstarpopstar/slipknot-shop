@@ -225,72 +225,69 @@
       </div>
     </div>
 
-    <Teleport to="body">
-      <div
-        v-if="showConfirm"
-        class="modal fade show glass-modal"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        @click.self="closeConfirm"
-      >
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <header class="modal-header">
-              <h2 class="modal-title h4 mb-0">Подтвердите оформление</h2>
-              <button
-                type="button"
-                class="btn-close"
-                aria-label="Закрыть"
-                @click="closeConfirm"
-              ></button>
-            </header>
-            <section class="modal-body">
-              <p class="mb-3">
-                Вы собираетесь оформить заказ на товар «{{ product?.title }}» стоимостью
-                {{ product ? formatCurrency(displayPrice) : '' }}.
-              </p>
-              <p v-if="selectedSize" class="text-muted mb-3">
-                Выбранный размер: {{ selectedSize.size }}
-              </p>
-              <p class="mb-4 text-muted">
-                После подтверждения товар будет добавлен в корзину, и вы перейдёте к оплате.
-              </p>
-              <p v-if="confirmError" class="alert alert-danger mb-0">{{ confirmError }}</p>
-            </section>
-            <footer class="modal-footer modal-footer--stacked">
-              <button type="button" class="btn btn-outline-secondary" @click="closeConfirm" :disabled="confirmLoading">
-                Отмена
-              </button>
-              <button type="button" class="btn btn-danger" @click="confirmPurchase" :disabled="confirmLoading">
-                <span
-                  v-if="confirmLoading"
-                  class="spinner-border spinner-border-sm me-2"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                Перейти к оплате
-              </button>
-            </footer>
-          </div>
+    <GlassModal
+      :visible="showConfirm"
+      max-width="560px"
+      :prevent-close="confirmLoading"
+      @close="closeConfirm"
+    >
+      <div class="confirm-modal product-confirm">
+        <div class="confirm-modal__icon" aria-hidden="true">
+          <CreditCardIcon />
+        </div>
+        <DialogTitle id="product-checkout-modal-title" as="h2" class="confirm-modal__title">
+          Подтвердите оформление
+        </DialogTitle>
+        <div class="product-confirm__details" aria-labelledby="product-checkout-modal-title">
+          <p id="product-checkout-modal-description" class="product-confirm__text">
+            Вы собираетесь оформить заказ на товар «{{ product?.title ?? '' }}» стоимостью
+            <span class="product-confirm__highlight">{{ formatCurrency(displayPrice) }}</span>.
+          </p>
+          <p v-if="selectedSize" class="product-confirm__meta">
+            Выбранный размер: {{ selectedSize.size }}
+          </p>
+          <p class="product-confirm__note">
+            После подтверждения товар будет добавлен в корзину, и вы перейдёте к оплате.
+          </p>
+          <p v-if="confirmError" class="product-confirm__error" role="alert">{{ confirmError }}</p>
+        </div>
+        <div class="confirm-modal__actions">
+          <button
+            type="button"
+            class="dialog-button dialog-button--ghost"
+            :disabled="confirmLoading"
+            @click="closeConfirm"
+          >
+            Отменить
+          </button>
+          <button
+            type="button"
+            class="dialog-button dialog-button--primary"
+            :disabled="confirmLoading"
+            @click="confirmPurchase"
+          >
+            <span v-if="confirmLoading">Переход...</span>
+            <span v-else>Перейти к оплате</span>
+          </button>
         </div>
       </div>
-      <div v-if="showConfirm" class="modal-backdrop fade show"></div>
-    </Teleport>
+    </GlassModal>
   </section>
 </template>
 
 <script setup lang="ts">
+import { DialogTitle } from '@headlessui/vue';
+import { CreditCardIcon } from '@heroicons/vue/24/outline';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
+import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useNavigation } from '../composables/useNavigation';
 import { useReviewsStore } from '../store/reviewsStore';
-import { useScrollLock } from '../composables/useScrollLock';
 
 const route = useRoute();
 const { safePush, goToCheckout } = useNavigation();
@@ -313,8 +310,6 @@ const eligibilityError = reviewsRefs.eligibilityError;
 const showConfirm = ref(false);
 const confirmLoading = ref(false);
 const confirmError = ref<string | null>(null);
-
-useScrollLock(showConfirm);
 
 const ratingOptions = [5, 4, 3, 2, 1];
 
@@ -752,6 +747,55 @@ const submitReview = async () => {
   border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
   font-size: 0.95rem;
   color: var(--color-text);
+}
+
+.product-confirm {
+  width: 100%;
+}
+
+.product-confirm__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  align-items: center;
+}
+
+.product-confirm__text,
+.product-confirm__note,
+.product-confirm__meta {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+  text-align: center;
+}
+
+.product-confirm__meta {
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--color-text-muted) 94%, transparent);
+}
+
+.product-confirm__note {
+  color: color-mix(in srgb, var(--color-text-muted) 92%, transparent);
+}
+
+.product-confirm__highlight {
+  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
+  font-weight: 600;
+}
+
+.product-confirm__error {
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--radius-lg) * 0.6);
+  background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent);
+  color: color-mix(in srgb, #fee2e2 85%, var(--color-text));
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 22px 40px -32px color-mix(in srgb, var(--color-danger) 55%, transparent);
 }
 
 .product-reviews {

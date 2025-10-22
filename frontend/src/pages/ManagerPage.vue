@@ -375,321 +375,353 @@
     </div>
   </section>
 
-  <div v-if="addProductModalVisible" class="modal fade show glass-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title h5 mb-0">Новый товар</h2>
-          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddProductModal"></button>
-        </div>
-        <form @submit.prevent="saveNewProduct">
-          <div class="modal-body">
-            <p class="modal-subtitle text-muted">
+  <GlassModal
+    :visible="addProductModalVisible"
+    max-width="920px"
+    :prevent-close="creatingProduct"
+    @close="closeAddProductModal"
+  >
+    <form class="form-dialog manager-modal" @submit.prevent="saveNewProduct">
+      <header class="form-dialog__header">
+        <div class="form-dialog__heading">
+          <span class="form-dialog__icon form-dialog__icon--accent" aria-hidden="true">
+            <PlusCircleIcon />
+          </span>
+          <div class="form-dialog__title-wrap">
+            <DialogTitle id="add-product-modal-title" as="h2" class="form-dialog__title">
+              Новый товар
+            </DialogTitle>
+            <p class="form-dialog__subtitle">
               Заполните карточку товара. Все поля можно отредактировать в любой момент.
             </p>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label for="newProductTitle" class="form-label">Название</label>
-                <input
-                  id="newProductTitle"
-                  v-model="addProductForm.title"
-                  type="text"
-                  class="form-control"
-                  placeholder="Например, Толстовка Slipknot"
-                  required
-                  :disabled="creatingProduct"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="newProductSku" class="form-label">Артикул</label>
-                <input
-                  id="newProductSku"
-                  v-model="addProductForm.sku"
-                  type="text"
-                  class="form-control"
-                  placeholder="SKU-001"
-                  required
-                  :disabled="creatingProduct"
-                />
-              </div>
-              <div class="col-md-4">
-                <label for="newProductPrice" class="form-label">Цена (₽)</label>
-                <input
-                  id="newProductPrice"
-                  v-model="addProductForm.price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="form-control"
-                  required
-                  :disabled="creatingProduct"
-                />
-              </div>
-              <div class="col-md-4">
-                <label for="newProductCategory" class="form-label">Категория</label>
-                <select
-                  id="newProductCategory"
-                  v-model="addProductForm.categoryId"
-                  class="form-select"
-                  required
-                  :disabled="creatingProduct"
-                >
-                  <option value="">Выберите категорию</option>
-                  <option v-for="category in categories" :key="category.id" :value="String(category.id)">
-                    {{ category.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-12">
-                <div class="manager-sizes">
-                  <div class="manager-sizes__header">
-                    <label class="form-label mb-0">Размеры и остатки</label>
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm"
-                      @click="addSizeRow(addProductForm.sizes)"
-                      :disabled="creatingProduct"
-                    >
-                      Добавить размер
-                    </button>
-                  </div>
-                  <div class="manager-sizes__list">
-                    <div
-                      v-for="(sizeRow, index) in addProductForm.sizes"
-                      :key="sizeRow.id ?? `new-product-size-${index}`"
-                      class="manager-sizes__row row g-3 align-items-end"
-                    >
-                      <div class="col-md-4 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`newProductSizeName-${index}`"
-                        >
-                          Размер
-                        </label>
-                        <input
-                          :id="`newProductSizeName-${index}`"
-                          v-model="sizeRow.size"
-                          type="text"
-                          class="form-control"
-                          placeholder="Например, M"
-                          maxlength="20"
-                          :disabled="creatingProduct"
-                        />
-                      </div>
-                      <div class="col-md-3 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`newProductSizePrice-${index}`"
-                        >
-                          Цена, ₽
-                        </label>
-                        <input
-                          :id="`newProductSizePrice-${index}`"
-                          v-model="sizeRow.price"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="form-control"
-                          placeholder="0.00"
-                          :disabled="creatingProduct"
-                        />
-                      </div>
-                      <div class="col-md-3 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`newProductSizeStock-${index}`"
-                        >
-                          Остаток
-                        </label>
-                        <input
-                          :id="`newProductSizeStock-${index}`"
-                          v-model="sizeRow.stock"
-                          type="number"
-                          min="0"
-                          class="form-control"
-                          :disabled="creatingProduct"
-                        />
-                      </div>
-                      <div class="col-md-2 col-sm-4">
-                        <button
-                          type="button"
-                          class="btn btn-outline-danger mt-4 w-100"
-                          @click="removeSizeRow(addProductForm.sizes, index)"
-                          :disabled="creatingProduct"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-8">
-                <label for="newProductImage" class="form-label">Ссылка на изображение</label>
-                <input
-                  id="newProductImage"
-                  v-model="addProductForm.imageUrl"
-                  type="url"
-                  class="form-control"
-                  placeholder="https://"
-                  :disabled="creatingProduct"
-                />
-              </div>
-              <div class="col-12">
-                <label for="newProductDescription" class="form-label">Описание</label>
-                <textarea
-                  id="newProductDescription"
-                  v-model="addProductForm.description"
-                  class="form-control"
-                  rows="3"
-                  placeholder="Коротко опишите товар"
-                  :disabled="creatingProduct"
-                ></textarea>
-              </div>
-            </div>
           </div>
-          <div class="modal-footer modal-footer--stacked">
-            <button type="button" class="btn btn-outline-secondary" @click="closeAddProductModal" :disabled="creatingProduct">
-              Отмена
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="creatingProduct">
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  <div v-if="addProductModalVisible" class="modal-backdrop fade show"></div>
-
-  <div v-if="addOrderModalVisible" class="modal fade show glass-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title h5 mb-0">Новый заказ</h2>
-          <button type="button" class="btn-close" aria-label="Закрыть" @click="closeAddOrderModal"></button>
         </div>
-        <form @submit.prevent="saveNewOrder">
-          <div class="modal-body">
-            <p class="modal-subtitle text-muted">
-              Создайте новый заказ и зафиксируйте ключевые данные клиента и доставки.
-            </p>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label for="newOrderUser" class="form-label">Покупатель</label>
-                <select
-                  id="newOrderUser"
-                  v-model="addOrderForm.userId"
-                  class="form-select"
-                  required
-                  :disabled="creatingOrder || !orderCustomers.length"
-                >
-                  <option value="">Выберите покупателя</option>
-                  <option v-for="customer in orderCustomers" :key="customer.id" :value="String(customer.id)">
-                    {{ customer.name }} • {{ customer.email }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label for="newOrderStatus" class="form-label">Статус</label>
-                <select
-                  id="newOrderStatus"
-                  v-model="addOrderForm.statusId"
-                  class="form-select"
-                  required
-                  :disabled="creatingOrder"
-                >
-                  <option value="">Выберите статус</option>
-                  <option v-for="status in orderStatuses" :key="status.id" :value="String(status.id)">
-                    {{ status.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label for="newOrderShipping" class="form-label">Статус отправки</label>
-                <select
-                  id="newOrderShipping"
-                  v-model="addOrderForm.shippingStatus"
-                  class="form-select"
-                  required
-                  :disabled="creatingOrder"
-                >
-                  <option v-for="option in shippingStatusOptions" :key="option" :value="option">
-                    {{ option }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label for="newOrderTotal" class="form-label">Сумма (₽)</label>
+        <button
+          type="button"
+          class="form-dialog__close"
+          aria-label="Закрыть"
+          :disabled="creatingProduct"
+          @click="closeAddProductModal"
+        >
+          <XMarkIcon aria-hidden="true" />
+        </button>
+      </header>
+      <section class="form-dialog__body manager-modal__body" aria-labelledby="add-product-modal-title">
+        <div class="form-grid manager-form-grid">
+          <div class="form-grid__item">
+            <label for="newProductTitle" class="form-field__label">Название</label>
+            <input
+              id="newProductTitle"
+              v-model="addProductForm.title"
+              type="text"
+              class="form-input"
+              placeholder="Например, Толстовка Slipknot"
+              required
+              :disabled="creatingProduct"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="newProductSku" class="form-field__label">Артикул</label>
+            <input
+              id="newProductSku"
+              v-model="addProductForm.sku"
+              type="text"
+              class="form-input"
+              placeholder="SKU-001"
+              required
+              :disabled="creatingProduct"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="newProductPrice" class="form-field__label">Цена (₽)</label>
+            <input
+              id="newProductPrice"
+              v-model="addProductForm.price"
+              type="number"
+              min="0"
+              step="0.01"
+              class="form-input"
+              required
+              :disabled="creatingProduct"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="newProductCategory" class="form-field__label">Категория</label>
+            <select
+              id="newProductCategory"
+              v-model="addProductForm.categoryId"
+              class="form-input form-input--select"
+              required
+              :disabled="creatingProduct"
+            >
+              <option value="">Выберите категорию</option>
+              <option v-for="category in categories" :key="category.id" :value="String(category.id)">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid__item form-grid__item--full">
+            <label for="newProductImage" class="form-field__label">Ссылка на изображение</label>
+            <input
+              id="newProductImage"
+              v-model="addProductForm.imageUrl"
+              type="url"
+              class="form-input"
+              placeholder="https://"
+              :disabled="creatingProduct"
+            />
+          </div>
+          <div class="form-grid__item form-grid__item--full">
+            <label for="newProductDescription" class="form-field__label">Описание</label>
+            <textarea
+              id="newProductDescription"
+              v-model="addProductForm.description"
+              class="form-input form-input--textarea"
+              rows="3"
+              placeholder="Короткое описание товара"
+              :disabled="creatingProduct"
+            ></textarea>
+          </div>
+        </div>
+        <div class="manager-sizes">
+          <div class="manager-sizes__header">
+            <h3 class="manager-sizes__title">Размеры и остатки</h3>
+            <button
+              type="button"
+              class="dialog-button dialog-button--ghost dialog-button--sm"
+              @click="addSizeRow(addProductForm.sizes)"
+              :disabled="creatingProduct"
+            >
+              Добавить размер
+            </button>
+          </div>
+          <div class="manager-sizes__list">
+            <div
+              v-for="(sizeRow, index) in addProductForm.sizes"
+              :key="sizeRow.id ?? `new-product-size-${index}`"
+              class="manager-sizes__row"
+            >
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`newProductSizeName-${index}`">Размер</label>
                 <input
-                  id="newOrderTotal"
-                  v-model="addOrderForm.totalAmount"
+                  :id="`newProductSizeName-${index}`"
+                  v-model="sizeRow.size"
+                  type="text"
+                  class="form-input"
+                  placeholder="Например, M"
+                  maxlength="20"
+                  :disabled="creatingProduct"
+                />
+              </div>
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`newProductSizePrice-${index}`">Цена (₽)</label>
+                <input
+                  :id="`newProductSizePrice-${index}`"
+                  v-model="sizeRow.price"
                   type="number"
                   min="0"
                   step="0.01"
-                  class="form-control"
-                  required
-                  :disabled="creatingOrder"
+                  class="form-input"
+                  :disabled="creatingProduct"
                 />
               </div>
-              <div class="col-md-6">
-                <label for="newOrderPayment" class="form-label">Способ оплаты</label>
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`newProductSizeStock-${index}`">Остаток</label>
                 <input
-                  id="newOrderPayment"
-                  v-model="addOrderForm.paymentMethod"
-                  type="text"
-                  class="form-control"
-                  placeholder="Например, Банковская карта"
-                  :disabled="creatingOrder"
-                />
-              </div>
-              <div class="col-md-6">
-                <label for="newOrderAddress" class="form-label">ID адреса (опционально)</label>
-                <input
-                  id="newOrderAddress"
-                  v-model="addOrderForm.addressId"
+                  :id="`newProductSizeStock-${index}`"
+                  v-model="sizeRow.stock"
                   type="number"
-                  min="1"
-                  class="form-control"
-                  placeholder="Укажите при необходимости"
-                  :disabled="creatingOrder"
+                  min="0"
+                  class="form-input"
+                  :disabled="creatingProduct"
                 />
               </div>
-              <div class="col-12">
-                <label for="newOrderComment" class="form-label">Комментарий</label>
-                <textarea
-                  id="newOrderComment"
-                  v-model="addOrderForm.comment"
-                  class="form-control"
-                  rows="3"
-                  placeholder="Дополнительная информация для сборки или доставки"
-                  :disabled="creatingOrder"
-                ></textarea>
-              </div>
-              <div v-if="!orderCustomers.length" class="col-12">
-                <div class="manager-modal__empty">
-                  Нет доступных покупателей. Добавьте пользователя в разделе администрирования.
-                </div>
-              </div>
+              <button
+                type="button"
+                class="dialog-button dialog-button--danger dialog-button--sm manager-sizes__remove"
+                @click="removeSizeRow(addProductForm.sizes, index)"
+                :disabled="creatingProduct || addProductForm.sizes.length <= 1"
+              >
+                Удалить
+              </button>
             </div>
           </div>
-          <div class="modal-footer modal-footer--stacked">
-            <button type="button" class="btn btn-outline-secondary" @click="closeAddOrderModal" :disabled="creatingOrder">
-              Отмена
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="creatingOrder || !orderCustomers.length">
-              Сохранить
-            </button>
+        </div>
+      </section>
+      <footer class="form-dialog__footer">
+        <button
+          type="button"
+          class="dialog-button dialog-button--ghost"
+          :disabled="creatingProduct"
+          @click="closeAddProductModal"
+        >
+          Отмена
+        </button>
+        <button type="submit" class="dialog-button dialog-button--primary" :disabled="creatingProduct">
+          <span v-if="creatingProduct">Сохранение...</span>
+          <span v-else>Сохранить</span>
+        </button>
+      </footer>
+    </form>
+  </GlassModal>
+
+  <GlassModal
+    :visible="addOrderModalVisible"
+    max-width="820px"
+    :prevent-close="creatingOrder"
+    @close="closeAddOrderModal"
+  >
+    <form class="form-dialog manager-modal" @submit.prevent="saveNewOrder">
+      <header class="form-dialog__header">
+        <div class="form-dialog__heading">
+          <span class="form-dialog__icon" aria-hidden="true">
+            <ClipboardDocumentListIcon />
+          </span>
+          <div class="form-dialog__title-wrap">
+            <DialogTitle id="add-order-modal-title" as="h2" class="form-dialog__title">
+              Новый заказ
+            </DialogTitle>
+            <p class="form-dialog__subtitle">
+              Укажите клиента, статусы и сумму заказа. Эти параметры можно изменить позже.
+            </p>
           </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  <div v-if="addOrderModalVisible" class="modal-backdrop fade show"></div>
+        </div>
+        <button
+          type="button"
+          class="form-dialog__close"
+          aria-label="Закрыть"
+          :disabled="creatingOrder"
+          @click="closeAddOrderModal"
+        >
+          <XMarkIcon aria-hidden="true" />
+        </button>
+      </header>
+      <section class="form-dialog__body manager-modal__body" aria-labelledby="add-order-modal-title">
+        <div class="form-grid manager-form-grid">
+          <div class="form-grid__item">
+            <label for="newOrderUser" class="form-field__label">Покупатель</label>
+            <select
+              id="newOrderUser"
+              v-model="addOrderForm.userId"
+              class="form-input form-input--select"
+              required
+              :disabled="creatingOrder || !orderCustomers.length"
+            >
+              <option value="">Выберите покупателя</option>
+              <option v-for="customer in orderCustomers" :key="customer.id" :value="String(customer.id)">
+                {{ customer.name }} • {{ customer.email }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid__item">
+            <label for="newOrderStatus" class="form-field__label">Статус</label>
+            <select
+              id="newOrderStatus"
+              v-model="addOrderForm.statusId"
+              class="form-input form-input--select"
+              required
+              :disabled="creatingOrder"
+            >
+              <option value="">Выберите статус</option>
+              <option v-for="status in orderStatuses" :key="status.id" :value="String(status.id)">
+                {{ status.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid__item">
+            <label for="newOrderShipping" class="form-field__label">Статус отправки</label>
+            <select
+              id="newOrderShipping"
+              v-model="addOrderForm.shippingStatus"
+              class="form-input form-input--select"
+              required
+              :disabled="creatingOrder"
+            >
+              <option v-for="option in shippingStatusOptions" :key="option" :value="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid__item">
+            <label for="newOrderTotal" class="form-field__label">Сумма (₽)</label>
+            <input
+              id="newOrderTotal"
+              v-model="addOrderForm.totalAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              class="form-input"
+              required
+              :disabled="creatingOrder"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="newOrderPayment" class="form-field__label">Способ оплаты</label>
+            <input
+              id="newOrderPayment"
+              v-model="addOrderForm.paymentMethod"
+              type="text"
+              class="form-input"
+              placeholder="Например, Банковская карта"
+              :disabled="creatingOrder"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="newOrderAddress" class="form-field__label">ID адреса (опционально)</label>
+            <input
+              id="newOrderAddress"
+              v-model="addOrderForm.addressId"
+              type="number"
+              min="1"
+              class="form-input"
+              placeholder="Укажите при необходимости"
+              :disabled="creatingOrder"
+            />
+          </div>
+          <div class="form-grid__item form-grid__item--full">
+            <label for="newOrderComment" class="form-field__label">Комментарий</label>
+            <textarea
+              id="newOrderComment"
+              v-model="addOrderForm.comment"
+              class="form-input form-input--textarea"
+              rows="3"
+              placeholder="Дополнительная информация для сборки или доставки"
+              :disabled="creatingOrder"
+            ></textarea>
+          </div>
+        </div>
+        <div v-if="!orderCustomers.length" class="manager-modal__empty">
+          Нет доступных покупателей. Добавьте пользователя в разделе администрирования.
+        </div>
+      </section>
+      <footer class="form-dialog__footer">
+        <button
+          type="button"
+          class="dialog-button dialog-button--ghost"
+          :disabled="creatingOrder"
+          @click="closeAddOrderModal"
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          class="dialog-button dialog-button--primary"
+          :disabled="creatingOrder || !orderCustomers.length"
+        >
+          <span v-if="creatingOrder">Сохранение...</span>
+          <span v-else>Сохранить</span>
+        </button>
+      </footer>
+    </form>
+  </GlassModal>
+
 </template>
 
 <script setup lang="ts">
+import { DialogTitle } from '@headlessui/vue';
+import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import { onMounted, reactive, ref } from 'vue';
+import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
   fetchProducts,
@@ -716,7 +748,6 @@ import {
   type UpdateOrderPayload,
 } from '../api/orders';
 import { extractErrorMessage } from '../api/http';
-import { useScrollLock } from '../composables/useScrollLock';
 
 interface EditableProductSize {
   id: number | null;
@@ -788,8 +819,6 @@ const orderForm = ref<OrderFormState | null>(null);
 const addProductModalVisible = ref(false);
 const addOrderModalVisible = ref(false);
 
-useScrollLock(addProductModalVisible);
-useScrollLock(addOrderModalVisible);
 const addProductForm = reactive<NewProductFormState>({
   title: '',
   description: '',
@@ -1340,14 +1369,31 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.manager-modal {
+  gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.manager-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.manager-form-grid {
+  gap: clamp(1rem, 2vw, 1.35rem);
+}
+
 .manager-sizes {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius-lg);
-  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, transparent);
-  background: color-mix(in srgb, var(--color-surface-alt) 85%, transparent);
+  padding: clamp(1rem, 2.5vw, 1.35rem);
+  border-radius: calc(var(--radius-lg) * 1.1);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 38%, transparent);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--color-surface-alt) 88%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface) 78%, transparent) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-surface-border) 65%, transparent);
 }
 
 .manager-sizes__header {
@@ -1355,16 +1401,37 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.manager-sizes__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .manager-sizes__list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .manager-sizes__row {
-  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.manager-sizes__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.manager-sizes__remove {
+  align-self: stretch;
+  min-width: 0;
 }
 
 .manager-modal__empty {
@@ -1374,6 +1441,16 @@ onMounted(() => {
   background: color-mix(in srgb, var(--color-accent) 18%, transparent);
   color: var(--color-text-muted);
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .manager-sizes__row {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-sizes__remove {
+    justify-self: stretch;
+  }
 }
 
 @media (max-width: 575.98px) {
