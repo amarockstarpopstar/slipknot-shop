@@ -107,7 +107,7 @@ const emitCancel = () => {
   transform: translateY(0) scale(1);
 }
 
-.modal-layer {
+:global(.modal-layer) {
   position: fixed;
   inset: 0;
   z-index: 1050;
@@ -254,8 +254,8 @@ const emitCancel = () => {
 
 @media (max-width: 575.98px) {
   .modal-layer__container {
-    padding: clamp(16px, 6vw, 26px) clamp(16px, 5vw, 22px) calc(24px + env(safe-area-inset-bottom));
-    align-items: flex-end;
+    padding: clamp(18px, 6vw, 28px) clamp(16px, 5vw, 22px) calc(24px + env(safe-area-inset-bottom));
+    align-items: center;
   }
 
   .confirm-dialog {
