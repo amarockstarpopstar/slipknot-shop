@@ -20,18 +20,53 @@
           <button type="button" class="btn-close" aria-label="Закрыть" @click="dismissInfoMessage"></button>
         </div>
         <div class="section-header">
-          <h2 class="section-header__title">Популярные товары</h2>
-          <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="loading">
-            Обновить список
-          </button>
+          <div class="section-header__title-block">
+            <h2 class="section-header__title">Популярные товары</h2>
+            <p class="section-header__subtitle">Мини-поиск помогает быстро отыскать нужный артикул или название.</p>
+          </div>
+          <div class="section-header__controls">
+            <div class="product-search" :class="{ 'product-search--active': hasActiveSearch }">
+              <span class="product-search__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <input
+                v-model="searchTerm"
+                type="search"
+                class="product-search__input"
+                placeholder="Искать по артикулу или названию"
+                aria-label="Поиск товаров по артикулу или названию"
+                :disabled="loading"
+              />
+              <button
+                v-if="hasActiveSearch"
+                type="button"
+                class="product-search__clear"
+                aria-label="Очистить поиск"
+                @click="clearSearch"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <button class="btn btn-outline-secondary" @click="refreshProducts" :disabled="loading">
+              Обновить список
+            </button>
+          </div>
         </div>
         <LoadingSpinner v-if="loading" />
         <div v-else>
           <div v-if="error" class="alert alert-danger" role="alert">
             {{ error }}
           </div>
-          <div v-else class="products-grid">
-            <ProductCard v-for="product in products" :key="product.id" :product="product">
+          <div v-else-if="filteredProducts.length" class="products-grid">
+            <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product">
               <template #actions>
                 <button
                   class="btn btn-danger btn-sm"
@@ -52,7 +87,10 @@
               </template>
             </ProductCard>
           </div>
-          <div v-if="!products.length && !error" class="alert alert-info mt-4" role="alert">
+          <div v-else-if="products.length" class="alert alert-secondary mt-4" role="alert">
+            По вашему запросу ничего не найдено. Попробуйте изменить формулировку или ввести другой артикул.
+          </div>
+          <div v-else class="alert alert-info mt-4" role="alert">
             Товары скоро появятся, следите за обновлениями.
           </div>
         </div>
@@ -69,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, type LocationQuery } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -92,6 +130,7 @@ const { updating: cartUpdatingRef } = storeToRefs(cartStore);
 const selectedProduct = ref<ProductDto | null>(null);
 const showSizeModal = ref(false);
 const pendingProductId = ref<number | null>(null);
+const searchTerm = ref('');
 
 const refreshProducts = async () => {
   await productStore.loadAll();
@@ -159,6 +198,69 @@ const dismissInfoMessage = () => {
   void safeReplace({ query: nextQuery });
 };
 
+const filteredProducts = computed(() => {
+  const query = searchTerm.value.trim().toLowerCase();
+  if (!query) {
+    return products.value;
+  }
+
+  return products.value.filter((product) => {
+    const title = product.title?.toLowerCase() ?? '';
+    const sku = product.sku?.toLowerCase() ?? '';
+    return title.includes(query) || sku.includes(query);
+  });
+});
+
+const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0);
+
+const clearSearch = () => {
+  if (!hasActiveSearch.value) {
+    return;
+  }
+  searchTerm.value = '';
+};
+
+watch(
+  () => route.query.search,
+  (value) => {
+    const nextValue = Array.isArray(value) ? value[0] : value;
+
+    if (typeof nextValue === 'string') {
+      if (nextValue !== searchTerm.value) {
+        searchTerm.value = nextValue;
+      }
+      return;
+    }
+
+    if (nextValue == null && searchTerm.value !== '') {
+      searchTerm.value = '';
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  searchTerm,
+  (value) => {
+    const trimmed = value.trim();
+    const nextQuery: LocationQuery = { ...route.query };
+
+    if (trimmed) {
+      if (nextQuery.search === trimmed) {
+        return;
+      }
+      nextQuery.search = trimmed;
+    } else if (nextQuery.search) {
+      delete nextQuery.search;
+    } else {
+      return;
+    }
+
+    void safeReplace({ query: nextQuery });
+  },
+  { flush: 'post' },
+);
+
 onMounted(async () => {
   if (!products.value.length) {
     await productStore.loadAll();
@@ -181,10 +283,93 @@ onMounted(async () => {
   margin-bottom: 2rem;
 }
 
+.section-header__title-block {
+  max-width: 420px;
+}
+
 .section-header__title {
   font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 600;
   margin: 0;
+}
+
+.section-header__subtitle {
+  margin: 0.5rem 0 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+}
+
+.section-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.product-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem 0.35rem 2.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.product-search--active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.product-search__icon {
+  position: absolute;
+  left: 0.85rem;
+  display: inline-flex;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.product-search__input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.95rem;
+  min-width: 220px;
+  outline: none;
+}
+
+.product-search__input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.product-search__input:disabled {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.product-search__clear {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.product-search__clear:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.product-search__clear span {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .products-grid {
@@ -200,6 +385,19 @@ onMounted(async () => {
   }
 
   .section-header :deep(.btn) {
+    width: 100%;
+  }
+
+  .section-header__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .product-search {
+    width: 100%;
+  }
+
+  .product-search__input {
     width: 100%;
   }
 }
