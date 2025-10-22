@@ -97,21 +97,35 @@ export class ProductsService {
     });
   }
 
-  async findAll(): Promise<ProductResponseDto[]> {
-    this.logger.log('Запрос каталога товаров');
-    try {
-      const products = await this.productsRepository.find({
-        relations: {
-          category: true,
-          productSizes: { stock: true },
-        },
-        order: {
-          id: 'ASC',
-          productSizes: { size: 'ASC' },
-        },
-      });
+  async findAll(search?: string): Promise<ProductResponseDto[]> {
+    const normalizedSearch = search?.trim();
+    const logSuffix = normalizedSearch ? ` (поиск: "${normalizedSearch}")` : '';
 
-      this.logger.log(`Каталог успешно загружен (${products.length} позиций)`);
+    this.logger.log(`Запрос каталога товаров${logSuffix}`);
+    try {
+      const queryBuilder = this.productsRepository
+        .createQueryBuilder('product')
+        .leftJoinAndSelect('product.category', 'category')
+        .leftJoinAndSelect('product.productSizes', 'productSize')
+        .leftJoinAndSelect('productSize.stock', 'stock')
+        .orderBy('product.id', 'ASC')
+        .addOrderBy('productSize.size', 'ASC');
+
+      if (normalizedSearch) {
+        const term = `%${normalizedSearch.toLowerCase()}%`;
+        queryBuilder.andWhere(
+          '(LOWER(product.title) LIKE :term OR LOWER(product.sku) LIKE :term)',
+          { term },
+        );
+      }
+
+      const products = await queryBuilder.getMany();
+
+      this.logger.log(
+        `Каталог успешно загружен (${products.length} позиций${
+          normalizedSearch ? `, поиск: "${normalizedSearch}"` : ''
+        })`,
+      );
       return products.map((product) => this.toProductResponse(product));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

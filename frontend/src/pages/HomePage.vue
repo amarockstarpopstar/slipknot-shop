@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute, type LocationQuery } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -130,10 +130,35 @@ const { updating: cartUpdatingRef } = storeToRefs(cartStore);
 const selectedProduct = ref<ProductDto | null>(null);
 const showSizeModal = ref(false);
 const pendingProductId = ref<number | null>(null);
-const searchTerm = ref('');
+const initialSearchParam = route.query.search;
+const initialSearchValue = Array.isArray(initialSearchParam)
+  ? initialSearchParam[0] ?? ''
+  : typeof initialSearchParam === 'string'
+  ? initialSearchParam
+  : '';
+
+const searchTerm = ref(initialSearchValue);
+
+let lastLoadedSearch: string | null = null;
+
+const executeSearch = async (query: string, force = false) => {
+  const normalized = query.trim();
+
+  if (!force && lastLoadedSearch !== null && normalized === lastLoadedSearch) {
+    return null;
+  }
+
+  const result = await productStore.loadAll(normalized ? normalized : undefined);
+
+  if (result !== null || force) {
+    lastLoadedSearch = normalized;
+  }
+
+  return result;
+};
 
 const refreshProducts = async () => {
-  await productStore.loadAll();
+  await executeSearch(searchTerm.value, true);
 };
 
 const resolveDefaultSizeId = (sizes: ProductSizeDto[]): number | null => {
@@ -221,51 +246,24 @@ const clearSearch = () => {
 };
 
 watch(
-  () => route.query.search,
-  (value) => {
-    const nextValue = Array.isArray(value) ? value[0] : value;
+  searchTerm,
+  (value, _oldValue, onCleanup) => {
+    const normalized = value.trim();
 
-    if (typeof nextValue === 'string') {
-      if (nextValue !== searchTerm.value) {
-        searchTerm.value = nextValue;
-      }
+    if (lastLoadedSearch !== null && normalized === lastLoadedSearch) {
       return;
     }
 
-    if (nextValue == null && searchTerm.value !== '') {
-      searchTerm.value = '';
-    }
+    const timeoutId = setTimeout(() => {
+      void executeSearch(normalized);
+    }, 300);
+
+    onCleanup(() => {
+      clearTimeout(timeoutId);
+    });
   },
   { immediate: true },
 );
-
-watch(
-  searchTerm,
-  (value) => {
-    const trimmed = value.trim();
-    const nextQuery: LocationQuery = { ...route.query };
-
-    if (trimmed) {
-      if (nextQuery.search === trimmed) {
-        return;
-      }
-      nextQuery.search = trimmed;
-    } else if (nextQuery.search) {
-      delete nextQuery.search;
-    } else {
-      return;
-    }
-
-    void safeReplace({ query: nextQuery });
-  },
-  { flush: 'post' },
-);
-
-onMounted(async () => {
-  if (!products.value.length) {
-    await productStore.loadAll();
-  }
-});
 </script>
 
 <style scoped>
@@ -338,6 +336,20 @@ onMounted(async () => {
   font-size: 0.95rem;
   min-width: 220px;
   outline: none;
+}
+
+.product-search__input::-webkit-search-decoration,
+.product-search__input::-webkit-search-cancel-button,
+.product-search__input::-webkit-search-results-button,
+.product-search__input::-webkit-search-results-decoration {
+  display: none;
+}
+
+.product-search__input::-ms-clear,
+.product-search__input::-ms-reveal {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .product-search__input::placeholder {
