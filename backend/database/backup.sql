@@ -1,2 +1,2 @@
--- Manual backup script for Slipknot merch database
-\! pg_dump -h "$DATABASE_HOST" -p "${DATABASE_PORT:-5432}" -U "$DATABASE_USER" "$DATABASE_NAME" > backup.sql
+-- Placeholder backup file. It will be overwritten automatically when an administrator generates a database backup from the reports panel.
+-- The generated script contains SQL statements that recreate the data in the public schema.

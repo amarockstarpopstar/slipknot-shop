@@ -421,7 +421,7 @@ const resetBackup = () => {
 
 const handleRestore = async () => {
   const confirmed = window.confirm(
-    'Сброс базы данных восстановит состояние из restore.sql и удалит текущие данные. Продолжить?',
+    'Сброс базы данных восстановит состояние из последнего бэкапа (если он существует) или schema.sql и удалит текущие данные. Продолжить?',
   );
   if (!confirmed) {
     return;

@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { spawn } from 'child_process';
 import { constants } from 'fs';
-import { access, readFile } from 'fs/promises';
+import { access, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { Workbook } from 'exceljs';
 import { DailySalesPointDto } from './dto/daily-sales-point.dto';
 
@@ -14,12 +12,22 @@ interface DailySalesRow {
   total_amount: string | number | null;
 }
 
+interface TableColumnDefinition {
+  column_name: string;
+  data_type: string;
+  udt_name: string;
+  is_identity: 'YES' | 'NO';
+  column_default: string | null;
+}
+
+interface ForeignKeyDependencyRow {
+  table_name: string;
+  referenced_table_name: string;
+}
+
 @Injectable()
 export class ReportsService {
-  constructor(
-    private readonly dataSource: DataSource,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly dataSource: DataSource) {}
 
   async getDailySales(): Promise<DailySalesPointDto[]> {
     const rows = (await this.dataSource.query(
@@ -112,248 +120,535 @@ export class ReportsService {
   }
 
   async createDatabaseBackup(): Promise<{ buffer: Buffer; filename: string }> {
-    const { host, port, username, password, database } = this.getDatabaseConnectionConfig();
+    const script = await this.generateDatabaseBackupScript();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `database-backup-${timestamp}.sql`;
+    const scriptsDirectory = join(process.cwd(), 'database');
+    const backupPath = join(scriptsDirectory, 'backup.sql');
 
-    const dumpArgs = ['-h', host, '-p', String(port), '-U', username, database];
-    const command = await this.resolvePostgresExecutable('pg_dump');
-    const env = { ...process.env, PGPASSWORD: password ?? '' };
-    const chunks: Buffer[] = [];
-    const errorChunks: string[] = [];
+    await this.persistBackupScript(backupPath, script);
 
-    return new Promise((resolve, reject) => {
-      const dumpProcess = spawn(command, dumpArgs, {
-        env,
-        windowsHide: true,
-      });
-
-      dumpProcess.stdout.on('data', (data: Buffer) => {
-        chunks.push(Buffer.from(data));
-      });
-
-      dumpProcess.stderr.on('data', (data: Buffer) => {
-        errorChunks.push(data.toString());
-      });
-
-      dumpProcess.on('error', (error) => {
-        reject(this.buildSpawnError('pg_dump', command, error));
-      });
-
-      dumpProcess.on('close', (code) => {
-        if (code !== 0) {
-          const errorMessage = errorChunks.join('').trim() || 'Неизвестная ошибка pg_dump';
-          reject(new Error(`pg_dump завершился с кодом ${code}: ${errorMessage}`));
-          return;
-        }
-
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `database-backup-${timestamp}.sql`;
-        resolve({ buffer: Buffer.concat(chunks), filename });
-      });
-    });
+    return { buffer: Buffer.from(script, 'utf-8'), filename };
   }
 
   async restoreDatabaseFromScript(): Promise<'backup' | 'schema'> {
-    const { host, port, username, password, database } = this.getDatabaseConnectionConfig();
     const scriptsDirectory = join(process.cwd(), 'database');
-    const scriptPath = join(scriptsDirectory, 'restore.sql');
+    const backupPath = join(scriptsDirectory, 'backup.sql');
+    const schemaPath = join(scriptsDirectory, 'schema.sql');
 
-    try {
-      await access(scriptPath, constants.R_OK);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'restore.sql недоступен для чтения';
-      throw new Error(`Не удалось получить доступ к restore.sql: ${message}`);
+    const backupScript = await this.readSqlFileIfAvailable(backupPath, true);
+    const scriptToExecute =
+      backupScript ?? (await this.readSqlFileIfAvailable(schemaPath));
+
+    if (!scriptToExecute) {
+      throw new Error(
+        'Не удалось найти подходящий SQL-скрипт. Убедитесь, что schema.sql существует и содержит инструкции для восстановления.',
+      );
     }
 
-    const env = {
-      ...process.env,
-      PGPASSWORD: password ?? '',
-      DATABASE_HOST: host,
-      DATABASE_PORT: String(port),
-      DATABASE_USER: username,
-      DATABASE_PASSWORD: password ?? '',
-      DATABASE_NAME: database,
-    };
+    const source: 'backup' | 'schema' = backupScript ? 'backup' : 'schema';
 
-    const backupDumpPath = join(scriptsDirectory, 'backup.sql');
-    let useBackupDump = false;
+    await this.executeSqlScript(scriptToExecute);
+
+    return source;
+  }
+
+  private async generateDatabaseBackupScript(): Promise<string> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
 
     try {
-      await access(backupDumpPath, constants.R_OK);
-      const content = await readFile(backupDumpPath, 'utf-8');
-      const normalized = content.trim();
-      const containsPgDumpDirective = /\\!\s*pg_dump/i.test(normalized);
-      useBackupDump = normalized.length > 0 && !containsPgDumpDirective;
-    } catch {
-      useBackupDump = false;
-    }
+      const tables = await this.topologicallySortTables(queryRunner);
+      const lines: string[] = [];
 
-    const targetFile = useBackupDump
-      ? backupDumpPath
-      : await this.resolveSchemaPath(scriptsDirectory);
+      lines.push(
+        '-- Slipknot Shop database backup generated without external pg_dump',
+      );
+      lines.push(`-- Generated at ${new Date().toISOString()}`);
+      lines.push("SET client_encoding = 'UTF8';");
+      lines.push('SET standard_conforming_strings = ON;');
+      lines.push('SET check_function_bodies = FALSE;');
+      lines.push('SET search_path = public;');
+      lines.push('BEGIN;');
+      lines.push('SET CONSTRAINTS ALL DEFERRED;');
 
-    const command = await this.resolvePostgresExecutable('psql');
+      for (const table of tables) {
+        lines.push('');
+        lines.push(`-- Table: ${table}`);
+        lines.push(
+          `TRUNCATE TABLE ${this.quoteIdentifier(table)} RESTART IDENTITY CASCADE;`,
+        );
 
-    await new Promise<void>((resolve, reject) => {
-      const args = [
-        '-v',
-        'ON_ERROR_STOP=1',
-        '-h',
-        host,
-        '-p',
-        String(port),
-        '-U',
-        username,
-        '-d',
-        database,
-        '-f',
-        targetFile,
-      ];
+        const columns = await this.fetchTableColumns(queryRunner, table);
+        const orderBy = columns
+          .map((column) => this.quoteIdentifier(column.column_name))
+          .join(', ');
+        const rows = (await queryRunner.query(
+          `SELECT * FROM ${this.quoteIdentifier(table)}${orderBy ? ` ORDER BY ${orderBy}` : ''}`,
+        )) as Record<string, unknown>[];
 
-      const restoreProcess = spawn(command, args, {
-        env,
-        cwd: scriptsDirectory,
-        windowsHide: true,
-      });
-      const errorChunks: string[] = [];
-
-      restoreProcess.stderr.on('data', (data: Buffer) => {
-        errorChunks.push(data.toString());
-      });
-
-      restoreProcess.on('error', (processError) => {
-        reject(this.buildSpawnError('psql', command, processError, targetFile));
-      });
-
-      restoreProcess.on('close', (code) => {
-        if (code !== 0) {
-          const errorMessage = errorChunks.join('').trim() || 'Неизвестная ошибка psql';
-          reject(new Error(`psql завершился с кодом ${code}: ${errorMessage}`));
-          return;
+        if (rows.length > 0) {
+          const columnList = columns
+            .map((column) => this.quoteIdentifier(column.column_name))
+            .join(', ');
+          for (const row of rows) {
+            const values = columns
+              .map((column) =>
+                this.formatValue(row[column.column_name], column),
+              )
+              .join(', ');
+            lines.push(
+              `INSERT INTO ${this.quoteIdentifier(table)} (${columnList}) VALUES (${values});`,
+            );
+          }
         }
 
-        resolve();
-      });
+        const sequences = Array.from(
+          new Set(
+            columns
+              .map((column) => this.extractSequenceName(column))
+              .filter((value): value is string => Boolean(value)),
+          ),
+        );
+
+        for (const sequence of sequences) {
+          const identityColumn = columns.find(
+            (column) => this.extractSequenceName(column) === sequence,
+          );
+          if (!identityColumn) {
+            continue;
+          }
+
+          lines.push(
+            `SELECT setval('${this.escapeLiteral(sequence)}', COALESCE((SELECT MAX(${this.quoteIdentifier(
+              identityColumn.column_name,
+            )}) FROM ${this.quoteIdentifier(table)}), 0) + 1, false);`,
+          );
+        }
+      }
+
+      lines.push('COMMIT;');
+
+      return `${lines.join('\n')}\n`;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private async topologicallySortTables(
+    queryRunner: QueryRunner,
+  ): Promise<string[]> {
+    const tables = await this.fetchTableNames(queryRunner);
+    const dependenciesRows =
+      await this.fetchForeignKeyDependencies(queryRunner);
+    const dependencyMap = new Map<string, Set<string>>();
+    const adjacency = new Map<string, Set<string>>();
+    const inDegree = new Map<string, number>();
+
+    tables.forEach((table) => {
+      dependencyMap.set(table, new Set<string>());
+      adjacency.set(table, new Set<string>());
+      inDegree.set(table, 0);
     });
 
-    return useBackupDump ? 'backup' : 'schema';
-  }
+    for (const row of dependenciesRows) {
+      if (
+        row.table_name === row.referenced_table_name ||
+        !dependencyMap.has(row.table_name) ||
+        !dependencyMap.has(row.referenced_table_name)
+      ) {
+        continue;
+      }
 
-  private async resolveSchemaPath(directory: string): Promise<string> {
-    const schemaPath = join(directory, 'schema.sql');
-    try {
-      await access(schemaPath, constants.R_OK);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'schema.sql недоступен';
-      throw new Error(`Не удалось восстановить базу данных: ${message}`);
+      dependencyMap.get(row.table_name)?.add(row.referenced_table_name);
     }
 
-    return schemaPath;
-  }
-
-  private getDatabaseConnectionConfig(): {
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    database: string;
-  } {
-    const portValue = this.resolveConfigValue(['DATABASE_PORT', 'DB_PORT']);
-    const port = portValue ? Number.parseInt(portValue, 10) : 5432;
-
-    return {
-      host: this.resolveConfigValue(['DATABASE_HOST', 'DB_HOST'], 'localhost') ?? 'localhost',
-      port: Number.isNaN(port) ? 5432 : port,
-      username:
-        this.resolveConfigValue(['DATABASE_USER', 'DB_USER'], 'postgres') ?? 'postgres',
-      password:
-        this.resolveConfigValue(['DATABASE_PASSWORD', 'DB_PASSWORD'], 'postgres') ??
-        'postgres',
-      database:
-        this.resolveConfigValue(['DATABASE_NAME', 'DB_NAME'], 'slipknot_shop') ??
-        'slipknot_shop',
-    };
-  }
-
-  private resolveConfigValue(keys: string[], fallback?: string): string | undefined {
-    for (const key of keys) {
-      const value = this.configService.get<string>(key);
-      if (value !== undefined && value !== null && value !== '') {
-        return value;
+    for (const table of tables) {
+      const deps = dependencyMap.get(table) ?? new Set<string>();
+      for (const dep of deps) {
+        adjacency.get(dep)?.add(table);
+        inDegree.set(table, (inDegree.get(table) ?? 0) + 1);
       }
     }
-    return fallback;
-  }
 
-  private async resolvePostgresExecutable(command: 'psql' | 'pg_dump'): Promise<string> {
-    const explicitPath = this.resolveConfigValue([
-      `POSTGRES_${command.toUpperCase()}_PATH`,
-      `PG_${command.toUpperCase()}_PATH`,
-    ]);
+    const queue: string[] = tables.filter(
+      (table) => (inDegree.get(table) ?? 0) === 0,
+    );
+    const ordered: string[] = [];
 
-    if (explicitPath) {
-      await this.ensureExecutableAccessible(explicitPath, command);
-      return explicitPath;
+    while (queue.length > 0) {
+      const table = queue.shift();
+      if (!table) {
+        break;
+      }
+      ordered.push(table);
+
+      for (const neighbour of adjacency.get(table) ?? []) {
+        const updated = (inDegree.get(neighbour) ?? 0) - 1;
+        inDegree.set(neighbour, updated);
+        if (updated === 0) {
+          queue.push(neighbour);
+        }
+      }
     }
 
-    const binDirectory = this.resolveConfigValue([
-      'POSTGRES_BIN_PATH',
-      'PG_BIN_PATH',
-      'POSTGRESQL_BIN_PATH',
-    ]);
-
-    if (binDirectory) {
-      const candidate = join(binDirectory, this.appendExecutableExtension(command));
-      await this.ensureExecutableAccessible(candidate, command);
-      return candidate;
+    if (ordered.length !== tables.length) {
+      return tables;
     }
 
-    return this.appendExecutableExtension(command);
+    return ordered;
   }
 
-  private appendExecutableExtension(command: 'psql' | 'pg_dump'): string {
-    if (process.platform === 'win32' && !command.endsWith('.exe')) {
-      return `${command}.exe`;
+  private async fetchTableNames(queryRunner: QueryRunner): Promise<string[]> {
+    const rows = (await queryRunner.query(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+    )) as { tablename: string }[];
+
+    return rows.map((row) => row.tablename);
+  }
+
+  private async fetchTableColumns(
+    queryRunner: QueryRunner,
+    table: string,
+  ): Promise<TableColumnDefinition[]> {
+    const rows = (await queryRunner.query(
+      `SELECT column_name, data_type, udt_name, is_identity, column_default
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = $1
+       ORDER BY ordinal_position`,
+      [table],
+    )) as TableColumnDefinition[];
+
+    return rows;
+  }
+
+  private async fetchForeignKeyDependencies(
+    queryRunner: QueryRunner,
+  ): Promise<ForeignKeyDependencyRow[]> {
+    const rows = (await queryRunner.query(
+      `SELECT tc.table_name, ccu.table_name AS referenced_table_name
+       FROM information_schema.table_constraints AS tc
+       JOIN information_schema.key_column_usage AS kcu
+         ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+       JOIN information_schema.constraint_column_usage AS ccu
+         ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+       WHERE tc.constraint_type = 'FOREIGN KEY'
+         AND tc.table_schema = 'public'`,
+    )) as ForeignKeyDependencyRow[];
+
+    return rows;
+  }
+
+  private formatValue(value: unknown, column: TableColumnDefinition): string {
+    if (value === null || value === undefined) {
+      return 'NULL';
     }
-    return command;
+
+    if (
+      Array.isArray(value) &&
+      (column.data_type === 'ARRAY' || column.udt_name.startsWith('_'))
+    ) {
+      return this.formatArrayLiteral(value, column);
+    }
+
+    if (column.udt_name === 'bytea') {
+      if (value instanceof Buffer) {
+        return `'\\x${value.toString('hex')}'::bytea`;
+      }
+      if (value instanceof Uint8Array) {
+        return `'\\x${Buffer.from(value).toString('hex')}'::bytea`;
+      }
+      if (typeof value === 'string') {
+        return `'${this.escapeLiteral(value)}'::bytea`;
+      }
+    }
+
+    switch (column.data_type) {
+      case 'boolean':
+        return value ? 'TRUE' : 'FALSE';
+      case 'integer':
+      case 'smallint':
+      case 'bigint':
+      case 'numeric':
+      case 'decimal':
+      case 'double precision':
+      case 'real':
+        return String(value);
+      case 'date':
+        return `'${this.escapeLiteral(String(value))}'::date`;
+      case 'timestamp without time zone':
+        return `'${this.escapeLiteral(this.normalizeDateValue(value))}'::timestamp`;
+      case 'timestamp with time zone':
+        return `'${this.escapeLiteral(this.normalizeDateValue(value))}'::timestamptz`;
+      case 'time without time zone':
+        return `'${this.escapeLiteral(String(value))}'::time`;
+      case 'time with time zone':
+        return `'${this.escapeLiteral(String(value))}'::timetz`;
+      case 'json':
+        return `'${this.escapeLiteral(
+          typeof value === 'string' ? value : JSON.stringify(value),
+        )}'::json`;
+      case 'jsonb':
+        return `'${this.escapeLiteral(
+          typeof value === 'string' ? value : JSON.stringify(value),
+        )}'::jsonb`;
+      default:
+        break;
+    }
+
+    if (column.udt_name === 'uuid') {
+      return `'${this.escapeLiteral(String(value))}'::uuid`;
+    }
+
+    if (typeof value === 'object') {
+      return `'${this.escapeLiteral(JSON.stringify(value))}'`;
+    }
+
+    return `'${this.escapeLiteral(String(value))}'`;
   }
 
-  private async ensureExecutableAccessible(
-    candidate: string,
-    command: 'psql' | 'pg_dump',
+  private formatArrayLiteral(
+    values: unknown[],
+    column: TableColumnDefinition,
+  ): string {
+    const formatted = values.map((item) => {
+      if (item === null || item === undefined) {
+        return 'NULL';
+      }
+      if (typeof item === 'number' || typeof item === 'bigint') {
+        return String(item);
+      }
+      if (typeof item === 'boolean') {
+        return item ? 'TRUE' : 'FALSE';
+      }
+      return `'${this.escapeLiteral(String(item))}'`;
+    });
+
+    const literal = `ARRAY[${formatted.join(', ')}]`;
+    const elementType = this.resolveArrayElementType(column.udt_name);
+
+    return elementType ? `${literal}::${elementType}[]` : literal;
+  }
+
+  private escapeLiteral(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/'/g, "''");
+  }
+
+  private normalizeDateValue(value: unknown): string {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const stringValue = String(value);
+    if (stringValue.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(stringValue)) {
+      return stringValue;
+    }
+
+    const parsed = new Date(stringValue);
+    if (Number.isNaN(parsed.getTime())) {
+      return stringValue;
+    }
+
+    return parsed.toISOString();
+  }
+
+  private extractSequenceName(column: TableColumnDefinition): string | null {
+    if (
+      column.column_default &&
+      /nextval\('([^']+)'::regclass\)/.test(column.column_default)
+    ) {
+      const match = column.column_default.match(
+        /nextval\('([^']+)'::regclass\)/,
+      );
+      return match ? match[1] : null;
+    }
+    return null;
+  }
+
+  private resolveArrayElementType(udtName: string): string | null {
+    if (!udtName.startsWith('_')) {
+      return null;
+    }
+
+    const mapping: Record<string, string> = {
+      _int2: 'smallint',
+      _int4: 'integer',
+      _int8: 'bigint',
+      _text: 'text',
+      _varchar: 'varchar',
+      _bpchar: 'char',
+      _uuid: 'uuid',
+      _bool: 'boolean',
+      _numeric: 'numeric',
+      _float4: 'real',
+      _float8: 'double precision',
+      _date: 'date',
+      _timestamptz: 'timestamptz',
+      _timestamp: 'timestamp',
+      _json: 'json',
+      _jsonb: 'jsonb',
+    };
+
+    return mapping[udtName] ?? null;
+  }
+
+  private async persistBackupScript(
+    path: string,
+    script: string,
   ): Promise<void> {
-    if (!candidate.includes('/') && !candidate.includes('\\')) {
+    try {
+      await writeFile(path, script, { encoding: 'utf-8' });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'неизвестная ошибка записи файла';
+      throw new Error(
+        `Не удалось сохранить резервную копию на диске: ${message}`,
+      );
+    }
+  }
+
+  private async readSqlFileIfAvailable(
+    path: string,
+    validateBackup = false,
+  ): Promise<string | null> {
+    try {
+      await access(path, constants.R_OK);
+    } catch {
+      return null;
+    }
+
+    const content = await readFile(path, 'utf-8');
+    if (!content.trim()) {
+      return null;
+    }
+
+    if (validateBackup && !this.isValidBackupScript(content)) {
+      return null;
+    }
+
+    const statements = this.splitSqlScript(content);
+    if (statements.length === 0) {
+      return null;
+    }
+
+    return content;
+  }
+
+  private isValidBackupScript(content: string): boolean {
+    return !/\\!\s*pg_dump/i.test(content);
+  }
+
+  private async executeSqlScript(script: string): Promise<void> {
+    const statements = this.splitSqlScript(script);
+    if (statements.length === 0) {
       return;
     }
 
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+
     try {
-      await access(candidate, constants.F_OK);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'неизвестная ошибка доступа';
-      throw new Error(
-        `Не удалось получить доступ к ${command} по пути ${candidate}: ${message}`,
-      );
+      for (const statement of statements) {
+        await queryRunner.query(statement);
+      }
+    } finally {
+      await queryRunner.release();
     }
   }
 
-  private buildSpawnError(
-    command: 'psql' | 'pg_dump',
-    resolvedCommand: string,
-    error: unknown,
-    targetFile?: string,
-  ): Error {
-    const errno = (error as NodeJS.ErrnoException)?.code;
-    if (errno === 'ENOENT') {
-      const extensionHint = resolvedCommand.includes('/') || resolvedCommand.includes('\\')
-        ? `Проверьте корректность пути "${resolvedCommand}".`
-        : `Убедитесь, что утилита доступна в PATH либо укажите путь через переменные POSTGRES_BIN_PATH или POSTGRES_${command.toUpperCase()}_PATH.`;
-      return new Error(
-        `Не найден исполняемый файл ${command}${targetFile ? ` для ${targetFile}` : ''}. ${extensionHint}`,
-      );
+  private splitSqlScript(script: string): string[] {
+    const normalized = script.replace(/\uFEFF/g, '');
+    const statements: string[] = [];
+    let current = '';
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let dollarTag: string | null = null;
+
+    for (let i = 0; i < normalized.length; ) {
+      const char = normalized[i];
+      const nextTwo = normalized.slice(i, i + 2);
+
+      if (!inSingleQuote && !inDoubleQuote && dollarTag === null) {
+        if (nextTwo === '--') {
+          i += 2;
+          while (i < normalized.length && normalized[i] !== '\n') {
+            i += 1;
+          }
+          continue;
+        }
+
+        if (nextTwo === '/*') {
+          const endIndex = normalized.indexOf('*/', i + 2);
+          if (endIndex === -1) {
+            break;
+          }
+          i = endIndex + 2;
+          continue;
+        }
+
+        const dollarMatch = normalized.slice(i).match(/^\$[A-Za-z0-9_]*\$/);
+        if (dollarMatch) {
+          dollarTag = dollarMatch[0];
+          current += dollarTag;
+          i += dollarTag.length;
+          continue;
+        }
+      }
+
+      if (dollarTag) {
+        if (normalized.startsWith(dollarTag, i)) {
+          current += dollarTag;
+          i += dollarTag.length;
+          dollarTag = null;
+          continue;
+        }
+
+        current += char;
+        i += 1;
+        continue;
+      }
+
+      if (char === "'" && !inDoubleQuote) {
+        inSingleQuote = !inSingleQuote;
+        current += char;
+        i += 1;
+        continue;
+      }
+
+      if (char === '"' && !inSingleQuote) {
+        inDoubleQuote = !inDoubleQuote;
+        current += char;
+        i += 1;
+        continue;
+      }
+
+      if (char === ';' && !inSingleQuote && !inDoubleQuote) {
+        const trimmed = current.trim();
+        if (trimmed) {
+          statements.push(trimmed);
+        }
+        current = '';
+        i += 1;
+        continue;
+      }
+
+      current += char;
+      i += 1;
     }
 
-    const suffix = targetFile ? ` для ${targetFile}` : '';
-    const message = error instanceof Error ? error.message : 'неизвестная ошибка запуска процесса';
-    return new Error(`Не удалось запустить ${command}${suffix}: ${message}`);
+    const trimmed = current.trim();
+    if (trimmed) {
+      statements.push(trimmed);
+    }
+
+    return statements;
+  }
+
+  private quoteIdentifier(identifier: string): string {
+    return `"${identifier.replace(/"/g, '""')}"`;
   }
 }
