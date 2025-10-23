@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
+  downloadDatabaseBackup,
   downloadSalesExcel,
   fetchDailySales,
+  restoreDatabaseFromScript,
   type DailySalesPointDto,
 } from '../api/reports';
 import { extractErrorMessage } from '../api/http';
@@ -38,6 +40,10 @@ export const useReportsStore = defineStore('reports', () => {
   const error = ref<string | null>(null);
   const downloading = ref(false);
   const downloadError = ref<string | null>(null);
+  const backupDownloading = ref(false);
+  const backupError = ref<string | null>(null);
+  const restoring = ref(false);
+  const restoreError = ref<string | null>(null);
 
   const totalItems = computed(() =>
     dailySales.value.reduce((sum, point) => sum + point.totalItems, 0),
@@ -78,8 +84,47 @@ export const useReportsStore = defineStore('reports', () => {
     }
   };
 
+  const downloadBackup = async (): Promise<{ blob: Blob; filename: string } | null> => {
+    try {
+      backupDownloading.value = true;
+      const response = await downloadDatabaseBackup();
+      backupError.value = null;
+      const filename =
+        parseContentDisposition(response.headers['content-disposition']) ||
+        `database-backup-${new Date().toISOString().slice(0, 10)}.sql`;
+      return { blob: response.data, filename };
+    } catch (err) {
+      backupError.value = extractErrorMessage(err);
+      return null;
+    } finally {
+      backupDownloading.value = false;
+    }
+  };
+
+  const restoreDatabase = async (): Promise<string | null> => {
+    try {
+      restoring.value = true;
+      const response = await restoreDatabaseFromScript();
+      restoreError.value = null;
+      return response.data?.message ?? 'База данных успешно восстановлена.';
+    } catch (err) {
+      restoreError.value = extractErrorMessage(err);
+      return null;
+    } finally {
+      restoring.value = false;
+    }
+  };
+
   const resetDownloadError = () => {
     downloadError.value = null;
+  };
+
+  const resetBackupError = () => {
+    backupError.value = null;
+  };
+
+  const resetRestoreError = () => {
+    restoreError.value = null;
   };
 
   return {
@@ -88,10 +133,18 @@ export const useReportsStore = defineStore('reports', () => {
     error,
     downloading,
     downloadError,
+    backupDownloading,
+    backupError,
+    restoring,
+    restoreError,
     totalItems,
     totalAmount,
     loadDailySales,
     downloadExcel,
+    downloadBackup,
+    restoreDatabase,
     resetDownloadError,
+    resetBackupError,
+    resetRestoreError,
   };
 });

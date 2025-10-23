@@ -17,3 +17,19 @@ export const downloadSalesExcel = async (): Promise<AxiosResponse<Blob>> => {
     responseType: 'blob',
   });
 };
+
+export const downloadDatabaseBackup = async (): Promise<AxiosResponse<Blob>> => {
+  return http.post('/reports/database/backup', undefined, {
+    responseType: 'blob',
+  });
+};
+
+export interface RestoreDatabaseResponse {
+  message: string;
+}
+
+export const restoreDatabaseFromScript = async (): Promise<
+  AxiosResponse<RestoreDatabaseResponse>
+> => {
+  return http.post('/reports/database/restore');
+};

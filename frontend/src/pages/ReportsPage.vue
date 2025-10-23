@@ -19,6 +19,34 @@
           <span v-if="downloading" class="spinner-border spinner-border-sm me-2" role="status"></span>
           Выгрузить в Excel
         </button>
+        <button
+          v-if="isAdmin"
+          type="button"
+          class="btn btn-outline-warning"
+          :disabled="backupDownloading"
+          @click="handleBackupDownload"
+        >
+          <span
+            v-if="backupDownloading"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          Создать бэкап БД
+        </button>
+        <button
+          v-if="isAdmin"
+          type="button"
+          class="btn btn-outline-danger"
+          :disabled="restoring"
+          @click="handleRestore"
+        >
+          <span
+            v-if="restoring"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          Сбросить БД
+        </button>
       </div>
     </header>
 
@@ -29,6 +57,24 @@
     <section v-if="downloadError" class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
       <span>{{ downloadError }}</span>
       <button type="button" class="btn-close" aria-label="Закрыть" @click="resetDownload"></button>
+    </section>
+
+    <section
+      v-if="backupError"
+      class="alert alert-warning d-flex justify-content-between align-items-center"
+      role="alert"
+    >
+      <span>{{ backupError }}</span>
+      <button type="button" class="btn-close" aria-label="Закрыть" @click="resetBackup"></button>
+    </section>
+
+    <section
+      v-if="restoreError"
+      class="alert alert-warning d-flex justify-content-between align-items-center"
+      role="alert"
+    >
+      <span>{{ restoreError }}</span>
+      <button type="button" class="btn-close" aria-label="Закрыть" @click="resetRestore"></button>
     </section>
 
     <section v-if="successMessage" class="alert alert-success" role="alert">
@@ -89,10 +135,27 @@
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useReportsStore } from '../store/reportsStore';
+import { useAuthStore } from '../store/authStore';
 
 const reportsStore = useReportsStore();
-const { dailySales, loading, error, downloading, downloadError, totalItems, totalAmount } =
-  storeToRefs(reportsStore);
+const {
+  dailySales,
+  loading,
+  error,
+  downloading,
+  downloadError,
+  backupDownloading,
+  backupError,
+  restoring,
+  restoreError,
+  totalItems,
+  totalAmount,
+} = storeToRefs(reportsStore);
+
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
+
+const isAdmin = computed(() => user.value?.role?.name === 'Администратор');
 
 const successMessage = ref<string | null>(null);
 
@@ -332,6 +395,51 @@ const handleDownload = async () => {
 
 const resetDownload = () => {
   reportsStore.resetDownloadError();
+};
+
+const handleBackupDownload = async () => {
+  const result = await reportsStore.downloadBackup();
+  if (!result) {
+    return;
+  }
+
+  const blobUrl = URL.createObjectURL(result.blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = result.filename;
+  link.click();
+  URL.revokeObjectURL(blobUrl);
+  successMessage.value = `Резервная копия ${result.filename} создана и загружена.`;
+  setTimeout(() => {
+    successMessage.value = null;
+  }, 7000);
+};
+
+const resetBackup = () => {
+  reportsStore.resetBackupError();
+};
+
+const handleRestore = async () => {
+  const confirmed = window.confirm(
+    'Сброс базы данных восстановит состояние из restore.sql и удалит текущие данные. Продолжить?',
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  const message = await reportsStore.restoreDatabase();
+  if (!message) {
+    return;
+  }
+
+  successMessage.value = message;
+  setTimeout(() => {
+    successMessage.value = null;
+  }, 7000);
+};
+
+const resetRestore = () => {
+  reportsStore.resetRestoreError();
 };
 
 onMounted(async () => {
