@@ -65,27 +65,45 @@
           <div v-if="error" class="alert alert-danger" role="alert">
             {{ error }}
           </div>
-          <div v-else-if="filteredProducts.length" class="products-grid">
-            <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product">
-              <template #actions>
-                <button
-                  class="btn btn-danger btn-sm"
-                  :disabled="isProductBeingAdded(product.id) || cartUpdating"
-                  @click="addToCart(product)"
+          <div v-else-if="categorizedProducts.length" class="products-category-list">
+            <div
+              v-for="category in categorizedProducts"
+              :key="category.key"
+              class="products-category"
+            >
+              <div class="products-category__header">
+                <h3 class="products-category__title">{{ category.title }}</h3>
+                <span class="products-category__count" aria-label="Количество товаров в категории">
+                  {{ category.products.length }}
+                </span>
+              </div>
+              <div class="products-grid">
+                <ProductCard
+                  v-for="product in category.products"
+                  :key="product.id"
+                  :product="product"
                 >
-                  <span
-                    v-if="isProductBeingAdded(product.id)"
-                    class="spinner-border spinner-border-sm me-1"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  В корзину
-                </button>
-                <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
-                  Подробнее
-                </RouterLink>
-              </template>
-            </ProductCard>
+                  <template #actions>
+                    <button
+                      class="btn btn-danger btn-sm"
+                      :disabled="isProductBeingAdded(product.id) || cartUpdating"
+                      @click="addToCart(product)"
+                    >
+                      <span
+                        v-if="isProductBeingAdded(product.id)"
+                        class="spinner-border spinner-border-sm me-1"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      В корзину
+                    </button>
+                    <RouterLink class="btn btn-outline-light btn-sm" :to="`/product/${product.id}`">
+                      Подробнее
+                    </RouterLink>
+                  </template>
+                </ProductCard>
+              </div>
+            </div>
           </div>
           <div v-else-if="products.length" class="alert alert-secondary mt-4" role="alert">
             По вашему запросу ничего не найдено. Попробуйте изменить формулировку или ввести другой артикул.
@@ -251,6 +269,38 @@ const filteredProducts = computed(() => {
   });
 });
 
+const categorizedProducts = computed(() => {
+  const groups: {
+    key: string;
+    title: string;
+    products: ProductDto[];
+  }[] = [];
+
+  const byKey = new Map<string, (typeof groups)[number]>();
+
+  for (const product of filteredProducts.value) {
+    const categoryId = product.category?.id ?? null;
+    const baseTitle = product.category?.name?.trim();
+    const title = baseTitle && baseTitle.length > 0 ? baseTitle : 'Без категории';
+    const key = categoryId !== null ? `id:${categoryId}` : `title:${title.toLowerCase()}`;
+
+    let group = byKey.get(key);
+    if (!group) {
+      group = {
+        key,
+        title,
+        products: [],
+      };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+
+    group.products.push(product);
+  }
+
+  return groups;
+});
+
 const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0);
 
 const clearSearch = () => {
@@ -397,6 +447,43 @@ watch(
 .product-search__clear span {
   font-size: 1.1rem;
   line-height: 1;
+}
+
+.products-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 3vw, 2.75rem);
+}
+
+.products-category {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.products-category__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.products-category__title {
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  font-weight: 600;
+  margin: 0;
+}
+
+.products-category__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
 }
 
 .products-grid {
