@@ -1,20 +1,21 @@
 <template>
-  <section class="section fade-in-up">
-    <div class="layout-container manager-page">
-      <header class="manager-header">
-        <div>
-          <span class="chip mb-2">Менеджмент</span>
-          <h1 class="section-title mb-1">Панель менеджера</h1>
-          <p class="section-subtitle mb-0">Управляйте товарами и заказами магазина.</p>
-        </div>
-      </header>
+  <div class="manager-page-view">
+    <section class="section fade-in-up">
+      <div class="layout-container manager-page">
+        <header class="manager-header">
+          <div>
+            <span class="chip mb-2">Менеджмент</span>
+            <h1 class="section-title mb-1">Панель менеджера</h1>
+            <p class="section-subtitle mb-0">Управляйте товарами и заказами магазина.</p>
+          </div>
+        </header>
 
-      <div v-if="globalError" class="alert alert-danger" role="alert">{{ globalError }}</div>
-      <div v-if="successMessage" class="alert alert-success" role="alert">{{ successMessage }}</div>
+        <div v-if="globalError" class="alert alert-danger" role="alert">{{ globalError }}</div>
+        <div v-if="successMessage" class="alert alert-success" role="alert">{{ successMessage }}</div>
 
-      <LoadingSpinner v-if="initialLoading" />
+        <LoadingSpinner v-if="initialLoading" />
 
-      <div v-else class="manager-grid">
+        <div v-else class="manager-grid">
         <section class="manager-block">
           <div class="manager-block__header">
             <h2 class="manager-block__title">Товары</h2>
@@ -373,7 +374,7 @@
         </section>
       </div>
     </div>
-  </section>
+    </section>
 
   <GlassModal
     :visible="addProductModalVisible"
@@ -715,6 +716,7 @@
     </form>
   </GlassModal>
 
+  </div>
 </template>
 
 <script setup lang="ts">
