@@ -43,7 +43,7 @@
                 class="product-search__input"
                 placeholder="Искать по артикулу или названию"
                 aria-label="Поиск товаров по артикулу или названию"
-                :disabled="loading"
+                :aria-busy="searchInFlight"
               />
               <button
                 v-if="hasActiveSearch"
@@ -140,6 +140,8 @@ const initialSearchValue = Array.isArray(initialSearchParam)
 const searchTerm = ref(initialSearchValue);
 
 let lastLoadedSearch: string | null = null;
+let searchRequestId = 0;
+const searchInFlight = ref(false);
 
 const executeSearch = async (query: string, force = false) => {
   const normalized = query.trim();
@@ -148,13 +150,26 @@ const executeSearch = async (query: string, force = false) => {
     return null;
   }
 
-  const result = await productStore.loadAll(normalized ? normalized : undefined);
+  const currentRequestId = ++searchRequestId;
+  searchInFlight.value = true;
 
-  if (result !== null || force) {
-    lastLoadedSearch = normalized;
+  try {
+    const result = await productStore.loadAll(normalized ? normalized : undefined);
+
+    if (currentRequestId !== searchRequestId) {
+      return result;
+    }
+
+    if (result !== null || force) {
+      lastLoadedSearch = normalized;
+    }
+
+    return result;
+  } finally {
+    if (currentRequestId === searchRequestId) {
+      searchInFlight.value = false;
+    }
   }
-
-  return result;
 };
 
 const refreshProducts = async () => {
