@@ -1,2 +1,3 @@
--- Manual restore script for Slipknot merch database
-\! psql -h "$DATABASE_HOST" -p "${DATABASE_PORT:-5432}" -U "$DATABASE_USER" -d "$DATABASE_NAME" -f backup.sql
+-- Placeholder manual restore helper.
+-- The NestJS reports module now executes SQL scripts directly, so this file no longer runs psql commands.
+-- Keep schema.sql up to date; restore operations will fall back to it if no generated backup is found.
