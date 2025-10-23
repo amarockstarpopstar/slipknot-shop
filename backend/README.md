@@ -94,6 +94,19 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
+## Database maintenance helpers
+
+Для корректной работы функций "Создать бэкап БД" и "Сбросить БД" необходимо, чтобы утилиты
+`pg_dump` и `psql` были доступны в системе. Если они не прописаны в `PATH`, укажите путь явно
+через переменные окружения:
+
+- `POSTGRES_BIN_PATH` / `PG_BIN_PATH` / `POSTGRESQL_BIN_PATH` — путь до каталога `bin` PostgreSQL.
+- `POSTGRES_PG_DUMP_PATH` или `PG_PG_DUMP_PATH` — полный путь до исполняемого файла `pg_dump`.
+- `POSTGRES_PSQL_PATH` или `PG_PSQL_PATH` — полный путь до исполняемого файла `psql`.
+
+Переменные со специфичным файлом имеют приоритет над каталогом. На Windows можно указывать путь
+к `.exe` файлам (например, `C:\\Program Files\\PostgreSQL\\16\\bin\\psql.exe`).
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
