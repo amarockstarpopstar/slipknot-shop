@@ -115,12 +115,16 @@ export class ReportsService {
     const { host, port, username, password, database } = this.getDatabaseConnectionConfig();
 
     const dumpArgs = ['-h', host, '-p', String(port), '-U', username, database];
+    const command = await this.resolvePostgresExecutable('pg_dump');
     const env = { ...process.env, PGPASSWORD: password ?? '' };
     const chunks: Buffer[] = [];
     const errorChunks: string[] = [];
 
     return new Promise((resolve, reject) => {
-      const dumpProcess = spawn('pg_dump', dumpArgs, { env });
+      const dumpProcess = spawn(command, dumpArgs, {
+        env,
+        windowsHide: true,
+      });
 
       dumpProcess.stdout.on('data', (data: Buffer) => {
         chunks.push(Buffer.from(data));
@@ -131,7 +135,7 @@ export class ReportsService {
       });
 
       dumpProcess.on('error', (error) => {
-        reject(new Error(`Не удалось запустить pg_dump: ${error.message}`));
+        reject(this.buildSpawnError('pg_dump', command, error));
       });
 
       dumpProcess.on('close', (code) => {
@@ -188,6 +192,8 @@ export class ReportsService {
       ? backupDumpPath
       : await this.resolveSchemaPath(scriptsDirectory);
 
+    const command = await this.resolvePostgresExecutable('psql');
+
     await new Promise<void>((resolve, reject) => {
       const args = [
         '-v',
@@ -204,7 +210,11 @@ export class ReportsService {
         targetFile,
       ];
 
-      const restoreProcess = spawn('psql', args, { env, cwd: scriptsDirectory });
+      const restoreProcess = spawn(command, args, {
+        env,
+        cwd: scriptsDirectory,
+        windowsHide: true,
+      });
       const errorChunks: string[] = [];
 
       restoreProcess.stderr.on('data', (data: Buffer) => {
@@ -212,11 +222,7 @@ export class ReportsService {
       });
 
       restoreProcess.on('error', (processError) => {
-        reject(
-          new Error(
-            `Не удалось запустить psql для ${targetFile}: ${(processError as Error).message}`,
-          ),
-        );
+        reject(this.buildSpawnError('psql', command, processError, targetFile));
       });
 
       restoreProcess.on('close', (code) => {
@@ -252,25 +258,102 @@ export class ReportsService {
     password: string;
     database: string;
   } {
-    const resolveValue = (keys: string[], fallback?: string): string | undefined => {
-      for (const key of keys) {
-        const value = this.configService.get<string>(key);
-        if (value !== undefined && value !== null && value !== '') {
-          return value;
-        }
-      }
-      return fallback;
-    };
-
-    const portValue = resolveValue(['DATABASE_PORT', 'DB_PORT']);
+    const portValue = this.resolveConfigValue(['DATABASE_PORT', 'DB_PORT']);
     const port = portValue ? Number.parseInt(portValue, 10) : 5432;
 
     return {
-      host: resolveValue(['DATABASE_HOST', 'DB_HOST'], 'localhost') ?? 'localhost',
+      host: this.resolveConfigValue(['DATABASE_HOST', 'DB_HOST'], 'localhost') ?? 'localhost',
       port: Number.isNaN(port) ? 5432 : port,
-      username: resolveValue(['DATABASE_USER', 'DB_USER'], 'postgres') ?? 'postgres',
-      password: resolveValue(['DATABASE_PASSWORD', 'DB_PASSWORD'], 'postgres') ?? 'postgres',
-      database: resolveValue(['DATABASE_NAME', 'DB_NAME'], 'slipknot_shop') ?? 'slipknot_shop',
+      username:
+        this.resolveConfigValue(['DATABASE_USER', 'DB_USER'], 'postgres') ?? 'postgres',
+      password:
+        this.resolveConfigValue(['DATABASE_PASSWORD', 'DB_PASSWORD'], 'postgres') ??
+        'postgres',
+      database:
+        this.resolveConfigValue(['DATABASE_NAME', 'DB_NAME'], 'slipknot_shop') ??
+        'slipknot_shop',
     };
+  }
+
+  private resolveConfigValue(keys: string[], fallback?: string): string | undefined {
+    for (const key of keys) {
+      const value = this.configService.get<string>(key);
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
+      }
+    }
+    return fallback;
+  }
+
+  private async resolvePostgresExecutable(command: 'psql' | 'pg_dump'): Promise<string> {
+    const explicitPath = this.resolveConfigValue([
+      `POSTGRES_${command.toUpperCase()}_PATH`,
+      `PG_${command.toUpperCase()}_PATH`,
+    ]);
+
+    if (explicitPath) {
+      await this.ensureExecutableAccessible(explicitPath, command);
+      return explicitPath;
+    }
+
+    const binDirectory = this.resolveConfigValue([
+      'POSTGRES_BIN_PATH',
+      'PG_BIN_PATH',
+      'POSTGRESQL_BIN_PATH',
+    ]);
+
+    if (binDirectory) {
+      const candidate = join(binDirectory, this.appendExecutableExtension(command));
+      await this.ensureExecutableAccessible(candidate, command);
+      return candidate;
+    }
+
+    return this.appendExecutableExtension(command);
+  }
+
+  private appendExecutableExtension(command: 'psql' | 'pg_dump'): string {
+    if (process.platform === 'win32' && !command.endsWith('.exe')) {
+      return `${command}.exe`;
+    }
+    return command;
+  }
+
+  private async ensureExecutableAccessible(
+    candidate: string,
+    command: 'psql' | 'pg_dump',
+  ): Promise<void> {
+    if (!candidate.includes('/') && !candidate.includes('\\')) {
+      return;
+    }
+
+    try {
+      await access(candidate, constants.F_OK);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'неизвестная ошибка доступа';
+      throw new Error(
+        `Не удалось получить доступ к ${command} по пути ${candidate}: ${message}`,
+      );
+    }
+  }
+
+  private buildSpawnError(
+    command: 'psql' | 'pg_dump',
+    resolvedCommand: string,
+    error: unknown,
+    targetFile?: string,
+  ): Error {
+    const errno = (error as NodeJS.ErrnoException)?.code;
+    if (errno === 'ENOENT') {
+      const extensionHint = resolvedCommand.includes('/') || resolvedCommand.includes('\\')
+        ? `Проверьте корректность пути "${resolvedCommand}".`
+        : `Убедитесь, что утилита доступна в PATH либо укажите путь через переменные POSTGRES_BIN_PATH или POSTGRES_${command.toUpperCase()}_PATH.`;
+      return new Error(
+        `Не найден исполняемый файл ${command}${targetFile ? ` для ${targetFile}` : ''}. ${extensionHint}`,
+      );
+    }
+
+    const suffix = targetFile ? ` для ${targetFile}` : '';
+    const message = error instanceof Error ? error.message : 'неизвестная ошибка запуска процесса';
+    return new Error(`Не удалось запустить ${command}${suffix}: ${message}`);
   }
 }
