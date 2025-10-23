@@ -137,7 +137,9 @@ const handleClose = () => {
   min-height: 100vh;
   align-items: center;
   justify-content: center;
-  padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 36px);
+  --modal-layer-padding-y: clamp(20px, 5vw, 48px);
+  --modal-layer-padding-x: clamp(16px, 4vw, 36px);
+  padding: var(--modal-layer-padding-y) var(--modal-layer-padding-x);
   overflow-y: auto;
 }
 
@@ -156,6 +158,56 @@ const handleClose = () => {
   flex-direction: column;
   position: relative;
   isolation: isolate;
+  max-height: min(
+    calc(100vh - var(--modal-layer-padding-y) * 2),
+    var(--modal-panel-max-height, 820px)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color:
+    color-mix(in srgb, var(--color-accent-strong, rgba(255, 77, 109, 0.65)) 45%, transparent)
+    color-mix(in srgb, var(--color-surface-border, rgba(255, 255, 255, 0.08)) 55%, transparent);
+}
+
+.glass-modal-panel::-webkit-scrollbar {
+  width: 12px;
+}
+
+.glass-modal-panel::-webkit-scrollbar-track {
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.18) 55%, transparent);
+  border-radius: 999px;
+}
+
+.glass-modal-panel::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent, rgba(255, 77, 109, 0.92)) 85%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent-strong, rgba(255, 77, 109, 0.98)) 95%, transparent) 100%
+    );
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.glass-modal-panel::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent, rgba(255, 98, 130, 1)) 92%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent-strong, rgba(255, 77, 109, 1)) 100%, transparent) 100%
+    );
+}
+
+@supports (height: 100dvh) {
+  .glass-modal-panel {
+    max-height: min(
+      calc(100dvh - var(--modal-layer-padding-y) * 2),
+      var(--modal-panel-max-height, 820px)
+    );
+  }
 }
 
 :global([data-theme='light']) .glass-modal-panel {
@@ -168,7 +220,9 @@ const handleClose = () => {
 
 @media (max-width: 640px) {
   .modal-layer__container {
-    padding: clamp(16px, 6vw, 28px) clamp(12px, 5vw, 20px);
+    --modal-layer-padding-y: clamp(16px, 6vw, 28px);
+    --modal-layer-padding-x: clamp(12px, 5vw, 20px);
+    padding: var(--modal-layer-padding-y) var(--modal-layer-padding-x);
     align-items: flex-start;
   }
 
@@ -176,6 +230,7 @@ const handleClose = () => {
     width: 100%;
     border-radius: clamp(16px, 6vw, 22px);
     padding: clamp(18px, 5vw, 24px);
+    --modal-panel-max-height: 92vh;
   }
 }
 </style>
