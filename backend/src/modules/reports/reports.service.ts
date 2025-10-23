@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { spawn } from 'child_process';
+import { constants } from 'fs';
+import { access, readFile } from 'fs/promises';
+import { join } from 'path';
 import { DataSource } from 'typeorm';
 import { Workbook } from 'exceljs';
 import { DailySalesPointDto } from './dto/daily-sales-point.dto';
@@ -11,7 +16,10 @@ interface DailySalesRow {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+  ) {}
 
   async getDailySales(): Promise<DailySalesPointDto[]> {
     const rows = (await this.dataSource.query(
@@ -100,6 +108,169 @@ export class ReportsService {
       saleDate,
       totalItems: Number(row.total_items ?? 0),
       totalAmount: Number(row.total_amount ?? 0),
+    };
+  }
+
+  async createDatabaseBackup(): Promise<{ buffer: Buffer; filename: string }> {
+    const { host, port, username, password, database } = this.getDatabaseConnectionConfig();
+
+    const dumpArgs = ['-h', host, '-p', String(port), '-U', username, database];
+    const env = { ...process.env, PGPASSWORD: password ?? '' };
+    const chunks: Buffer[] = [];
+    const errorChunks: string[] = [];
+
+    return new Promise((resolve, reject) => {
+      const dumpProcess = spawn('pg_dump', dumpArgs, { env });
+
+      dumpProcess.stdout.on('data', (data: Buffer) => {
+        chunks.push(Buffer.from(data));
+      });
+
+      dumpProcess.stderr.on('data', (data: Buffer) => {
+        errorChunks.push(data.toString());
+      });
+
+      dumpProcess.on('error', (error) => {
+        reject(new Error(`Не удалось запустить pg_dump: ${error.message}`));
+      });
+
+      dumpProcess.on('close', (code) => {
+        if (code !== 0) {
+          const errorMessage = errorChunks.join('').trim() || 'Неизвестная ошибка pg_dump';
+          reject(new Error(`pg_dump завершился с кодом ${code}: ${errorMessage}`));
+          return;
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `database-backup-${timestamp}.sql`;
+        resolve({ buffer: Buffer.concat(chunks), filename });
+      });
+    });
+  }
+
+  async restoreDatabaseFromScript(): Promise<'backup' | 'schema'> {
+    const { host, port, username, password, database } = this.getDatabaseConnectionConfig();
+    const scriptsDirectory = join(process.cwd(), 'database');
+    const scriptPath = join(scriptsDirectory, 'restore.sql');
+
+    try {
+      await access(scriptPath, constants.R_OK);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'restore.sql недоступен для чтения';
+      throw new Error(`Не удалось получить доступ к restore.sql: ${message}`);
+    }
+
+    const env = {
+      ...process.env,
+      PGPASSWORD: password ?? '',
+      DATABASE_HOST: host,
+      DATABASE_PORT: String(port),
+      DATABASE_USER: username,
+      DATABASE_PASSWORD: password ?? '',
+      DATABASE_NAME: database,
+    };
+
+    const backupDumpPath = join(scriptsDirectory, 'backup.sql');
+    let useBackupDump = false;
+
+    try {
+      await access(backupDumpPath, constants.R_OK);
+      const content = await readFile(backupDumpPath, 'utf-8');
+      const normalized = content.trim();
+      const containsPgDumpDirective = /\\!\s*pg_dump/i.test(normalized);
+      useBackupDump = normalized.length > 0 && !containsPgDumpDirective;
+    } catch {
+      useBackupDump = false;
+    }
+
+    const targetFile = useBackupDump
+      ? backupDumpPath
+      : await this.resolveSchemaPath(scriptsDirectory);
+
+    await new Promise<void>((resolve, reject) => {
+      const args = [
+        '-v',
+        'ON_ERROR_STOP=1',
+        '-h',
+        host,
+        '-p',
+        String(port),
+        '-U',
+        username,
+        '-d',
+        database,
+        '-f',
+        targetFile,
+      ];
+
+      const restoreProcess = spawn('psql', args, { env, cwd: scriptsDirectory });
+      const errorChunks: string[] = [];
+
+      restoreProcess.stderr.on('data', (data: Buffer) => {
+        errorChunks.push(data.toString());
+      });
+
+      restoreProcess.on('error', (processError) => {
+        reject(
+          new Error(
+            `Не удалось запустить psql для ${targetFile}: ${(processError as Error).message}`,
+          ),
+        );
+      });
+
+      restoreProcess.on('close', (code) => {
+        if (code !== 0) {
+          const errorMessage = errorChunks.join('').trim() || 'Неизвестная ошибка psql';
+          reject(new Error(`psql завершился с кодом ${code}: ${errorMessage}`));
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    return useBackupDump ? 'backup' : 'schema';
+  }
+
+  private async resolveSchemaPath(directory: string): Promise<string> {
+    const schemaPath = join(directory, 'schema.sql');
+    try {
+      await access(schemaPath, constants.R_OK);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'schema.sql недоступен';
+      throw new Error(`Не удалось восстановить базу данных: ${message}`);
+    }
+
+    return schemaPath;
+  }
+
+  private getDatabaseConnectionConfig(): {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    database: string;
+  } {
+    const resolveValue = (keys: string[], fallback?: string): string | undefined => {
+      for (const key of keys) {
+        const value = this.configService.get<string>(key);
+        if (value !== undefined && value !== null && value !== '') {
+          return value;
+        }
+      }
+      return fallback;
+    };
+
+    const portValue = resolveValue(['DATABASE_PORT', 'DB_PORT']);
+    const port = portValue ? Number.parseInt(portValue, 10) : 5432;
+
+    return {
+      host: resolveValue(['DATABASE_HOST', 'DB_HOST'], 'localhost') ?? 'localhost',
+      port: Number.isNaN(port) ? 5432 : port,
+      username: resolveValue(['DATABASE_USER', 'DB_USER'], 'postgres') ?? 'postgres',
+      password: resolveValue(['DATABASE_PASSWORD', 'DB_PASSWORD'], 'postgres') ?? 'postgres',
+      database: resolveValue(['DATABASE_NAME', 'DB_NAME'], 'slipknot_shop') ?? 'slipknot_shop',
     };
   }
 }
