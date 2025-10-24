@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container-fluid layout-container d-flex align-items-center">
+    <div class="container-fluid layout-container">
       <RouterLink class="navbar-brand" to="/">Slipknot Shop</RouterLink>
       <button
         class="navbar-toggler"
@@ -13,16 +13,57 @@
       >
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="mainNavbar">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li v-for="(link, index) in navigationLinks" :key="link.to" class="nav-item">
+      <div class="collapse navbar-collapse navbar-collapse-balanced" id="mainNavbar">
+        <ul class="navbar-nav navigation-list mb-2 mb-lg-0">
+          <li v-for="link in visibleNavigationLinks" :key="link.to" class="nav-item">
             <RouterLink class="nav-link" :to="link.to">
               {{ link.label }}
-              <span class="shortcut-hint" aria-hidden="true">Alt+{{ index + 1 }}</span>
+              <span class="shortcut-hint" aria-hidden="true">Alt+{{ link.shortcutIndex + 1 }}</span>
             </RouterLink>
           </li>
+          <li
+            v-if="hasOverflowLinks"
+            ref="overflowMenuTriggerRef"
+            class="nav-item overflow-menu-wrapper"
+          >
+            <button
+              type="button"
+              class="nav-link overflow-toggle"
+              :aria-expanded="isOverflowMenuOpen"
+              aria-haspopup="true"
+              :aria-controls="overflowMenuId"
+              @click="toggleOverflowMenu"
+            >
+              …
+            </button>
+            <Transition name="fade">
+              <ul
+                v-if="isOverflowMenuOpen"
+                ref="overflowMenuRef"
+                :id="overflowMenuId"
+                class="overflow-menu"
+                role="menu"
+              >
+                <li
+                  v-for="link in overflowNavigationLinks"
+                  :key="link.to"
+                  class="overflow-menu-item"
+                >
+                  <RouterLink
+                    class="overflow-menu-link"
+                    :to="link.to"
+                    role="menuitem"
+                    @click="handleOverflowLinkClick"
+                  >
+                    {{ link.label }}
+                    <span class="shortcut-hint" aria-hidden="true">Alt+{{ link.shortcutIndex + 1 }}</span>
+                  </RouterLink>
+                </li>
+              </ul>
+            </Transition>
+          </li>
         </ul>
-        <div class="d-flex align-items-center flex-wrap gap-2">
+        <div class="navbar-actions">
           <ThemeToggle />
           <RouterLink v-if="!isAuthenticated" class="btn btn-outline-light" to="/login">Вход</RouterLink>
           <button v-else class="btn btn-outline-light" type="button" @click="openModal">Выход</button>
@@ -34,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { NavigationFailureType, RouterLink, isNavigationFailure, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 import LogoutConfirmModal from './LogoutConfirmModal.vue';
@@ -47,7 +88,7 @@ const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const showModal = ref(false);
 
-const navigationLinks = computed(() => {
+const rawNavigationLinks = computed(() => {
   const links = [
     { to: '/', label: 'Каталог' },
     { to: '/cart', label: 'Корзина' },
@@ -77,12 +118,95 @@ const navigationLinks = computed(() => {
   return links;
 });
 
+const navigationLinks = computed(() =>
+  rawNavigationLinks.value.map((link, index) => ({
+    ...link,
+    shortcutIndex: index,
+  }))
+);
+
+const MAX_VISIBLE_NAV_LINKS = 4;
+
+const visibleNavigationLinks = computed(() =>
+  navigationLinks.value.slice(0, MAX_VISIBLE_NAV_LINKS)
+);
+
+const overflowNavigationLinks = computed(() =>
+  navigationLinks.value.slice(MAX_VISIBLE_NAV_LINKS)
+);
+
+const hasOverflowLinks = computed(() => overflowNavigationLinks.value.length > 0);
+
+const isOverflowMenuOpen = ref(false);
+const overflowMenuTriggerRef = ref<HTMLElement | null>(null);
+const overflowMenuRef = ref<HTMLElement | null>(null);
+const overflowMenuId = 'navbar-overflow-menu';
+
 const openModal = () => {
   showModal.value = true;
 };
 
 const closeModal = () => {
   showModal.value = false;
+};
+
+const closeOverflowMenu = () => {
+  isOverflowMenuOpen.value = false;
+};
+
+const focusFirstOverflowLink = () => {
+  const firstOverflowLink = overflowMenuRef.value?.querySelector<HTMLAnchorElement>('a');
+  if (firstOverflowLink) {
+    firstOverflowLink.focus();
+  }
+};
+
+const toggleOverflowMenu = () => {
+  const shouldOpen = !isOverflowMenuOpen.value;
+  isOverflowMenuOpen.value = shouldOpen;
+
+  if (shouldOpen) {
+    nextTick(() => {
+      focusFirstOverflowLink();
+    });
+  }
+};
+
+const handleOverflowLinkClick = () => {
+  closeOverflowMenu();
+};
+
+const handleGlobalClick = (event: MouseEvent) => {
+  if (!isOverflowMenuOpen.value) {
+    return;
+  }
+
+  const target = event.target as Node | null;
+
+  if (!target) {
+    return;
+  }
+
+  if (
+    overflowMenuTriggerRef.value?.contains(target) === true ||
+    overflowMenuRef.value?.contains(target) === true
+  ) {
+    return;
+  }
+
+  closeOverflowMenu();
+};
+
+const handleGlobalKeydown = (event: KeyboardEvent) => {
+  if (!isOverflowMenuOpen.value) {
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    event.stopPropagation();
+    closeOverflowMenu();
+    overflowMenuTriggerRef.value?.focus();
+  }
 };
 
 const handleLogout = async () => {
@@ -159,21 +283,167 @@ const handleShortcut = (event: KeyboardEvent) => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleShortcut);
+  document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('keydown', handleGlobalKeydown);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleShortcut);
+  document.removeEventListener('click', handleGlobalClick);
+  document.removeEventListener('keydown', handleGlobalKeydown);
 });
 
-watchEffect(() => {
-  console.info('Navbar reactive snapshot', {
-    isAuthenticated: isAuthenticated.value,
-    user: user.value,
-  });
-});
+watch(
+  () => navigationLinks.value.length,
+  () => {
+    closeOverflowMenu();
+  }
+);
+
+watch(
+  () => router.currentRoute.value.fullPath,
+  () => {
+    closeOverflowMenu();
+  }
+);
+
 </script>
 
 <style scoped>
+.layout-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+}
+
+.layout-container :deep(.navbar-brand) {
+  white-space: nowrap;
+}
+
+.navbar-collapse-balanced {
+  flex-grow: 1;
+}
+
+@media (min-width: 992px) {
+  .navbar-collapse-balanced {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+
+.navigation-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+}
+
+@media (min-width: 992px) {
+  .navigation-list {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.navbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (min-width: 992px) {
+  .navbar-actions {
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+}
+
+.overflow-menu-wrapper {
+  position: relative;
+}
+
+.overflow-toggle {
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 999px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.overflow-toggle:hover,
+.overflow-toggle:focus {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.overflow-toggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.overflow-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 12rem;
+  margin: 0;
+  padding: 0.75rem;
+  list-style: none;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 24, 0.95);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.overflow-menu-item {
+  width: 100%;
+}
+
+.overflow-menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.overflow-menu-link:hover,
+.overflow-menu-link:focus {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
 .shortcut-hint {
   margin-left: 0.5rem;
   font-size: 0.75rem;
@@ -186,5 +456,43 @@ watchEffect(() => {
   .shortcut-hint {
     display: none;
   }
+}
+
+@media (max-width: 991.98px) {
+  .overflow-menu-wrapper {
+    width: 100%;
+  }
+
+  .overflow-toggle {
+    justify-content: flex-start;
+    width: 100%;
+    padding-left: 0;
+  }
+
+  .overflow-menu {
+    position: static;
+    width: 100%;
+    padding: 0.5rem 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    gap: 0.5rem;
+  }
+
+  .overflow-menu-link {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
