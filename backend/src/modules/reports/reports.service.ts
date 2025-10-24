@@ -45,15 +45,15 @@ export class ReportsService {
     workbook.created = new Date();
     workbook.modified = new Date();
 
-    const worksheet = workbook.addWorksheet('Продажи по дням');
-    worksheet.columns = [
+    const dailyWorksheet = workbook.addWorksheet('Продажи по дням');
+    dailyWorksheet.columns = [
       { header: 'Дата', key: 'date', width: 18 },
       { header: 'Количество товаров', key: 'items', width: 24 },
       { header: 'Сумма продаж, ₽', key: 'amount', width: 22 },
     ];
 
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).alignment = {
+    dailyWorksheet.getRow(1).font = { bold: true };
+    dailyWorksheet.getRow(1).alignment = {
       vertical: 'middle',
       horizontal: 'center',
     };
@@ -63,7 +63,7 @@ export class ReportsService {
 
     points.forEach((point) => {
       const saleDate = new Date(point.saleDate);
-      worksheet.addRow({
+      dailyWorksheet.addRow({
         date: saleDate.toLocaleDateString('ru-RU'),
         items: point.totalItems,
         amount: point.totalAmount,
@@ -72,7 +72,7 @@ export class ReportsService {
       totalAmount += point.totalAmount;
     });
 
-    const totalRow = worksheet.addRow({
+    const totalRow = dailyWorksheet.addRow({
       date: 'Итого',
       items: totalItems,
       amount: totalAmount,
@@ -83,11 +83,11 @@ export class ReportsService {
       horizontal: 'center',
     };
 
-    worksheet.getColumn('items').alignment = { horizontal: 'center' };
-    worksheet.getColumn('amount').numFmt = '#,##0.00';
+    dailyWorksheet.getColumn('items').alignment = { horizontal: 'center' };
+    dailyWorksheet.getColumn('amount').numFmt = '#,##0.00';
 
-    worksheet.addConditionalFormatting({
-      ref: `C2:C${worksheet.rowCount}`,
+    dailyWorksheet.addConditionalFormatting({
+      ref: `C2:C${dailyWorksheet.rowCount}`,
       rules: [
         {
           type: 'top10',
@@ -99,6 +99,89 @@ export class ReportsService {
         },
       ],
     });
+
+    const cumulativeWorksheet = workbook.addWorksheet('Накопительный итог');
+    cumulativeWorksheet.columns = [
+      { header: 'Дата', key: 'date', width: 18 },
+      { header: 'Накопительная сумма, ₽', key: 'cumulativeAmount', width: 28 },
+      { header: 'Накопительно товаров, шт.', key: 'cumulativeItems', width: 30 },
+    ];
+
+    cumulativeWorksheet.getRow(1).font = { bold: true };
+    cumulativeWorksheet.getRow(1).alignment = {
+      vertical: 'middle',
+      horizontal: 'center',
+    };
+
+    let runningAmount = 0;
+    let runningItems = 0;
+
+    points.forEach((point) => {
+      const saleDate = new Date(point.saleDate);
+      runningAmount += point.totalAmount;
+      runningItems += point.totalItems;
+      cumulativeWorksheet.addRow({
+        date: saleDate.toLocaleDateString('ru-RU'),
+        cumulativeAmount: runningAmount,
+        cumulativeItems: runningItems,
+      });
+    });
+
+    cumulativeWorksheet.getColumn('cumulativeAmount').numFmt = '#,##0.00';
+    cumulativeWorksheet.getColumn('cumulativeItems').alignment = {
+      horizontal: 'center',
+    };
+
+    const weekdayWorksheet = workbook.addWorksheet('Продажи по дням недели');
+    weekdayWorksheet.columns = [
+      { header: 'День недели', key: 'weekday', width: 20 },
+      { header: 'Выручка, ₽', key: 'amount', width: 22 },
+      { header: 'Товары, шт.', key: 'items', width: 18 },
+    ];
+
+    weekdayWorksheet.getRow(1).font = { bold: true };
+    weekdayWorksheet.getRow(1).alignment = {
+      vertical: 'middle',
+      horizontal: 'center',
+    };
+
+    const weekdayOrder: Array<{ label: string; index: number }> = [
+      { label: 'Понедельник', index: 1 },
+      { label: 'Вторник', index: 2 },
+      { label: 'Среда', index: 3 },
+      { label: 'Четверг', index: 4 },
+      { label: 'Пятница', index: 5 },
+      { label: 'Суббота', index: 6 },
+      { label: 'Воскресенье', index: 0 },
+    ];
+
+    const totalsByWeekday = new Map<number, { amount: number; items: number }>();
+
+    points.forEach((point) => {
+      const date = new Date(point.saleDate);
+      const weekdayIndex = date.getDay();
+      const currentTotals = totalsByWeekday.get(weekdayIndex) ?? {
+        amount: 0,
+        items: 0,
+      };
+
+      totalsByWeekday.set(weekdayIndex, {
+        amount: currentTotals.amount + point.totalAmount,
+        items: currentTotals.items + point.totalItems,
+      });
+    });
+
+    weekdayOrder.forEach(({ label, index }) => {
+      const totals = totalsByWeekday.get(index) ?? { amount: 0, items: 0 };
+      weekdayWorksheet.addRow({
+        weekday: label,
+        amount: totals.amount,
+        items: totals.items,
+      });
+    });
+
+    weekdayWorksheet.getColumn('amount').numFmt = '#,##0.00';
+    weekdayWorksheet.getColumn('items').alignment = { horizontal: 'center' };
 
     const filename = `sales-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
