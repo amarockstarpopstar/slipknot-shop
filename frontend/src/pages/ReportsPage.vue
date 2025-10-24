@@ -33,20 +33,6 @@
           ></span>
           Создать бэкап БД
         </button>
-        <button
-          v-if="isAdmin"
-          type="button"
-          class="btn btn-outline-danger"
-          :disabled="restoring"
-          @click="handleRestore"
-        >
-          <span
-            v-if="restoring"
-            class="spinner-border spinner-border-sm me-2"
-            role="status"
-          ></span>
-          Сбросить БД
-        </button>
       </div>
     </header>
 
@@ -66,15 +52,6 @@
     >
       <span>{{ backupError }}</span>
       <button type="button" class="btn-close" aria-label="Закрыть" @click="resetBackup"></button>
-    </section>
-
-    <section
-      v-if="restoreError"
-      class="alert alert-warning d-flex justify-content-between align-items-center"
-      role="alert"
-    >
-      <span>{{ restoreError }}</span>
-      <button type="button" class="btn-close" aria-label="Закрыть" @click="resetRestore"></button>
     </section>
 
     <section v-if="successMessage" class="alert alert-success" role="alert">
@@ -127,6 +104,52 @@
           </div>
         </div>
       </div>
+      <div class="col-12 col-xl-6">
+        <div class="card chart-card h-100">
+          <div class="card-body">
+            <h2 class="h5 card-title">Накопительный итог продаж</h2>
+            <p class="text-muted small">
+              Динамика роста выручки с учётом накопления ежедневных продаж.
+            </p>
+            <div v-if="hasData" class="chart-wrapper">
+              <ApexChart
+                type="area"
+                height="320"
+                :options="cumulativeChartOptions"
+                :series="cumulativeChartSeries"
+                aria-label="Накопительный итог продаж"
+                role="img"
+              />
+            </div>
+            <p v-else class="text-muted text-center mt-3 mb-0">
+              Нет данных для построения графика. Обновите отчёт, когда появятся продажи.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-6">
+        <div class="card chart-card h-100">
+          <div class="card-body">
+            <h2 class="h5 card-title">Продажи по дням недели</h2>
+            <p class="text-muted small">
+              Помогает увидеть, в какие дни недели заказы оформляются чаще всего.
+            </p>
+            <div v-if="hasData" class="chart-wrapper">
+              <ApexChart
+                type="bar"
+                height="320"
+                :options="weekdayChartOptions"
+                :series="weekdayChartSeries"
+                aria-label="Распределение продаж по дням недели"
+                role="img"
+              />
+            </div>
+            <p v-else class="text-muted text-center mt-3 mb-0">
+              Нет данных для построения графика. Обновите отчёт, когда появятся продажи.
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 </template>
@@ -146,8 +169,6 @@ const {
   downloadError,
   backupDownloading,
   backupError,
-  restoring,
-  restoreError,
   totalItems,
   totalAmount,
 } = storeToRefs(reportsStore);
@@ -419,28 +440,245 @@ const resetBackup = () => {
   reportsStore.resetBackupError();
 };
 
-const handleRestore = async () => {
-  const confirmed = window.confirm(
-    'Сброс базы данных восстановит состояние из последнего бэкапа (если он существует) или schema.sql и удалит текущие данные. Продолжить?',
-  );
-  if (!confirmed) {
-    return;
+const weekdayOrder: Array<{ label: string; index: number }> = [
+  { label: 'Пн', index: 1 },
+  { label: 'Вт', index: 2 },
+  { label: 'Ср', index: 3 },
+  { label: 'Чт', index: 4 },
+  { label: 'Пт', index: 5 },
+  { label: 'Сб', index: 6 },
+  { label: 'Вс', index: 0 },
+];
+
+const cumulativeChartSeries = computed(() => {
+  if (!hasData.value) {
+    return [];
   }
 
-  const message = await reportsStore.restoreDatabase();
-  if (!message) {
-    return;
+  let runningTotal = 0;
+  const data = dailySales.value.map((point) => {
+    runningTotal += point.totalAmount;
+    return runningTotal;
+  });
+
+  return [
+    {
+      name: 'Накопительный итог, ₽',
+      data,
+    },
+  ];
+});
+
+const cumulativeChartOptions = computed(() => {
+  const categories = dailySales.value.map((point) => {
+    const date = new Date(`${point.saleDate}T00:00:00`);
+    return chartDateFormatter.format(date);
+  });
+
+  return {
+    chart: {
+      type: 'area',
+      background: 'transparent',
+      toolbar: { show: false },
+      foreColor: '#ffffff',
+    },
+    theme: { mode: 'dark' },
+    colors: ['#34d399'],
+    dataLabels: { enabled: false },
+    stroke: {
+      curve: 'smooth',
+      width: 3,
+      lineCap: 'round',
+    },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shade: 'dark',
+        type: 'vertical',
+        shadeIntensity: 0.6,
+        gradientToColors: ['#10b981'],
+        inverseColors: false,
+        opacityFrom: 0.4,
+        opacityTo: 0.05,
+        stops: [0, 85, 100],
+      },
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      strokeDashArray: 4,
+      padding: { left: 16, right: 16 },
+    },
+    xaxis: {
+      categories,
+      labels: {
+        style: {
+          colors: Array.from({ length: categories.length }, () => 'rgba(255, 255, 255, 0.72)'),
+          fontWeight: 500,
+        },
+        offsetY: 4,
+      },
+      axisBorder: {
+        color: 'rgba(255, 255, 255, 0.08)',
+      },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: {
+        formatter: (value: number) => currencyFormatter.format(value),
+        style: { color: '#ffffff', fontWeight: 500 },
+      },
+    },
+    tooltip: {
+      theme: 'dark',
+      y: {
+        formatter: (value: number) => currencyFormatter.format(value),
+      },
+    },
+  };
+});
+
+const weekdayChartSeries = computed(() => {
+  if (!hasData.value) {
+    return [];
   }
 
-  successMessage.value = message;
-  setTimeout(() => {
-    successMessage.value = null;
-  }, 7000);
-};
+  const totalsByWeekday = new Map<number, { amount: number; items: number }>();
 
-const resetRestore = () => {
-  reportsStore.resetRestoreError();
-};
+  dailySales.value.forEach((point) => {
+    const date = new Date(`${point.saleDate}T00:00:00`);
+    const day = date.getDay();
+    const current = totalsByWeekday.get(day) ?? { amount: 0, items: 0 };
+    totalsByWeekday.set(day, {
+      amount: current.amount + point.totalAmount,
+      items: current.items + point.totalItems,
+    });
+  });
+
+  const amountData = weekdayOrder.map(({ index }) => totalsByWeekday.get(index)?.amount ?? 0);
+  const itemsData = weekdayOrder.map(({ index }) => totalsByWeekday.get(index)?.items ?? 0);
+
+  return [
+    {
+      name: 'Выручка, ₽',
+      type: 'column',
+      data: amountData,
+    },
+    {
+      name: 'Товары, шт.',
+      type: 'line',
+      data: itemsData,
+    },
+  ];
+});
+
+const weekdayChartOptions = computed(() => {
+  const categories = weekdayOrder.map(({ label }) => label);
+
+  return {
+    chart: {
+      type: 'bar',
+      background: 'transparent',
+      stacked: false,
+      toolbar: { show: false },
+      foreColor: '#ffffff',
+    },
+    theme: { mode: 'dark' },
+    colors: ['#60a5fa', '#fbbf24'],
+    stroke: {
+      width: [0, 3],
+      curve: 'smooth',
+      lineCap: 'round',
+    },
+    dataLabels: { enabled: false },
+    markers: {
+      size: 4,
+      strokeWidth: 2,
+      strokeColors: '#111827',
+      colors: ['#bfdbfe'],
+    },
+    plotOptions: {
+      bar: {
+        columnWidth: '40%',
+        borderRadius: 12,
+        borderRadiusApplication: 'end',
+      },
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      strokeDashArray: 4,
+      position: 'back',
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } },
+      padding: { left: 16, right: 16 },
+    },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'left',
+      fontSize: '13px',
+      labels: { colors: '#ffffff' },
+      markers: { width: 12, height: 12, radius: 12 },
+    },
+    xaxis: {
+      categories,
+      labels: {
+        style: {
+          colors: Array.from({ length: categories.length }, () => 'rgba(255, 255, 255, 0.72)'),
+          fontWeight: 500,
+        },
+      },
+      axisBorder: { color: 'rgba(255, 255, 255, 0.08)' },
+      axisTicks: { show: false },
+    },
+    yaxis: [
+      {
+        seriesName: 'Выручка, ₽',
+        labels: {
+          formatter: (value: number) => currencyFormatter.format(value),
+          style: { color: '#ffffff', fontWeight: 500 },
+        },
+        title: {
+          text: 'Выручка, ₽',
+          style: { color: '#ffffff', fontWeight: 600 },
+        },
+        axisTicks: { show: false },
+      },
+      {
+        opposite: true,
+        seriesName: 'Товары, шт.',
+        labels: {
+          formatter: (value: number) => `${Math.round(value)} шт.`,
+          style: { color: '#ffffff', fontWeight: 500 },
+        },
+        title: {
+          text: 'Товары, шт.',
+          style: { color: '#ffffff', fontWeight: 600 },
+        },
+        axisTicks: { show: false },
+      },
+    ],
+    tooltip: {
+      shared: true,
+      intersect: false,
+      theme: 'dark',
+      y: {
+        formatter: (value: number, opts: { seriesIndex: number }) =>
+          opts.seriesIndex === 0 ? currencyFormatter.format(value) : `${Math.round(value)} шт.`,
+      },
+    },
+    responsive: [
+      {
+        breakpoint: 768,
+        options: {
+          legend: {
+            position: 'bottom',
+            horizontalAlign: 'center',
+            offsetY: 8,
+          },
+        },
+      },
+    ],
+  };
+});
 
 onMounted(async () => {
   await reportsStore.loadDailySales();

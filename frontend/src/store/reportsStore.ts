@@ -4,7 +4,6 @@ import {
   downloadDatabaseBackup,
   downloadSalesExcel,
   fetchDailySales,
-  restoreDatabaseFromScript,
   type DailySalesPointDto,
 } from '../api/reports';
 import { extractErrorMessage } from '../api/http';
@@ -42,8 +41,6 @@ export const useReportsStore = defineStore('reports', () => {
   const downloadError = ref<string | null>(null);
   const backupDownloading = ref(false);
   const backupError = ref<string | null>(null);
-  const restoring = ref(false);
-  const restoreError = ref<string | null>(null);
 
   const totalItems = computed(() =>
     dailySales.value.reduce((sum, point) => sum + point.totalItems, 0),
@@ -101,30 +98,12 @@ export const useReportsStore = defineStore('reports', () => {
     }
   };
 
-  const restoreDatabase = async (): Promise<string | null> => {
-    try {
-      restoring.value = true;
-      const response = await restoreDatabaseFromScript();
-      restoreError.value = null;
-      return response.data?.message ?? 'База данных успешно восстановлена.';
-    } catch (err) {
-      restoreError.value = extractErrorMessage(err);
-      return null;
-    } finally {
-      restoring.value = false;
-    }
-  };
-
   const resetDownloadError = () => {
     downloadError.value = null;
   };
 
   const resetBackupError = () => {
     backupError.value = null;
-  };
-
-  const resetRestoreError = () => {
-    restoreError.value = null;
   };
 
   return {
@@ -135,16 +114,12 @@ export const useReportsStore = defineStore('reports', () => {
     downloadError,
     backupDownloading,
     backupError,
-    restoring,
-    restoreError,
     totalItems,
     totalAmount,
     loadDailySales,
     downloadExcel,
     downloadBackup,
-    restoreDatabase,
     resetDownloadError,
     resetBackupError,
-    resetRestoreError,
   };
 });
