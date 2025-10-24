@@ -60,6 +60,7 @@
                     id="profilePhone"
                     v-model="form.phone"
                     type="tel"
+                    inputmode="tel"
                     class="form-control"
                     placeholder="Например, +7 900 000-00-00"
                     maxlength="30"
@@ -170,6 +171,8 @@ const route = useRoute();
 
 const countries = [...SUPPORTED_COUNTRIES];
 
+const ALLOWED_PHONE_CHARACTERS = /[^\d+()\-\s]/g;
+
 const form = reactive({
   name: '',
   email: '',
@@ -269,6 +272,19 @@ watch(user, (value) => {
   }
   form.address = value.address ?? '';
 });
+
+watch(
+  () => form.phone,
+  (value) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    const sanitized = value.replace(ALLOWED_PHONE_CHARACTERS, '');
+    if (sanitized !== value) {
+      form.phone = sanitized;
+    }
+  },
+);
 
 watch(error, (value) => {
   if (value) {
