@@ -55,6 +55,18 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT chk_email_format CHECK (position('@' IN email) > 1)
 );
 
+CREATE TABLE IF NOT EXISTS user_settings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    theme VARCHAR(20) NOT NULL DEFAULT 'dark' CHECK (theme IN ('light', 'dark')),
+    date_format VARCHAR(50) NOT NULL DEFAULT 'DD.MM.YYYY',
+    number_format VARCHAR(50) NOT NULL DEFAULT '1 234,56',
+    items_per_page INTEGER NOT NULL DEFAULT 20 CHECK (items_per_page BETWEEN 5 AND 100),
+    saved_filters JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS user_addresses (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -577,6 +589,25 @@ ON CONFLICT (email) DO UPDATE SET
     address = EXCLUDED.address,
     passport_number_encrypted = EXCLUDED.passport_number_encrypted,
     role_id = EXCLUDED.role_id;
+
+INSERT INTO user_settings (user_id, theme, date_format, number_format, items_per_page, saved_filters)
+SELECT u.id,
+       CASE u.email
+           WHEN 'admin@shop.local' THEN 'light'
+           ELSE 'dark'
+       END AS theme,
+       'DD.MM.YYYY' AS date_format,
+       '1 234,56' AS number_format,
+       20 AS items_per_page,
+       '{}'::jsonb AS saved_filters
+FROM users u
+WHERE u.email IN ('admin@shop.local', 'manager@shop.local', 'user@shop.local')
+ON CONFLICT (user_id) DO UPDATE SET
+    theme = EXCLUDED.theme,
+    date_format = EXCLUDED.date_format,
+    number_format = EXCLUDED.number_format,
+    items_per_page = EXCLUDED.items_per_page,
+    saved_filters = EXCLUDED.saved_filters;
 
 WITH product_data AS (
     SELECT

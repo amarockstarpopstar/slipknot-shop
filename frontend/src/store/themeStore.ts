@@ -1,48 +1,115 @@
 import { defineStore } from 'pinia';
+import { watch, type WatchStopHandle } from 'vue';
+import { useAuthStore } from './authStore';
+import {
+  fetchUserSettings,
+  updateUserSettings,
+  type ThemeVariant,
+  type UserSettingsResponse,
+} from '../api/userSettings';
 
-const STORAGE_KEY = 'slipknot-shop-theme';
-
-type Theme = 'light' | 'dark';
+type Theme = ThemeVariant;
 
 interface ThemeState {
   theme: Theme;
   ready: boolean;
+  loading: boolean;
+  stopAuthWatcher: WatchStopHandle | null;
 }
+
+const DEFAULT_THEME: Theme = 'dark';
 
 export const useThemeStore = defineStore('theme', {
   state: (): ThemeState => ({
-    theme: 'dark',
+    theme: DEFAULT_THEME,
     ready: false,
+    loading: false,
+    stopAuthWatcher: null,
   }),
   actions: {
-    initialize() {
-      if (this.ready) {
+    async initialize() {
+      if (this.ready || this.loading) {
         return;
       }
-      if (typeof window !== 'undefined') {
-        const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
-        if (stored === 'light' || stored === 'dark') {
-          this.theme = stored;
-        }
+
+      const authStore = useAuthStore();
+      this.ensureAuthWatcher(authStore);
+
+      if (!authStore.isAuthenticated) {
+        this.theme = DEFAULT_THEME;
+        this.ready = true;
+        this.applyTheme();
+        return;
       }
-      this.ready = true;
-      this.applyTheme();
+
+      try {
+        this.loading = true;
+        const settings = await this.safeFetchSettings();
+        if (settings?.theme) {
+          this.theme = settings.theme;
+        }
+      } catch (error) {
+        console.warn('Не удалось загрузить настройки пользователя', error);
+      } finally {
+        this.loading = false;
+        this.ready = true;
+        this.applyTheme();
+      }
     },
-    setTheme(value: Theme) {
+    ensureAuthWatcher(authStore: ReturnType<typeof useAuthStore>) {
+      if (this.stopAuthWatcher) {
+        return;
+      }
+      this.stopAuthWatcher = watch(
+        () => authStore.isAuthenticated,
+        (isAuthenticated) => {
+          if (isAuthenticated) {
+            this.ready = false;
+            void this.initialize();
+            return;
+          }
+          this.reset();
+        },
+        { immediate: true },
+      );
+    },
+    async safeFetchSettings(): Promise<UserSettingsResponse | null> {
+      try {
+        return await fetchUserSettings();
+      } catch (error) {
+        console.warn('Ошибка при получении настроек', error);
+        return null;
+      }
+    },
+    async setTheme(value: Theme) {
       this.theme = value;
       this.applyTheme();
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, value);
+
+      const authStore = useAuthStore();
+      if (!authStore.isAuthenticated) {
+        return;
+      }
+
+      try {
+        await updateUserSettings({ theme: value });
+      } catch (error) {
+        console.warn('Не удалось сохранить тему на сервере', error);
       }
     },
-    toggleTheme() {
-      this.setTheme(this.theme === 'dark' ? 'light' : 'dark');
+    async toggleTheme() {
+      const nextTheme: Theme = this.theme === 'dark' ? 'light' : 'dark';
+      await this.setTheme(nextTheme);
     },
     applyTheme() {
       if (typeof document === 'undefined') {
         return;
       }
       document.documentElement.setAttribute('data-theme', this.theme);
+    },
+    reset() {
+      this.theme = DEFAULT_THEME;
+      this.ready = false;
+      this.applyTheme();
     },
   },
 });

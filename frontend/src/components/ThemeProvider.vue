@@ -13,7 +13,7 @@ const themeStore = useThemeStore();
 const theme = computed(() => themeStore.theme);
 
 onMounted(() => {
-  themeStore.initialize();
+  void themeStore.initialize();
 });
 
 watch(theme, () => {

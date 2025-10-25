@@ -13,6 +13,7 @@ import { CartsModule } from './modules/carts/carts.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { UserSettingsModule } from './modules/user-settings/user-settings.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { buildTypeOrmOptions } from './config/typeorm.config';
@@ -67,6 +68,7 @@ export class DatabaseConnectionLogger implements OnApplicationBootstrap {
     ReviewsModule,
     AuditLogModule,
     ReportsModule,
+    UserSettingsModule,
   ],
   controllers: [AppController],
   providers: [
