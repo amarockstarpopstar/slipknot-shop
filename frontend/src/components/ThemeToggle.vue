@@ -14,8 +14,8 @@ const themeStore = useThemeStore();
 const icon = computed(() => (themeStore.theme === 'dark' ? '☀️' : '🌙'));
 const label = computed(() => (themeStore.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'));
 
-const toggle = () => {
-  themeStore.toggleTheme();
+const toggle = async () => {
+  await themeStore.toggleTheme();
 };
 </script>
 
