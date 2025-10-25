@@ -318,6 +318,11 @@ watch(
   width: 100%;
 }
 
+.navbar {
+  position: relative;
+  z-index: 100;
+}
+
 .layout-container :deep(.navbar-brand) {
   white-space: nowrap;
 }
@@ -376,6 +381,7 @@ watch(
 
 .overflow-menu-wrapper {
   position: relative;
+  z-index: 20;
 }
 
 .overflow-toggle {
@@ -407,7 +413,7 @@ watch(
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
-  z-index: 10;
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
