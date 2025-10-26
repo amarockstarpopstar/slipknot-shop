@@ -3,14 +3,9 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { DataSource } from 'typeorm';
-import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const bootstrapLogger = new Logger('Bootstrap');
 
   app.useLogger(bootstrapLogger);
@@ -29,12 +24,6 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
-
-  const uploadsRoot = join(process.cwd(), 'uploads');
-  if (!existsSync(uploadsRoot)) {
-    mkdirSync(uploadsRoot, { recursive: true });
-  }
-  app.useStaticAssets(uploadsRoot, { prefix: '/uploads' });
 
   try {
     const dataSource = app.get(DataSource, { strict: false });
