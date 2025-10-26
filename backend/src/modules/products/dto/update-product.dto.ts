@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -10,6 +10,7 @@ import {
   Length,
   MaxLength,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { ProductSizeWithStockDto } from './product-size.dto';
 
@@ -19,6 +20,7 @@ export class UpdateProductDto {
     example: 'Футболка Slipknot 1999',
     description: 'Название товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Название товара должно быть строкой' })
   @Length(2, 200, {
@@ -30,11 +32,16 @@ export class UpdateProductDto {
     example: 'Обновлённое описание товара',
     description: 'Описание товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Описание должно быть строкой' })
   description?: string;
 
   @ApiPropertyOptional({ example: 3190, description: 'Новая цена товара' })
+  @Type(() => Number)
+  @ValidateIf(
+    (dto) => Array.isArray(dto.sizes) && dto.sizes.length === 0,
+  )
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Цена должна быть числом' })
   @IsPositive({ message: 'Цена должна быть больше нуля' })
@@ -44,6 +51,7 @@ export class UpdateProductDto {
     example: 'SLP-TS-002-NEW',
     description: 'Артикул товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Артикул должен быть строкой' })
   @Length(2, 100, { message: 'Артикул должен содержать от 2 до 100 символов' })
@@ -53,6 +61,7 @@ export class UpdateProductDto {
     example: 'https://example.com/images/shirt-new.jpg',
     description: 'Ссылка на изображение товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Ссылка на изображение должна быть строкой' })
   @MaxLength(500, {
@@ -61,6 +70,7 @@ export class UpdateProductDto {
   imageUrl?: string;
 
   @ApiPropertyOptional({ example: 5, description: 'Идентификатор категории' })
+  @Type(() => Number)
   @IsOptional()
   @IsInt({ message: 'Идентификатор категории должен быть числом' })
   categoryId?: number;

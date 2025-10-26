@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -19,6 +19,7 @@ export class CreateProductDto {
     example: 'Футболка Slipknot Iowa',
     description: 'Название товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'Название товара должно быть строкой' })
   @Length(2, 200, {
     message: 'Название товара должно содержать от 2 до 200 символов',
@@ -29,16 +30,24 @@ export class CreateProductDto {
     example: 'Чёрная футболка с логотипом Slipknot',
     description: 'Описание товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Описание должно быть строкой' })
   description?: string;
 
-  @ApiProperty({ example: 2990, description: 'Цена товара' })
+  @ApiPropertyOptional({
+    example: 2990,
+    description:
+      'Цена товара (обязательна, если у товара отсутствуют размеры)',
+  })
+  @Type(() => Number)
+  @ValidateIf((dto) => !dto.sizes || dto.sizes.length === 0)
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Цена должна быть числом' })
   @IsPositive({ message: 'Цена должна быть больше нуля' })
   price: number;
 
   @ApiProperty({ example: 'SLP-TS-002', description: 'Артикул товара' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'Артикул должен быть строкой' })
   @Length(2, 100, { message: 'Артикул должен содержать от 2 до 100 символов' })
   sku: string;
@@ -47,6 +56,7 @@ export class CreateProductDto {
     example: 'https://example.com/images/shirt.jpg',
     description: 'Ссылка на изображение товара',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsString({ message: 'Ссылка на изображение должна быть строкой' })
   @MaxLength(500, {
@@ -55,7 +65,9 @@ export class CreateProductDto {
   imageUrl?: string;
 
   @ApiProperty({ example: 3, description: 'Идентификатор категории' })
+  @Type(() => Number)
   @IsInt({ message: 'Идентификатор категории должен быть числом' })
+  @IsPositive({ message: 'Идентификатор категории должен быть больше нуля' })
   categoryId: number;
 
   @ApiPropertyOptional({
