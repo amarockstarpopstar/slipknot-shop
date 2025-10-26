@@ -31,14 +31,14 @@
           <div class="table-responsive">
             <table class="table align-middle mb-0 manager-table">
               <colgroup>
-                <col style="width: 5rem" />
-                <col style="width: 18rem" />
-                <col style="width: 12rem" />
-                <col style="width: 10rem" />
-                <col style="width: 9rem" />
-                <col style="width: 18rem" />
+                <col style="width: 6rem" />
+                <col style="width: 22rem" />
+                <col style="width: 14rem" />
                 <col style="width: 12rem" />
                 <col style="width: 11rem" />
+                <col style="width: 26rem" />
+                <col style="width: 15rem" />
+                <col style="width: 14rem" />
               </colgroup>
               <thead>
                 <tr>
@@ -62,10 +62,18 @@
                   <td>{{ summarizeSizes(product) }}</td>
                   <td>{{ product.category ? product.category.name : '—' }}</td>
                   <td class="text-end manager-table__actions">
-                    <button class="btn btn-sm btn-outline-primary" @click="startEditProduct(product)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      @click="startEditProduct(product)"
+                    >
                       Редактировать
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" @click="removeProduct(product)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="removeProduct(product)"
+                    >
                       Удалить
                     </button>
                   </td>
@@ -102,7 +110,7 @@
                   required
                 />
               </div>
-              <div class="col-md-3">
+              <div v-if="!productFormHasSizes" class="col-md-3">
                 <label class="form-label" for="productPrice">Цена (₽)</label>
                 <input
                   id="productPrice"
@@ -113,6 +121,15 @@
                   class="form-control"
                   required
                 />
+              </div>
+              <div v-else class="col-md-3">
+                <label class="form-label" for="productPrice">Цена (₽)</label>
+                <div class="form-control form-control--readonly">
+                  {{ productFormMinSizePriceLabel }}
+                </div>
+                <p class="form-field__hint">
+                  Цена товара определяется минимальной ценой среди размеров.
+                </p>
               </div>
               <div class="col-md-3">
                 <label class="form-label" for="productCategory">Категория</label>
@@ -137,6 +154,9 @@
                     </button>
                   </div>
                   <div class="manager-sizes__list">
+                    <div v-if="!productForm.sizes.length" class="manager-sizes__empty">
+                      Размеры не указаны. Добавьте необходимые размеры или сохраните товар без вариантов.
+                    </div>
                     <div
                       v-for="(sizeRow, index) in productForm.sizes"
                       :key="sizeRow.id ?? `product-size-${index}`"
@@ -208,14 +228,31 @@
                 </div>
               </div>
               <div class="col-md-6">
-                <label class="form-label" for="productImage">Ссылка на изображение</label>
-                <input
-                  id="productImage"
-                  v-model="productForm.imageUrl"
-                  type="url"
-                  class="form-control"
-                  placeholder="https://"
-                />
+                <label class="form-label" for="productImage">Фотография товара</label>
+                <div class="image-upload">
+                  <div v-if="productImagePreview" class="image-upload__preview">
+                    <img :src="productImagePreview" alt="Предпросмотр изображения товара" />
+                  </div>
+                  <input
+                    id="productImage"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    class="form-control"
+                    :disabled="productSaving || productImageUploading"
+                    @change="handleProductImageChange"
+                  />
+                  <p class="form-field__hint">JPG, PNG или WEBP до 5 МБ.</p>
+                  <div class="image-upload__actions" v-if="productForm.imageUrl">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      :disabled="productSaving || productImageUploading"
+                      @click="clearProductImage"
+                    >
+                      Удалить фото
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="col-12">
                 <label class="form-label" for="productDescription">Описание</label>
@@ -254,15 +291,15 @@
           <div class="table-responsive">
             <table class="table align-middle mb-0 manager-table">
               <colgroup>
-                <col style="width: 5rem" />
-                <col style="width: 18rem" />
-                <col style="width: 11rem" />
+                <col style="width: 6rem" />
+                <col style="width: 22rem" />
+                <col style="width: 12rem" />
+                <col style="width: 16rem" />
+                <col style="width: 12rem" />
                 <col style="width: 14rem" />
                 <col style="width: 10rem" />
-                <col style="width: 12rem" />
-                <col style="width: 8rem" />
-                <col style="width: 13rem" />
-                <col style="width: 12rem" />
+                <col style="width: 16rem" />
+                <col style="width: 14rem" />
               </colgroup>
               <thead>
                 <tr>
@@ -294,10 +331,18 @@
                   <td>{{ order.items.length }}</td>
                   <td>{{ formatDate(order.updatedAt) }}</td>
                   <td class="text-end manager-table__actions">
-                    <button class="btn btn-sm btn-outline-primary" @click="startEditOrder(order)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      @click="startEditOrder(order)"
+                    >
                       Редактировать
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" @click="removeOrder(order)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="removeOrder(order)"
+                    >
                       Удалить
                     </button>
                   </td>
@@ -433,7 +478,7 @@
               :disabled="creatingProduct"
             />
           </div>
-          <div class="form-grid__item">
+          <div v-if="!addProductHasSizes" class="form-grid__item">
             <label for="newProductPrice" class="form-field__label">Цена (₽)</label>
             <input
               id="newProductPrice"
@@ -445,6 +490,15 @@
               required
               :disabled="creatingProduct"
             />
+          </div>
+          <div v-else class="form-grid__item">
+            <label class="form-field__label" for="newProductPrice">Цена (₽)</label>
+            <div class="form-field__readonly">
+              {{ addProductMinSizePriceLabel }}
+            </div>
+            <p class="form-field__hint">
+              Цена рассчитывается автоматически по минимальной цене среди указанных размеров.
+            </p>
           </div>
           <div class="form-grid__item">
             <label for="newProductCategory" class="form-field__label">Категория</label>
@@ -462,15 +516,34 @@
             </select>
           </div>
           <div class="form-grid__item form-grid__item--full">
-            <label for="newProductImage" class="form-field__label">Ссылка на изображение</label>
-            <input
-              id="newProductImage"
-              v-model="addProductForm.imageUrl"
-              type="url"
-              class="form-input"
-              placeholder="https://"
-              :disabled="creatingProduct"
-            />
+            <label for="newProductImage" class="form-field__label">Фотография товара</label>
+            <div class="image-upload">
+              <div v-if="addProductImagePreview" class="image-upload__preview">
+                <img
+                  :src="addProductImagePreview"
+                  alt="Предпросмотр изображения нового товара"
+                />
+              </div>
+              <input
+                id="newProductImage"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                class="form-input"
+                :disabled="creatingProduct || addProductImageUploading"
+                @change="handleAddProductImageChange"
+              />
+              <p class="form-field__hint">JPG, PNG или WEBP до 5 МБ.</p>
+              <div class="image-upload__actions" v-if="addProductForm.imageUrl">
+                <button
+                  type="button"
+                  class="dialog-button dialog-button--ghost dialog-button--sm"
+                  :disabled="creatingProduct || addProductImageUploading"
+                  @click="clearAddProductImage"
+                >
+                  Удалить фото
+                </button>
+              </div>
+            </div>
           </div>
           <div class="form-grid__item form-grid__item--full">
             <label for="newProductDescription" class="form-field__label">Описание</label>
@@ -497,6 +570,9 @@
             </button>
           </div>
           <div class="manager-sizes__list">
+            <div v-if="!addProductForm.sizes.length" class="manager-sizes__empty">
+              Размеры пока не добавлены. Добавьте хотя бы один размер или оставьте товар без размеров.
+            </div>
             <div
               v-for="(sizeRow, index) in addProductForm.sizes"
               :key="sizeRow.id ?? `new-product-size-${index}`"
@@ -541,7 +617,7 @@
                 type="button"
                 class="dialog-button dialog-button--danger dialog-button--sm manager-sizes__remove"
                 @click="removeSizeRow(addProductForm.sizes, index)"
-                :disabled="creatingProduct || addProductForm.sizes.length <= 1"
+                :disabled="creatingProduct"
               >
                 Удалить
               </button>
@@ -722,7 +798,7 @@
 <script setup lang="ts">
 import { DialogTitle } from '@headlessui/vue';
 import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
@@ -730,6 +806,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
   type ProductDto,
   type ProductSizePayload,
   type CreateProductPayload,
@@ -821,6 +898,15 @@ const orderForm = ref<OrderFormState | null>(null);
 const addProductModalVisible = ref(false);
 const addOrderModalVisible = ref(false);
 
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+const addProductImagePreview = ref<string | null>(null);
+const productImagePreview = ref<string | null>(null);
+const addProductImageUploading = ref(false);
+const productImageUploading = ref(false);
+
 const addProductForm = reactive<NewProductFormState>({
   title: '',
   description: '',
@@ -848,6 +934,26 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const addProductHasSizes = computed(() => addProductForm.sizes.length > 0);
+const addProductMinSizePrice = computed(() =>
+  getMinimalSizePrice(addProductForm.sizes),
+);
+const addProductMinSizePriceLabel = computed(() => {
+  const value = addProductMinSizePrice.value;
+  return value !== null ? formatCurrency(value) : '—';
+});
+
+const productFormHasSizes = computed(() =>
+  productForm.value ? productForm.value.sizes.length > 0 : false,
+);
+const productFormMinSizePrice = computed(() =>
+  productForm.value ? getMinimalSizePrice(productForm.value.sizes) : null,
+);
+const productFormMinSizePriceLabel = computed(() => {
+  const value = productFormMinSizePrice.value;
+  return value !== null ? formatCurrency(value) : '—';
+});
+
 const formatDate = (date: string) => {
   const parsed = new Date(date);
   return parsed.toLocaleString('ru-RU');
@@ -874,7 +980,7 @@ const showSuccess = (message: string) => {
 
 const toEditableSizes = (sizes: ProductDto['sizes']): EditableProductSize[] => {
   if (!sizes.length) {
-    return [{ id: null, size: '', price: '', stock: '' }];
+    return [];
   }
 
   return sizes.map((size) => ({
@@ -928,16 +1034,23 @@ const addSizeRow = (rows: EditableProductSize[]) => {
 };
 
 const removeSizeRow = (rows: EditableProductSize[], index: number) => {
-  if (rows.length <= 1) {
-    rows.splice(0, rows.length, { id: null, size: '', price: '', stock: '' });
-    return;
-  }
-
   rows.splice(index, 1);
 };
 
 const getTotalStock = (product: ProductDto): number =>
   product.sizes.reduce((sum, size) => sum + size.stock, 0);
+
+const getMinimalSizePrice = (sizes: EditableProductSize[]): number | null => {
+  const prices = sizes
+    .map((size) => Number(size.price))
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  if (!prices.length) {
+    return null;
+  }
+
+  return Math.min(...prices);
+};
 
 const summarizeSizes = (product: ProductDto): string => {
   if (!product.sizes.length) {
@@ -963,8 +1076,10 @@ const resetAddProductForm = () => {
     sku: '',
     imageUrl: '',
     categoryId: '',
-    sizes: [{ id: null, size: '', price: '', stock: '' }],
+    sizes: [],
   });
+  addProductImagePreview.value = null;
+  addProductImageUploading.value = false;
 };
 
 const resetAddOrderForm = () => {
@@ -1088,19 +1203,19 @@ const startEditProduct = (product: ProductDto) => {
     categoryId: product.category ? String(product.category.id) : '',
     sizes: toEditableSizes(product.sizes),
   };
+  productImagePreview.value = product.imageUrl ?? null;
+  productImageUploading.value = false;
 };
 
 const cancelProductEdit = () => {
   productForm.value = null;
+  productImagePreview.value = null;
+  productImageUploading.value = false;
 };
 
 const saveNewProduct = async () => {
-  if (
-    !addProductForm.title ||
-    !addProductForm.sku ||
-    !addProductForm.price ||
-    !addProductForm.categoryId
-  ) {
+  if (!addProductForm.title || !addProductForm.sku || !addProductForm.categoryId) {
+    showError('Заполните все обязательные поля для товара.');
     return;
   }
 
@@ -1112,16 +1227,41 @@ const saveNewProduct = async () => {
     return;
   }
 
+  const hasSizeRows = addProductForm.sizes.length > 0;
+  const hasSizePayload = sizePayload.length > 0;
+
+  if (hasSizeRows && !hasSizePayload) {
+    showError('Заполните цену и остаток для добавленных размеров или удалите пустые строки.');
+    return;
+  }
+
+  let resolvedPrice: number | null = null;
+
+  if (hasSizePayload) {
+    resolvedPrice = Math.min(...sizePayload.map((size) => size.price));
+  } else {
+    if (!addProductForm.price) {
+      showError('Укажите цену товара.');
+      return;
+    }
+    const priceValue = Number(addProductForm.price);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      showError('Укажите корректную цену товара.');
+      return;
+    }
+    resolvedPrice = Number(priceValue.toFixed(2));
+  }
+
   try {
     creatingProduct.value = true;
     const payload: CreateProductPayload = {
       title: addProductForm.title,
       description: addProductForm.description ? addProductForm.description : undefined,
-      price: Number(addProductForm.price),
+      price: resolvedPrice,
       sku: addProductForm.sku,
       imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
       categoryId: Number(addProductForm.categoryId),
-      sizes: sizePayload.length ? sizePayload : undefined,
+      sizes: hasSizePayload ? sizePayload : undefined,
     };
     await createProduct(payload);
     products.value = await fetchProducts();
@@ -1145,22 +1285,48 @@ const saveProduct = async () => {
     showError(error);
     return;
   }
+  const hasSizeRows = productForm.value.sizes.length > 0;
+  const hasSizePayload = sizePayload.length > 0;
+
+  if (hasSizeRows && !hasSizePayload) {
+    showError('Заполните параметры для размеров или удалите пустые строки.');
+    return;
+  }
+
+  let resolvedPrice: number | undefined;
+
+  if (hasSizePayload) {
+    resolvedPrice = Math.min(...sizePayload.map((size) => size.price));
+  } else {
+    if (!productForm.value.price) {
+      showError('Укажите цену товара.');
+      return;
+    }
+    const priceValue = Number(productForm.value.price);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      showError('Укажите корректную цену товара.');
+      return;
+    }
+    resolvedPrice = Number(priceValue.toFixed(2));
+  }
+
   try {
     productSaving.value = true;
     const payload: UpdateProductPayload = {
       title: productForm.value.title,
       description: productForm.value.description || undefined,
-      price: Number(productForm.value.price),
+      price: resolvedPrice,
       sku: productForm.value.sku,
-      imageUrl: productForm.value.imageUrl || undefined,
+      imageUrl: productForm.value.imageUrl,
       categoryId: productForm.value.categoryId
         ? Number(productForm.value.categoryId)
         : undefined,
-      sizes: sizePayload,
+      sizes: hasSizeRows ? sizePayload : [],
     };
     await updateProduct(productForm.value.id, payload);
     await refreshProducts();
     productForm.value = null;
+    productImagePreview.value = null;
     showSuccess('Товар обновлён.');
   } catch (error) {
     showError(error);
@@ -1177,6 +1343,95 @@ const removeProduct = async (product: ProductDto) => {
   } catch (error) {
     showError(error);
   }
+};
+
+const getFileExtension = (filename: string): string => {
+  const dotIndex = filename.lastIndexOf('.');
+  return dotIndex >= 0 ? filename.slice(dotIndex).toLowerCase() : '';
+};
+
+const validateImageFile = (file: File) => {
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error('Размер файла превышает допустимые 5 МБ.');
+  }
+
+  const extension = getFileExtension(file.name);
+  const isExtensionAllowed = ALLOWED_IMAGE_EXTENSIONS.includes(extension);
+  const isMimeAllowed = ALLOWED_IMAGE_TYPES.includes(file.type);
+
+  if (!isExtensionAllowed || !isMimeAllowed) {
+    throw new Error('Допустимые форматы: JPG, JPEG, PNG или WEBP.');
+  }
+};
+
+const uploadImageAndResolveUrl = async (file: File): Promise<string> => {
+  const { imageUrl } = await uploadProductImage(file);
+  return imageUrl;
+};
+
+const resetFileInput = (event: Event) => {
+  const input = event.target as HTMLInputElement | null;
+  if (input) {
+    input.value = '';
+  }
+};
+
+const handleAddProductImageChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    validateImageFile(file);
+    addProductImageUploading.value = true;
+    const imageUrl = await uploadImageAndResolveUrl(file);
+    addProductForm.imageUrl = imageUrl;
+    addProductImagePreview.value = imageUrl;
+    showSuccess('Изображение загружено.');
+  } catch (error) {
+    showError(error instanceof Error ? error.message : error);
+  } finally {
+    addProductImageUploading.value = false;
+    resetFileInput(event);
+  }
+};
+
+const handleProductImageChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file || !productForm.value) {
+    resetFileInput(event);
+    return;
+  }
+
+  try {
+    validateImageFile(file);
+    productImageUploading.value = true;
+    const imageUrl = await uploadImageAndResolveUrl(file);
+    productForm.value.imageUrl = imageUrl;
+    productImagePreview.value = imageUrl;
+    showSuccess('Изображение обновлено.');
+  } catch (error) {
+    showError(error instanceof Error ? error.message : error);
+  } finally {
+    productImageUploading.value = false;
+    resetFileInput(event);
+  }
+};
+
+const clearAddProductImage = () => {
+  addProductForm.imageUrl = '';
+  addProductImagePreview.value = null;
+};
+
+const clearProductImage = () => {
+  if (!productForm.value) {
+    return;
+  }
+  productForm.value.imageUrl = '';
+  productImagePreview.value = null;
 };
 
 const startEditOrder = (order: OrderDto) => {
@@ -1333,14 +1588,24 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
-.manager-table td:not(:nth-child(2)) {
+.manager-table td {
   white-space: nowrap;
 }
 
+.manager-table td:nth-child(2),
+.manager-table td:nth-child(6),
+.manager-table td:nth-child(7) {
+  white-space: normal;
+}
+
 .manager-table td:nth-child(2) {
-  max-width: 18rem;
+  max-width: 22rem;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.manager-table td:nth-child(6) {
+  max-width: 28rem;
 }
 
 .manager-table__actions {
@@ -1418,6 +1683,14 @@ onMounted(() => {
   gap: 0.9rem;
 }
 
+.manager-sizes__empty {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-alt) 80%, transparent);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
 .manager-sizes__row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
@@ -1434,6 +1707,63 @@ onMounted(() => {
 .manager-sizes__remove {
   align-self: stretch;
   min-width: 0;
+}
+
+.form-field__readonly {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--color-surface-alt) 75%, transparent);
+  font-weight: 600;
+}
+
+.form-field__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.form-control--readonly {
+  background: color-mix(in srgb, var(--color-surface-alt) 80%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.image-upload__preview {
+  position: relative;
+  width: min(100%, 18rem);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.image-upload__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-upload__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.image-upload__actions .dialog-button,
+.image-upload__actions .btn {
+  margin: 0;
 }
 
 .manager-modal__empty {
