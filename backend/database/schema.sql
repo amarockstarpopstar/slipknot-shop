@@ -103,11 +103,11 @@ CREATE TABLE IF NOT EXISTS sizes (
 
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(200) NOT NULL CHECK (char_length(btrim(title)) >= 2),
+    title VARCHAR(200) NOT NULL,
     description TEXT,
     image_url TEXT,
-    price NUMERIC(10, 2) NOT NULL CHECK (price > 0),
-    sku VARCHAR(100) NOT NULL UNIQUE CHECK (char_length(btrim(sku)) >= 2),
+    price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
+    sku VARCHAR(100) NOT NULL UNIQUE,
     category_id INTEGER NOT NULL REFERENCES categories(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
@@ -130,8 +130,8 @@ CREATE TABLE IF NOT EXISTS product_images (
 CREATE TABLE IF NOT EXISTS product_sizes (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    size VARCHAR(20) NOT NULL CHECK (char_length(btrim(size)) >= 1),
-    price NUMERIC(10, 2) NOT NULL CHECK (price > 0),
+    size VARCHAR(20) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     UNIQUE (product_id, size)
