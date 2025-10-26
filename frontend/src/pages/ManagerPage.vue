@@ -111,7 +111,13 @@
                   min="0"
                   step="0.01"
                   class="form-control"
-                  required
+                  :required="!productFormHasSizes"
+                  :disabled="productSaving || productFormHasSizes"
+                  :placeholder="
+                    productFormHasSizes
+                      ? 'Цена определяется размерами'
+                      : '0.00'
+                  "
                 />
               </div>
               <div class="col-md-3">
@@ -442,8 +448,13 @@
               min="0"
               step="0.01"
               class="form-input"
-              required
-              :disabled="creatingProduct"
+              :required="!addProductHasSizes"
+              :disabled="creatingProduct || addProductHasSizes"
+              :placeholder="
+                addProductHasSizes
+                  ? 'Цена рассчитывается по минимальной цене среди размеров'
+                  : 'Например, 2990'
+              "
             />
           </div>
           <div class="form-grid__item">
@@ -541,7 +552,7 @@
                 type="button"
                 class="dialog-button dialog-button--danger dialog-button--sm manager-sizes__remove"
                 @click="removeSizeRow(addProductForm.sizes, index)"
-                :disabled="creatingProduct || addProductForm.sizes.length <= 1"
+                :disabled="creatingProduct"
               >
                 Удалить
               </button>
@@ -722,7 +733,7 @@
 <script setup lang="ts">
 import { DialogTitle } from '@headlessui/vue';
 import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
@@ -840,6 +851,14 @@ const addOrderForm = reactive<NewOrderFormState>({
   addressId: '',
 });
 
+const hasFilledSizeRows = (rows: EditableProductSize[]): boolean =>
+  rows.some((size) => size.size.trim().length > 0);
+
+const addProductHasSizes = computed(() => hasFilledSizeRows(addProductForm.sizes));
+const productFormHasSizes = computed(() =>
+  productForm.value ? hasFilledSizeRows(productForm.value.sizes) : false,
+);
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -923,13 +942,36 @@ const buildSizePayload = (sizes: EditableProductSize[]): ProductSizePayload[] =>
   return payload;
 };
 
+const calculateBasePriceForSubmission = (
+  priceInput: string,
+  sizes: ProductSizePayload[],
+): number => {
+  if (sizes.length) {
+    const validPrices = sizes
+      .map((size) => size.price)
+      .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (!validPrices.length) {
+      throw new Error('Укажите корректные цены для размеров товара.');
+    }
+
+    return Number(Math.min(...validPrices).toFixed(2));
+  }
+
+  const normalizedPrice = Number(priceInput);
+  if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    throw new Error('Укажите корректную цену товара.');
+  }
+
+  return Number(normalizedPrice.toFixed(2));
+};
+
 const addSizeRow = (rows: EditableProductSize[]) => {
   rows.push({ id: null, size: '', price: '', stock: '' });
 };
 
 const removeSizeRow = (rows: EditableProductSize[], index: number) => {
-  if (rows.length <= 1) {
-    rows.splice(0, rows.length, { id: null, size: '', price: '', stock: '' });
+  if (index < 0 || index >= rows.length) {
     return;
   }
 
@@ -1098,7 +1140,6 @@ const saveNewProduct = async () => {
   if (
     !addProductForm.title ||
     !addProductForm.sku ||
-    !addProductForm.price ||
     !addProductForm.categoryId
   ) {
     return;
@@ -1112,12 +1153,21 @@ const saveNewProduct = async () => {
     return;
   }
 
+  let basePrice: number;
+  try {
+    basePrice = calculateBasePriceForSubmission(addProductForm.price, sizePayload);
+  } catch (error) {
+    showError(error);
+    return;
+  }
+  addProductForm.price = basePrice.toFixed(2);
+
   try {
     creatingProduct.value = true;
     const payload: CreateProductPayload = {
       title: addProductForm.title,
       description: addProductForm.description ? addProductForm.description : undefined,
-      price: Number(addProductForm.price),
+      price: basePrice,
       sku: addProductForm.sku,
       imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
       categoryId: Number(addProductForm.categoryId),
@@ -1145,12 +1195,23 @@ const saveProduct = async () => {
     showError(error);
     return;
   }
+  let basePrice: number;
+  try {
+    basePrice = calculateBasePriceForSubmission(
+      productForm.value.price,
+      sizePayload,
+    );
+  } catch (error) {
+    showError(error);
+    return;
+  }
+  productForm.value.price = basePrice.toFixed(2);
   try {
     productSaving.value = true;
     const payload: UpdateProductPayload = {
       title: productForm.value.title,
       description: productForm.value.description || undefined,
-      price: Number(productForm.value.price),
+      price: basePrice,
       sku: productForm.value.sku,
       imageUrl: productForm.value.imageUrl || undefined,
       categoryId: productForm.value.categoryId
