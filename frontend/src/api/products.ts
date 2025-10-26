@@ -81,24 +81,3 @@ export const updateProduct = async (
 export const deleteProduct = async (id: number): Promise<void> => {
   await http.delete(`/products/${id}`);
 };
-
-export interface UploadProductImageResponse {
-  imageUrl: string;
-}
-
-export const uploadProductImage = async (
-  file: File,
-): Promise<UploadProductImageResponse> => {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const { data } = await http.post<UploadProductImageResponse>(
-    '/products/upload-image',
-    formData,
-    {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    },
-  );
-
-  return data;
-};
