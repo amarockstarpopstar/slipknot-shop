@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
   IsNumber,
@@ -12,7 +11,6 @@ import {
 // dto describing size + stock payload for product creation/update
 export class ProductSizeWithStockDto {
   @ApiProperty({ example: 'L', description: 'Название размера' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'Название размера должно быть строкой' })
   @Length(1, 20, {
     message: 'Название размера должно содержать от 1 до 20 символов',
@@ -20,13 +18,11 @@ export class ProductSizeWithStockDto {
   size: string;
 
   @ApiProperty({ example: 3190, description: 'Цена для выбранного размера' })
-  @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Цена должна быть числом' })
   @IsPositive({ message: 'Цена должна быть больше нуля' })
   price: number;
 
   @ApiProperty({ example: 15, description: 'Количество товара на складе' })
-  @Type(() => Number)
   @IsInt({ message: 'Количество должно быть целым числом' })
   @Min(0, { message: 'Количество не может быть отрицательным' })
   stock: number;
