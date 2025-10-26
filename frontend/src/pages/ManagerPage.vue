@@ -931,7 +931,12 @@ const buildSizePayload = (sizes: EditableProductSize[]): ProductSizePayload[] =>
 };
 
 const hasConfiguredSizes = (sizes: EditableProductSize[]): boolean =>
-  sizes.some((size) => size.size.trim().length > 0);
+  sizes.some((size) => {
+    const nameFilled = size.size.trim().length > 0;
+    const priceFilled = size.price.trim().length > 0;
+    const stockFilled = size.stock.trim().length > 0;
+    return nameFilled || priceFilled || stockFilled;
+  });
 
 const addSizeRow = (rows: EditableProductSize[]) => {
   rows.push({ id: null, size: '', price: '', stock: '' });
@@ -1108,7 +1113,20 @@ const cancelProductEdit = () => {
 };
 
 const saveNewProduct = async () => {
-  if (!addProductForm.title || !addProductForm.sku || !addProductForm.categoryId) {
+  const title = addProductForm.title.trim();
+  const sku = addProductForm.sku.trim();
+  const categoryIdValue = addProductForm.categoryId.trim();
+  const description = addProductForm.description.trim();
+  const imageUrl = addProductForm.imageUrl.trim();
+
+  if (!title || !sku || !categoryIdValue) {
+    showError('Заполните название, артикул и категорию товара.');
+    return;
+  }
+
+  const categoryIdNumber = Number(categoryIdValue);
+  if (!Number.isInteger(categoryIdNumber) || categoryIdNumber <= 0) {
+    showError('Выберите корректную категорию.');
     return;
   }
 
@@ -1122,9 +1140,11 @@ const saveNewProduct = async () => {
 
   const hasSizes = sizePayload.length > 0;
 
+  const priceValue = addProductForm.price.trim();
+
   if (!hasSizes) {
-    const basePrice = Number(addProductForm.price);
-    if (!addProductForm.price || !Number.isFinite(basePrice) || basePrice <= 0) {
+    const basePrice = Number(priceValue);
+    if (!priceValue || !Number.isFinite(basePrice) || basePrice <= 0) {
       showError('Укажите корректную цену для товара без размеров.');
       return;
     }
@@ -1133,16 +1153,16 @@ const saveNewProduct = async () => {
   try {
     creatingProduct.value = true;
     const payload: CreateProductPayload = {
-      title: addProductForm.title,
-      description: addProductForm.description ? addProductForm.description : undefined,
-      sku: addProductForm.sku,
-      imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
-      categoryId: Number(addProductForm.categoryId),
+      title,
+      description: description ? description : undefined,
+      sku,
+      imageUrl: imageUrl ? imageUrl : undefined,
+      categoryId: categoryIdNumber,
       sizes: hasSizes ? sizePayload : undefined,
     };
 
     if (!hasSizes) {
-      const basePrice = Number(addProductForm.price);
+      const basePrice = Number(priceValue);
       payload.price = Number(basePrice.toFixed(2));
     }
 
@@ -1161,6 +1181,29 @@ const saveProduct = async () => {
   if (!productForm.value) {
     return;
   }
+
+  const title = productForm.value.title.trim();
+  const sku = productForm.value.sku.trim();
+  const categoryIdValue = productForm.value.categoryId.trim();
+  const description = productForm.value.description.trim();
+  const imageUrl = productForm.value.imageUrl.trim();
+
+  if (!title || !sku) {
+    showError('Заполните название и артикул товара.');
+    return;
+  }
+
+  if (!categoryIdValue) {
+    showError('Выберите категорию товара.');
+    return;
+  }
+
+  const categoryIdNumber = Number(categoryIdValue);
+  if (!Number.isInteger(categoryIdNumber) || categoryIdNumber <= 0) {
+    showError('Выберите корректную категорию.');
+    return;
+  }
+
   let sizePayload: ProductSizePayload[] = [];
   try {
     sizePayload = buildSizePayload(productForm.value.sizes);
@@ -1170,9 +1213,11 @@ const saveProduct = async () => {
   }
   const hasSizes = sizePayload.length > 0;
 
+  const priceValue = productForm.value.price.trim();
+
   if (!hasSizes) {
-    const basePrice = Number(productForm.value.price);
-    if (!productForm.value.price || !Number.isFinite(basePrice) || basePrice <= 0) {
+    const basePrice = Number(priceValue);
+    if (!priceValue || !Number.isFinite(basePrice) || basePrice <= 0) {
       showError('Укажите корректную цену для товара без размеров.');
       return;
     }
@@ -1180,18 +1225,16 @@ const saveProduct = async () => {
   try {
     productSaving.value = true;
     const payload: UpdateProductPayload = {
-      title: productForm.value.title,
-      description: productForm.value.description || undefined,
-      sku: productForm.value.sku,
-      imageUrl: productForm.value.imageUrl || undefined,
-      categoryId: productForm.value.categoryId
-        ? Number(productForm.value.categoryId)
-        : undefined,
+      title,
+      description: description ? description : undefined,
+      sku,
+      imageUrl: imageUrl ? imageUrl : undefined,
+      categoryId: categoryIdNumber,
       sizes: sizePayload,
     };
 
     if (!hasSizes) {
-      const basePrice = Number(productForm.value.price);
+      const basePrice = Number(priceValue);
       payload.price = Number(basePrice.toFixed(2));
     }
     await updateProduct(productForm.value.id, payload);
