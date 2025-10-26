@@ -111,12 +111,8 @@
                   min="0"
                   step="0.01"
                   class="form-control"
-                  :required="!isEditingProductWithSizes"
-                  :disabled="isEditingProductWithSizes"
+                  required
                 />
-                <div v-if="isEditingProductWithSizes" class="form-text text-muted">
-                  Цена рассчитывается автоматически по размерам.
-                </div>
               </div>
               <div class="col-md-3">
                 <label class="form-label" for="productCategory">Категория</label>
@@ -446,12 +442,9 @@
               min="0"
               step="0.01"
               class="form-input"
-              :required="!addProductHasConfiguredSizes"
-              :disabled="creatingProduct || addProductHasConfiguredSizes"
+              required
+              :disabled="creatingProduct"
             />
-            <p v-if="addProductHasConfiguredSizes" class="form-field__hint">
-              Стоимость будет рассчитана по минимальной цене среди размеров.
-            </p>
           </div>
           <div class="form-grid__item">
             <label for="newProductCategory" class="form-field__label">Категория</label>
@@ -548,7 +541,7 @@
                 type="button"
                 class="dialog-button dialog-button--danger dialog-button--sm manager-sizes__remove"
                 @click="removeSizeRow(addProductForm.sizes, index)"
-                :disabled="creatingProduct"
+                :disabled="creatingProduct || addProductForm.sizes.length <= 1"
               >
                 Удалить
               </button>
@@ -729,7 +722,7 @@
 <script setup lang="ts">
 import { DialogTitle } from '@headlessui/vue';
 import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
@@ -881,7 +874,7 @@ const showSuccess = (message: string) => {
 
 const toEditableSizes = (sizes: ProductDto['sizes']): EditableProductSize[] => {
   if (!sizes.length) {
-    return [];
+    return [{ id: null, size: '', price: '', stock: '' }];
   }
 
   return sizes.map((size) => ({
@@ -943,16 +936,13 @@ const addSizeRow = (rows: EditableProductSize[]) => {
 };
 
 const removeSizeRow = (rows: EditableProductSize[], index: number) => {
+  if (rows.length <= 1) {
+    rows.splice(0, rows.length, { id: null, size: '', price: '', stock: '' });
+    return;
+  }
+
   rows.splice(index, 1);
 };
-
-const addProductHasConfiguredSizes = computed(() =>
-  hasConfiguredSizes(addProductForm.sizes),
-);
-
-const isEditingProductWithSizes = computed(() =>
-  (productForm.value ? hasConfiguredSizes(productForm.value.sizes) : false),
-);
 
 const getTotalStock = (product: ProductDto): number =>
   product.sizes.reduce((sum, size) => sum + size.stock, 0);
@@ -981,7 +971,7 @@ const resetAddProductForm = () => {
     sku: '',
     imageUrl: '',
     categoryId: '',
-    sizes: [],
+    sizes: [{ id: null, size: '', price: '', stock: '' }],
   });
 };
 
@@ -1462,12 +1452,6 @@ onMounted(() => {
 
 .manager-form-grid {
   gap: clamp(1rem, 2vw, 1.35rem);
-}
-
-.form-field__hint {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
 }
 
 .manager-sizes {
