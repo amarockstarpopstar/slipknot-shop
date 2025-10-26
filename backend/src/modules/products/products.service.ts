@@ -461,30 +461,22 @@ export class ProductsService {
   }
 
   private determineBasePrice(
-    requestedPrice: number | undefined,
+    requestedPrice: number,
     sizes: NormalizedProductSize[],
   ): number {
-    if (sizes.length) {
-      const sizePrices = sizes
-        .map((size) => size.price)
-        .filter((price) => Number.isFinite(price) && price > 0);
-
-      if (sizePrices.length) {
-        return Math.min(...sizePrices);
-      }
+    if (!sizes.length) {
+      return requestedPrice;
     }
 
-    if (
-      requestedPrice === undefined ||
-      !Number.isFinite(requestedPrice) ||
-      requestedPrice <= 0
-    ) {
-      throw new BadRequestException(
-        'Для товара без размеров необходимо указать корректную цену',
-      );
+    const sizePrices = sizes
+      .map((size) => size.price)
+      .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (!sizePrices.length) {
+      return requestedPrice;
     }
 
-    return requestedPrice;
+    return Math.min(...sizePrices);
   }
 
   private resolveBasePriceFromEntity(product: Product): number {

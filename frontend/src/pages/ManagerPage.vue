@@ -111,12 +111,8 @@
                   min="0"
                   step="0.01"
                   class="form-control"
-                  :required="!isEditingProductWithSizes"
-                  :disabled="isEditingProductWithSizes"
+                  required
                 />
-                <div v-if="isEditingProductWithSizes" class="form-text text-muted">
-                  Цена рассчитывается автоматически по размерам.
-                </div>
               </div>
               <div class="col-md-3">
                 <label class="form-label" for="productCategory">Категория</label>
@@ -446,12 +442,9 @@
               min="0"
               step="0.01"
               class="form-input"
-              :required="!addProductHasConfiguredSizes"
-              :disabled="creatingProduct || addProductHasConfiguredSizes"
+              required
+              :disabled="creatingProduct"
             />
-            <p v-if="addProductHasConfiguredSizes" class="form-field__hint">
-              Стоимость будет рассчитана по минимальной цене среди размеров.
-            </p>
           </div>
           <div class="form-grid__item">
             <label for="newProductCategory" class="form-field__label">Категория</label>
@@ -548,7 +541,7 @@
                 type="button"
                 class="dialog-button dialog-button--danger dialog-button--sm manager-sizes__remove"
                 @click="removeSizeRow(addProductForm.sizes, index)"
-                :disabled="creatingProduct"
+                :disabled="creatingProduct || addProductForm.sizes.length <= 1"
               >
                 Удалить
               </button>
@@ -729,7 +722,7 @@
 <script setup lang="ts">
 import { DialogTitle } from '@headlessui/vue';
 import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import {
@@ -881,7 +874,7 @@ const showSuccess = (message: string) => {
 
 const toEditableSizes = (sizes: ProductDto['sizes']): EditableProductSize[] => {
   if (!sizes.length) {
-    return [];
+    return [{ id: null, size: '', price: '', stock: '' }];
   }
 
   return sizes.map((size) => ({
@@ -930,24 +923,18 @@ const buildSizePayload = (sizes: EditableProductSize[]): ProductSizePayload[] =>
   return payload;
 };
 
-const hasConfiguredSizes = (sizes: EditableProductSize[]): boolean =>
-  sizes.some((size) => size.size.trim().length > 0);
-
 const addSizeRow = (rows: EditableProductSize[]) => {
   rows.push({ id: null, size: '', price: '', stock: '' });
 };
 
 const removeSizeRow = (rows: EditableProductSize[], index: number) => {
+  if (rows.length <= 1) {
+    rows.splice(0, rows.length, { id: null, size: '', price: '', stock: '' });
+    return;
+  }
+
   rows.splice(index, 1);
 };
-
-const addProductHasConfiguredSizes = computed(() =>
-  hasConfiguredSizes(addProductForm.sizes),
-);
-
-const isEditingProductWithSizes = computed(() =>
-  (productForm.value ? hasConfiguredSizes(productForm.value.sizes) : false),
-);
 
 const getTotalStock = (product: ProductDto): number =>
   product.sizes.reduce((sum, size) => sum + size.stock, 0);
@@ -976,7 +963,7 @@ const resetAddProductForm = () => {
     sku: '',
     imageUrl: '',
     categoryId: '',
-    sizes: [],
+    sizes: [{ id: null, size: '', price: '', stock: '' }],
   });
 };
 
@@ -1108,7 +1095,12 @@ const cancelProductEdit = () => {
 };
 
 const saveNewProduct = async () => {
-  if (!addProductForm.title || !addProductForm.sku || !addProductForm.categoryId) {
+  if (
+    !addProductForm.title ||
+    !addProductForm.sku ||
+    !addProductForm.price ||
+    !addProductForm.categoryId
+  ) {
     return;
   }
 
@@ -1120,32 +1112,17 @@ const saveNewProduct = async () => {
     return;
   }
 
-  const hasSizes = sizePayload.length > 0;
-
-  if (!hasSizes) {
-    const basePrice = Number(addProductForm.price);
-    if (!addProductForm.price || !Number.isFinite(basePrice) || basePrice <= 0) {
-      showError('Укажите корректную цену для товара без размеров.');
-      return;
-    }
-  }
-
   try {
     creatingProduct.value = true;
     const payload: CreateProductPayload = {
       title: addProductForm.title,
       description: addProductForm.description ? addProductForm.description : undefined,
+      price: Number(addProductForm.price),
       sku: addProductForm.sku,
       imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
       categoryId: Number(addProductForm.categoryId),
-      sizes: hasSizes ? sizePayload : undefined,
+      sizes: sizePayload.length ? sizePayload : undefined,
     };
-
-    if (!hasSizes) {
-      const basePrice = Number(addProductForm.price);
-      payload.price = Number(basePrice.toFixed(2));
-    }
-
     await createProduct(payload);
     products.value = await fetchProducts();
     showSuccess('Новый товар добавлен.');
@@ -1168,20 +1145,12 @@ const saveProduct = async () => {
     showError(error);
     return;
   }
-  const hasSizes = sizePayload.length > 0;
-
-  if (!hasSizes) {
-    const basePrice = Number(productForm.value.price);
-    if (!productForm.value.price || !Number.isFinite(basePrice) || basePrice <= 0) {
-      showError('Укажите корректную цену для товара без размеров.');
-      return;
-    }
-  }
   try {
     productSaving.value = true;
     const payload: UpdateProductPayload = {
       title: productForm.value.title,
       description: productForm.value.description || undefined,
+      price: Number(productForm.value.price),
       sku: productForm.value.sku,
       imageUrl: productForm.value.imageUrl || undefined,
       categoryId: productForm.value.categoryId
@@ -1189,11 +1158,6 @@ const saveProduct = async () => {
         : undefined,
       sizes: sizePayload,
     };
-
-    if (!hasSizes) {
-      const basePrice = Number(productForm.value.price);
-      payload.price = Number(basePrice.toFixed(2));
-    }
     await updateProduct(productForm.value.id, payload);
     await refreshProducts();
     productForm.value = null;
@@ -1419,12 +1383,6 @@ onMounted(() => {
 
 .manager-form-grid {
   gap: clamp(1rem, 2vw, 1.35rem);
-}
-
-.form-field__hint {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
 }
 
 .manager-sizes {
