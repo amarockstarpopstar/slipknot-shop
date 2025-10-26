@@ -58,7 +58,7 @@ export interface UpdateProductPayload {
 export interface CreateProductPayload {
   title: string;
   description?: string;
-  price: number;
+  price?: number;
   sku: string;
   imageUrl?: string;
   categoryId: number;
