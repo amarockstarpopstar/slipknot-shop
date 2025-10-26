@@ -10,6 +10,7 @@ import {
   Length,
   MaxLength,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { ProductSizeWithStockDto } from './product-size.dto';
 
@@ -33,10 +34,16 @@ export class CreateProductDto {
   @IsString({ message: 'Описание должно быть строкой' })
   description?: string;
 
-  @ApiProperty({ example: 2990, description: 'Цена товара' })
+  @ApiPropertyOptional({
+    example: 2990,
+    description:
+      'Цена товара (обязательна, если у товара отсутствуют размеры)',
+  })
+  @ValidateIf((dto) => !dto.sizes || dto.sizes.length === 0)
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Цена должна быть числом' })
   @IsPositive({ message: 'Цена должна быть больше нуля' })
-  price: number;
+  @IsOptional()
+  price?: number;
 
   @ApiProperty({ example: 'SLP-TS-002', description: 'Артикул товара' })
   @IsString({ message: 'Артикул должен быть строкой' })
