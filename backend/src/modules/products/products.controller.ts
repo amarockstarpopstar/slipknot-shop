@@ -8,11 +8,15 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -29,6 +33,12 @@ import { UpdateProductSizeStockDto } from './dto/update-size-stock.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { UploadProductImageResponseDto } from './dto/upload-product-image-response.dto';
+import type { Express } from 'express';
+
+const PRODUCT_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
 // controller with CRUD endpoints for products
 @ApiTags('Товары')
@@ -47,6 +57,42 @@ export class ProductsController {
     @Body() createProductDto: CreateProductDto,
   ): Promise<ProductResponseDto> {
     return this.productsService.create(createProductDto);
+  }
+
+  @Post('upload-image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Менеджер')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Загрузить изображение товара' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Файл изображения (JPEG, PNG, WebP)',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiCreatedResponse({
+    description: 'Изображение загружено и доступно по публичному пути',
+    type: UploadProductImageResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Некорректный файл изображения' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: PRODUCT_IMAGE_MAX_SIZE_BYTES },
+    }),
+  )
+  uploadImage(
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<UploadProductImageResponseDto> {
+    return this.productsService.uploadProductImage(file);
   }
 
   @Get()

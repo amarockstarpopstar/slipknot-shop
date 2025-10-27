@@ -2,6 +2,7 @@ import { Injectable, Module, OnApplicationBootstrap } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -22,6 +23,7 @@ import { AuditContextInterceptor } from './common/audit/audit-context.intercepto
 import { AuditSubscriber } from './common/audit/audit.subscriber';
 import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
 import { DataSource } from 'typeorm';
+import { join } from 'path';
 
 @Injectable()
 export class DatabaseConnectionLogger implements OnApplicationBootstrap {
@@ -52,6 +54,13 @@ export class DatabaseConnectionLogger implements OnApplicationBootstrap {
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+      serveStaticOptions: {
+        redirect: false,
+      },
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) =>
