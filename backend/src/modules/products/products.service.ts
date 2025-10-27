@@ -6,6 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -29,6 +30,15 @@ import type { Express } from 'express';
 
 const UPLOADS_ROOT = join(process.cwd(), 'uploads');
 const PRODUCT_IMAGES_DIR = join(UPLOADS_ROOT, 'products');
+const UPLOADS_PUBLIC_PATH = '/uploads';
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
+const PUBLIC_BASE_URL_ENV_KEYS = [
+  'APP_PUBLIC_URL',
+  'BACKEND_PUBLIC_URL',
+  'API_PUBLIC_URL',
+  'PUBLIC_BACKEND_URL',
+];
+const DEFAULT_PUBLIC_BASE_URL = 'http://localhost:3000';
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
   'image/jpg',
@@ -52,6 +62,8 @@ interface NormalizedProductSize {
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
+  private readonly publicBaseUrl: string;
+  private readonly publicBaseOrigin: string;
 
   constructor(
     @InjectRepository(Product)
@@ -59,7 +71,11 @@ export class ProductsService {
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.publicBaseUrl = this.resolvePublicBaseUrl();
+    this.publicBaseOrigin = this.extractPublicOrigin(this.publicBaseUrl);
+  }
 
   private normalizeImageUrl(imageUrl?: string | null): string | null {
     const trimmed = imageUrl?.trim();
@@ -67,7 +83,66 @@ export class ProductsService {
       return null;
     }
 
-    return trimmed;
+    if (trimmed.startsWith('//')) {
+      return trimmed;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.origin === this.publicBaseOrigin) {
+        const pathWithQuery = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        return pathWithQuery || UPLOADS_PUBLIC_PATH;
+      }
+      return parsed.toString();
+    } catch {
+      return trimmed;
+    }
+  }
+
+  private resolvePublicBaseUrl(): string {
+    for (const key of PUBLIC_BASE_URL_ENV_KEYS) {
+      const value = this.configService.get<string>(key);
+      if (!value) {
+        continue;
+      }
+
+      try {
+        const normalized = new URL(value);
+        return normalized.toString().replace(/\/$/, '');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Игнорируем некорректное значение ${key}: ${message}`,
+        );
+      }
+    }
+
+    return DEFAULT_PUBLIC_BASE_URL;
+  }
+
+  private extractPublicOrigin(url: string): string {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return url;
+    }
+  }
+
+  private resolvePublicImageUrl(imageUrl?: string | null): string | null {
+    const trimmed = imageUrl?.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (ABSOLUTE_URL_PATTERN.test(trimmed) || trimmed.startsWith('//')) {
+      return trimmed;
+    }
+
+    try {
+      return new URL(trimmed, `${this.publicBaseUrl}/`).toString();
+    } catch {
+      return trimmed;
+    }
   }
 
   private async ensureProductImageDirectory(): Promise<void> {
@@ -480,7 +555,7 @@ export class ProductsService {
       description: product.description ?? null,
       price: this.resolveBasePriceFromEntity(product),
       sku: product.sku,
-      imageUrl: product.imageUrl ?? null,
+      imageUrl: this.resolvePublicImageUrl(product.imageUrl),
       category: product.category
         ? {
             id: product.category.id,
