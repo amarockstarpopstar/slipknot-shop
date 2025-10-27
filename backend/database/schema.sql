@@ -356,13 +356,42 @@ JOIN order_statuses os ON os.id = o.status_id
 LEFT JOIN payments p ON p.order_id = o.id;
 
 CREATE OR REPLACE VIEW vw_sales_by_day AS
+WITH eligible_orders AS (
+    SELECT
+        o.id,
+        COALESCE(
+            (
+                SELECT COALESCE(
+                    (al.new_data ->> 'shipping_updated_at')::timestamptz,
+                    (al.new_data ->> 'updated_at')::timestamptz,
+                    al.created_at
+                )
+                FROM audit_log al
+                WHERE al.table_name = 'orders'
+                  AND al.record_id = o.id
+                  AND al.new_data ? 'shipping_status'
+                  AND al.new_data ->> 'shipping_status' = 'В пути'
+                ORDER BY al.created_at
+                LIMIT 1
+            ),
+            CASE
+                WHEN o.shipping_status = 'В пути' THEN o.shipping_updated_at
+                ELSE NULL
+            END
+        ) AS in_transit_at
+    FROM orders o
+    JOIN order_statuses os ON os.id = o.status_id
+    WHERE os.name <> 'Отменен'
+      AND (o.shipping_status IS NULL OR o.shipping_status <> 'Отменен пользователем')
+)
 SELECT
-    DATE(o.placed_at) AS sale_date,
+    DATE(eo.in_transit_at) AS sale_date,
     SUM(oi.quantity) AS total_items,
     SUM(oi.quantity * oi.unit_price) AS total_amount
-FROM orders o
-JOIN order_items oi ON oi.order_id = o.id
-GROUP BY DATE(o.placed_at)
+FROM eligible_orders eo
+JOIN order_items oi ON oi.order_id = eo.id
+WHERE eo.in_transit_at IS NOT NULL
+GROUP BY DATE(eo.in_transit_at)
 ORDER BY sale_date;
 
 CREATE OR REPLACE VIEW vw_audit_log_detailed AS
