@@ -2,10 +2,29 @@ import axios from 'axios';
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
+
 export const http = axios.create({
   baseURL: API_URL,
   withCredentials: false,
 });
+
+export const resolveApiUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(trimmed) || trimmed.startsWith('//')) {
+    return trimmed;
+  }
+
+  try {
+    return new URL(trimmed, API_URL).toString();
+  } catch {
+    return trimmed;
+  }
+};
 
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
