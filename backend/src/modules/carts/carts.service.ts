@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Cart } from './entities/cart.entity';
@@ -20,10 +22,17 @@ import { OrderItem } from '../order-items/entities/order-item.entity';
 import { OrderStatus } from '../order-statuses/entities/order-status.entity';
 import { User } from '../users/entities/user.entity';
 import { DEFAULT_SHIPPING_STATUS } from '../orders/orders.constants';
+import {
+  resolvePublicBaseUrl,
+  resolvePublicImageUrl,
+} from '../../common/utils/public-url.util';
 
 // service encapsulating cart logic
 @Injectable()
 export class CartsService {
+  private readonly logger = new Logger(CartsService.name);
+  private readonly publicBaseUrl: string;
+
   constructor(
     @InjectRepository(Cart)
     private readonly cartsRepository: Repository<Cart>,
@@ -38,7 +47,10 @@ export class CartsService {
     @InjectRepository(OrderStatus)
     private readonly orderStatusesRepository: Repository<OrderStatus>,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.publicBaseUrl = resolvePublicBaseUrl(this.configService, this.logger);
+  }
 
   async getCart(userId: number): Promise<CartResponseDto> {
     const cart = await this.getOrCreateCart(userId);
@@ -407,7 +419,7 @@ export class CartsService {
         id: item.product?.id ?? 0,
         title: item.product?.title ?? 'Товар недоступен',
         price: Number(item.unitPrice),
-        imageUrl: item.product?.imageUrl ?? null,
+        imageUrl: this.toPublicImageUrl(item.product?.imageUrl),
       },
       size: item.productSize
         ? {
@@ -431,5 +443,9 @@ export class CartsService {
       totalQuantity,
       totalAmount: Number(totalAmount.toFixed(2)),
     };
+  }
+
+  private toPublicImageUrl(imageUrl?: string | null): string | null {
+    return resolvePublicImageUrl(imageUrl, this.publicBaseUrl);
   }
 }
