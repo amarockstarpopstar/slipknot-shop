@@ -5,6 +5,11 @@ import { join } from 'path';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Workbook } from 'exceljs';
 import { DailySalesPointDto } from './dto/daily-sales-point.dto';
+import {
+  CANCELLED_SHIPPING_STATUS,
+  CANCELLED_STATUS_NAME,
+  IN_TRANSIT_SHIPPING_STATUS,
+} from '../orders/orders.constants';
 
 interface DailySalesRow {
   sale_date: Date | string;
@@ -31,7 +36,50 @@ export class ReportsService {
 
   async getDailySales(): Promise<DailySalesPointDto[]> {
     const rows = (await this.dataSource.query(
-      `SELECT sale_date, total_items, total_amount FROM vw_sales_by_day ORDER BY sale_date`,
+      `
+        WITH eligible_orders AS (
+          SELECT
+            o.id,
+            COALESCE(
+              (
+                SELECT COALESCE(
+                  (al.new_data->>'shipping_updated_at')::timestamptz,
+                  (al.new_data->>'updated_at')::timestamptz,
+                  al.created_at
+                )
+                FROM audit_log al
+                WHERE al.table_name = 'orders'
+                  AND al.record_id = o.id
+                  AND al.new_data ? 'shipping_status'
+                  AND al.new_data->>'shipping_status' = $1
+                ORDER BY al.created_at
+                LIMIT 1
+              ),
+              CASE
+                WHEN o.shipping_status = $1 THEN o.shipping_updated_at
+                ELSE NULL
+              END
+            ) AS in_transit_at
+          FROM orders o
+          JOIN order_statuses os ON os.id = o.status_id
+          WHERE os.name <> $3
+            AND (o.shipping_status IS NULL OR o.shipping_status <> $2)
+        )
+        SELECT
+          DATE(eo.in_transit_at) AS sale_date,
+          SUM(oi.quantity) AS total_items,
+          SUM(oi.quantity * oi.unit_price) AS total_amount
+        FROM eligible_orders eo
+        JOIN order_items oi ON oi.order_id = eo.id
+        WHERE eo.in_transit_at IS NOT NULL
+        GROUP BY DATE(eo.in_transit_at)
+        ORDER BY sale_date
+      `,
+      [
+        IN_TRANSIT_SHIPPING_STATUS,
+        CANCELLED_SHIPPING_STATUS,
+        CANCELLED_STATUS_NAME,
+      ],
     )) as DailySalesRow[];
 
     return rows.map((row) => this.mapRowToDto(row));

@@ -35,15 +35,15 @@ export const useThemeStore = defineStore('theme', {
       const authStore = useAuthStore();
       this.ensureAuthWatcher(authStore);
 
+      this.loading = true;
+
       if (!authStore.isAuthenticated) {
         this.theme = DEFAULT_THEME;
-        this.ready = true;
-        this.applyTheme();
+        this.finishLoading();
         return;
       }
 
       try {
-        this.loading = true;
         const settings = await this.safeFetchSettings();
         if (settings?.theme) {
           this.theme = settings.theme;
@@ -51,9 +51,7 @@ export const useThemeStore = defineStore('theme', {
       } catch (error) {
         console.warn('Не удалось загрузить настройки пользователя', error);
       } finally {
-        this.loading = false;
-        this.ready = true;
-        this.applyTheme();
+        this.finishLoading();
       }
     },
     ensureAuthWatcher(authStore: ReturnType<typeof useAuthStore>) {
@@ -70,7 +68,7 @@ export const useThemeStore = defineStore('theme', {
           }
           this.reset();
         },
-        { immediate: true },
+        { immediate: false },
       );
     },
     async safeFetchSettings(): Promise<UserSettingsResponse | null> {
@@ -108,7 +106,13 @@ export const useThemeStore = defineStore('theme', {
     },
     reset() {
       this.theme = DEFAULT_THEME;
-      this.ready = false;
+      this.loading = false;
+      this.ready = true;
+      this.applyTheme();
+    },
+    finishLoading() {
+      this.loading = false;
+      this.ready = true;
       this.applyTheme();
     },
   },
