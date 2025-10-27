@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +20,27 @@ import {
 import { ProductSize } from './entities/product-size.entity';
 import { SizeStock } from './entities/size-stock.entity';
 import { UpdateProductSizeStockDto } from './dto/update-size-stock.dto';
+import { UploadProductImageResponseDto } from './dto/upload-product-image-response.dto';
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
+import imageSize from 'image-size';
+import type { Express } from 'express';
+
+const UPLOADS_ROOT = join(process.cwd(), 'uploads');
+const PRODUCT_IMAGES_DIR = join(UPLOADS_ROOT, 'products');
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+]);
+const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+const PRODUCT_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const MIN_IMAGE_WIDTH = 600;
+const MIN_IMAGE_HEIGHT = 600;
+const MAX_IMAGE_WIDTH = 4000;
+const MAX_IMAGE_HEIGHT = 4000;
 
 interface NormalizedProductSize {
   size: string;
@@ -38,6 +60,120 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Category>,
     private readonly dataSource: DataSource,
   ) {}
+
+  private normalizeImageUrl(imageUrl?: string | null): string | null {
+    const trimmed = imageUrl?.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    return trimmed;
+  }
+
+  private async ensureProductImageDirectory(): Promise<void> {
+    await fs.mkdir(PRODUCT_IMAGES_DIR, { recursive: true });
+  }
+
+  private resolveImageExtension(
+    file: Express.Multer.File,
+    detectedType?: string,
+  ): string {
+    const candidates = [
+      detectedType,
+      file.mimetype.split('/').pop(),
+      file.originalname.split('.').pop(),
+    ].filter(Boolean) as string[];
+
+    for (const candidate of candidates) {
+      const normalized = candidate.toLowerCase();
+      if (SUPPORTED_IMAGE_EXTENSIONS.has(normalized)) {
+        return normalized === 'jpeg' ? 'jpg' : normalized;
+      }
+    }
+
+    return 'jpg';
+  }
+
+  private buildImageFilename(extension: string): string {
+    const normalized = extension.toLowerCase() === 'jpeg'
+      ? 'jpg'
+      : extension.toLowerCase();
+    return `${Date.now()}-${randomUUID().slice(0, 12)}.${normalized}`;
+  }
+
+  async uploadProductImage(
+    file: Express.Multer.File,
+  ): Promise<UploadProductImageResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Файл изображения не получен.');
+    }
+
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Поддерживаются только изображения в форматах JPEG, PNG или WebP.',
+      );
+    }
+
+    if (file.size > PRODUCT_IMAGE_MAX_SIZE_BYTES) {
+      throw new BadRequestException(
+        'Размер изображения не должен превышать 5 МБ.',
+      );
+    }
+
+    let dimensions: ReturnType<typeof imageSize>;
+    try {
+      dimensions = imageSize(file.buffer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Ошибка чтения изображения: ${message}`);
+      throw new BadRequestException(
+        'Не удалось прочитать файл изображения. Проверьте его и попробуйте снова.',
+      );
+    }
+
+    const { width, height, type } = dimensions;
+
+    if (!width || !height) {
+      throw new BadRequestException(
+        'Не удалось определить размеры изображения. Загрузите другой файл.',
+      );
+    }
+
+    if (width < MIN_IMAGE_WIDTH || height < MIN_IMAGE_HEIGHT) {
+      throw new BadRequestException(
+        `Минимальное разрешение изображения — ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} пикселей.`,
+      );
+    }
+
+    if (width > MAX_IMAGE_WIDTH || height > MAX_IMAGE_HEIGHT) {
+      throw new BadRequestException(
+        `Максимальное разрешение изображения — ${MAX_IMAGE_WIDTH}x${MAX_IMAGE_HEIGHT} пикселей.`,
+      );
+    }
+
+    const extension = this.resolveImageExtension(file, type);
+    const filename = this.buildImageFilename(extension);
+
+    try {
+      await this.ensureProductImageDirectory();
+      await fs.writeFile(join(PRODUCT_IMAGES_DIR, filename), file.buffer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Не удалось сохранить изображение товара: ${message}`, stack);
+      throw new InternalServerErrorException(
+        'Не удалось сохранить изображение. Попробуйте ещё раз.',
+      );
+    }
+
+    return {
+      url: `/uploads/products/${filename}`,
+      filename,
+      width,
+      height,
+      size: file.size,
+    };
+  }
 
   async create(
     createProductDto: CreateProductDto,
@@ -65,12 +201,16 @@ export class ProductsService {
         normalizedSizes,
       );
 
+      const normalizedImageUrl = this.normalizeImageUrl(
+        createProductDto.imageUrl,
+      );
+
       const product = productsRepo.create({
         title: createProductDto.title.trim(),
         description: createProductDto.description?.trim() ?? null,
         price: basePrice.toFixed(2),
         sku,
-        imageUrl: createProductDto.imageUrl?.trim() ?? null,
+        imageUrl: normalizedImageUrl,
         category,
       });
 
@@ -271,7 +411,9 @@ export class ProductsService {
       }
 
       if (updateProductDto.imageUrl !== undefined) {
-        product.imageUrl = updateProductDto.imageUrl?.trim() ?? null;
+        product.imageUrl = this.normalizeImageUrl(
+          updateProductDto.imageUrl,
+        );
       }
 
       if (updateProductDto.categoryId !== undefined) {

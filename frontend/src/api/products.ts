@@ -65,6 +65,14 @@ export interface CreateProductPayload {
   sizes?: ProductSizePayload[];
 }
 
+export interface UploadProductImageResponse {
+  url: string;
+  filename: string;
+  width: number;
+  height: number;
+  size: number;
+}
+
 export const createProduct = async (payload: CreateProductPayload): Promise<ProductDto> => {
   const { data } = await http.post<ProductDto>('/products', payload);
   return data;
@@ -80,4 +88,21 @@ export const updateProduct = async (
 
 export const deleteProduct = async (id: number): Promise<void> => {
   await http.delete(`/products/${id}`);
+};
+
+export const uploadProductImage = async (
+  file: File,
+): Promise<UploadProductImageResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const { data } = await http.post<UploadProductImageResponse>(
+    '/products/upload-image',
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  );
+
+  return data;
 };

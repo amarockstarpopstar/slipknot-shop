@@ -77,172 +77,6 @@
             </table>
           </div>
 
-          <div v-if="productForm" class="manager-form">
-            <h3 class="manager-form__title">Редактирование товара #{{ productForm.id }}</h3>
-            <form @submit.prevent="saveProduct" class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label" for="productTitle">Название</label>
-                <input
-                  id="productTitle"
-                  v-model="productForm.title"
-                  type="text"
-                  class="form-control"
-                  placeholder="Введите название"
-                  required
-                />
-              </div>
-              <div class="col-md-3">
-                <label class="form-label" for="productSku">Артикул</label>
-                <input
-                  id="productSku"
-                  v-model="productForm.sku"
-                  type="text"
-                  class="form-control"
-                  placeholder="Артикул"
-                  required
-                />
-              </div>
-              <div class="col-md-3">
-                <label class="form-label" for="productPrice">Цена (₽)</label>
-                <input
-                  id="productPrice"
-                  v-model="productForm.price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="form-control"
-                  :required="!productFormHasSizes"
-                  :disabled="productSaving || productFormHasSizes"
-                  :placeholder="
-                    productFormHasSizes
-                      ? 'Цена определяется размерами'
-                      : '0.00'
-                  "
-                />
-              </div>
-              <div class="col-md-3">
-                <label class="form-label" for="productCategory">Категория</label>
-                <select id="productCategory" v-model="productForm.categoryId" class="form-select" required>
-                  <option value="">Выберите категорию</option>
-                  <option v-for="category in categories" :key="category.id" :value="String(category.id)">
-                    {{ category.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-12">
-                <div class="manager-sizes">
-                  <div class="manager-sizes__header">
-                    <label class="form-label mb-0">Размеры и остатки</label>
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm"
-                      @click="addSizeRow(productForm.sizes)"
-                      :disabled="productSaving"
-                    >
-                      Добавить размер
-                    </button>
-                  </div>
-                  <div class="manager-sizes__list">
-                    <div
-                      v-for="(sizeRow, index) in productForm.sizes"
-                      :key="sizeRow.id ?? `product-size-${index}`"
-                      class="manager-sizes__row row g-3 align-items-end"
-                    >
-                      <div class="col-md-4 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`productSizeName-${productForm.id}-${index}`"
-                        >
-                          Размер
-                        </label>
-                        <input
-                          :id="`productSizeName-${productForm.id}-${index}`"
-                          v-model="sizeRow.size"
-                          type="text"
-                          class="form-control"
-                          placeholder="Например, M"
-                          maxlength="20"
-                          :disabled="productSaving"
-                        />
-                      </div>
-                      <div class="col-md-3 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`productSizePrice-${productForm.id}-${index}`"
-                        >
-                          Цена, ₽
-                        </label>
-                        <input
-                          :id="`productSizePrice-${productForm.id}-${index}`"
-                          v-model="sizeRow.price"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="form-control"
-                          placeholder="0.00"
-                          :disabled="productSaving"
-                        />
-                      </div>
-                      <div class="col-md-3 col-sm-6">
-                        <label
-                          class="form-label"
-                          :for="`productSizeStock-${productForm.id}-${index}`"
-                        >
-                          Остаток
-                        </label>
-                        <input
-                          :id="`productSizeStock-${productForm.id}-${index}`"
-                          v-model="sizeRow.stock"
-                          type="number"
-                          min="0"
-                          class="form-control"
-                          :disabled="productSaving"
-                        />
-                      </div>
-                      <div class="col-md-2 col-sm-4">
-                        <button
-                          type="button"
-                          class="btn btn-outline-danger mt-4 w-100"
-                          @click="removeSizeRow(productForm.sizes, index)"
-                          :disabled="productSaving"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="productImage">Ссылка на изображение</label>
-                <input
-                  id="productImage"
-                  v-model="productForm.imageUrl"
-                  type="url"
-                  class="form-control"
-                  placeholder="https://"
-                />
-              </div>
-              <div class="col-12">
-                <label class="form-label" for="productDescription">Описание</label>
-                <textarea
-                  id="productDescription"
-                  v-model="productForm.description"
-                  class="form-control"
-                  rows="3"
-                  placeholder="Короткое описание товара"
-                ></textarea>
-              </div>
-              <div class="col-12 d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
-                <button class="btn btn-primary" type="submit" :disabled="productSaving">
-                  Сохранить изменения
-                </button>
-                <button class="btn btn-outline-secondary" type="button" @click="cancelProductEdit" :disabled="productSaving">
-                  Отменить
-                </button>
-              </div>
-            </form>
-          </div>
         </section>
 
         <section class="manager-block">
@@ -473,15 +307,51 @@
             </select>
           </div>
           <div class="form-grid__item form-grid__item--full">
-            <label for="newProductImage" class="form-field__label">Ссылка на изображение</label>
-            <input
-              id="newProductImage"
-              v-model="addProductForm.imageUrl"
-              type="url"
-              class="form-input"
-              placeholder="https://"
-              :disabled="creatingProduct"
-            />
+            <label for="newProductImageFile" class="form-field__label">Превью товара</label>
+            <div class="image-upload">
+              <div class="image-upload__controls">
+                <input
+                  id="newProductImageFile"
+                  ref="addImageInputRef"
+                  class="form-input form-input--file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  :disabled="creatingProduct"
+                  @change="onAddProductImageSelected"
+                />
+                <p class="image-upload__hint">
+                  Поддерживаются JPEG, PNG или WebP до 5 МБ и с разрешением от 600×600 до 4000×4000 пикселей.
+                </p>
+                <div v-if="addProductImage.error" class="form-field__error">
+                  {{ addProductImage.error }}
+                </div>
+                <div
+                  v-if="addProductImage.previewUrl"
+                  class="image-upload__preview"
+                >
+                  <img :src="addProductImage.previewUrl" alt="Превью нового товара" />
+                  <div class="image-upload__preview-actions">
+                    <button
+                      type="button"
+                      class="dialog-button dialog-button--ghost dialog-button--sm"
+                      :disabled="creatingProduct"
+                      @click="clearAddProductImage"
+                    >
+                      Очистить файл
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="image-upload__divider">или вставьте ссылку</div>
+              <input
+                id="newProductImage"
+                v-model="addProductForm.imageUrl"
+                type="url"
+                class="form-input"
+                placeholder="https://"
+                :disabled="creatingProduct || !!addProductImage.file"
+              />
+            </div>
           </div>
           <div class="form-grid__item form-grid__item--full">
             <label for="newProductDescription" class="form-field__label">Описание</label>
@@ -571,6 +441,260 @@
         </button>
         <button type="submit" class="dialog-button dialog-button--primary" :disabled="creatingProduct">
           <span v-if="creatingProduct">Сохранение...</span>
+          <span v-else>Сохранить</span>
+        </button>
+      </footer>
+    </form>
+  </GlassModal>
+
+  <GlassModal
+    :visible="editProductModalVisible"
+    max-width="920px"
+    :prevent-close="productSaving"
+    @close="closeEditProductModal"
+  >
+    <form
+      v-if="productForm"
+      class="form-dialog manager-modal"
+      @submit.prevent="saveProduct"
+    >
+      <header class="form-dialog__header">
+        <div class="form-dialog__heading">
+          <span class="form-dialog__icon" aria-hidden="true">
+            <PencilSquareIcon />
+          </span>
+          <div class="form-dialog__title-wrap">
+            <DialogTitle id="edit-product-modal-title" as="h2" class="form-dialog__title">
+              Редактирование товара
+            </DialogTitle>
+            <p class="form-dialog__subtitle">
+              Измените характеристики товара. Все изменения сохранятся после нажатия кнопки «Сохранить».
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="form-dialog__close"
+          aria-label="Закрыть"
+          :disabled="productSaving"
+          @click="closeEditProductModal"
+        >
+          <XMarkIcon aria-hidden="true" />
+        </button>
+      </header>
+      <section
+        class="form-dialog__body manager-modal__body"
+        aria-labelledby="edit-product-modal-title"
+      >
+        <div class="form-grid manager-form-grid">
+          <div class="form-grid__item">
+            <label for="editProductTitle" class="form-field__label">Название</label>
+            <input
+              id="editProductTitle"
+              v-model="productForm.title"
+              type="text"
+              class="form-input"
+              placeholder="Введите название"
+              required
+              :disabled="productSaving"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="editProductSku" class="form-field__label">Артикул</label>
+            <input
+              id="editProductSku"
+              v-model="productForm.sku"
+              type="text"
+              class="form-input"
+              placeholder="SKU-001"
+              required
+              :disabled="productSaving"
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="editProductPrice" class="form-field__label">Цена (₽)</label>
+            <input
+              id="editProductPrice"
+              v-model="productForm.price"
+              type="number"
+              min="0"
+              step="0.01"
+              class="form-input"
+              :required="!productFormHasSizes"
+              :disabled="productSaving || productFormHasSizes"
+              :placeholder="
+                productFormHasSizes
+                  ? 'Цена определяется размерами'
+                  : '0.00'
+              "
+            />
+          </div>
+          <div class="form-grid__item">
+            <label for="editProductCategory" class="form-field__label">Категория</label>
+            <select
+              id="editProductCategory"
+              v-model="productForm.categoryId"
+              class="form-input form-input--select"
+              required
+              :disabled="productSaving"
+            >
+              <option value="">Выберите категорию</option>
+              <option v-for="category in categories" :key="category.id" :value="String(category.id)">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid__item form-grid__item--full">
+            <label for="editProductImageFile" class="form-field__label">Превью товара</label>
+            <div class="image-upload">
+              <div class="image-upload__controls">
+                <input
+                  id="editProductImageFile"
+                  ref="editImageInputRef"
+                  class="form-input form-input--file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  :disabled="productSaving"
+                  @change="onEditProductImageSelected"
+                />
+                <p class="image-upload__hint">
+                  Поддерживаются JPEG, PNG или WebP до 5 МБ и с разрешением от 600×600 до 4000×4000 пикселей.
+                </p>
+                <div v-if="editProductImage.error" class="form-field__error">
+                  {{ editProductImage.error }}
+                </div>
+                <div
+                  v-if="editProductImage.previewUrl || productForm.imageUrl"
+                  class="image-upload__preview"
+                >
+                  <img
+                    :src="editProductImage.previewUrl ?? productForm.imageUrl"
+                    alt="Текущее превью товара"
+                  />
+                  <div class="image-upload__preview-actions">
+                    <button
+                      type="button"
+                      class="dialog-button dialog-button--ghost dialog-button--sm"
+                      :disabled="productSaving"
+                      @click="clearEditProductImage"
+                    >
+                      Очистить файл
+                    </button>
+                    <button
+                      type="button"
+                      class="dialog-button dialog-button--ghost dialog-button--sm"
+                      :disabled="productSaving || !productForm.imageUrl"
+                      @click="removeExistingProductImage"
+                    >
+                      Удалить изображение
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="image-upload__divider">или обновите ссылку</div>
+              <input
+                id="editProductImage"
+                v-model="productForm.imageUrl"
+                type="url"
+                class="form-input"
+                placeholder="https://"
+                :disabled="productSaving || !!editProductImage.file"
+              />
+            </div>
+          </div>
+          <div class="form-grid__item form-grid__item--full">
+            <label for="editProductDescription" class="form-field__label">Описание</label>
+            <textarea
+              id="editProductDescription"
+              v-model="productForm.description"
+              class="form-input form-input--textarea"
+              rows="3"
+              placeholder="Короткое описание товара"
+              :disabled="productSaving"
+            ></textarea>
+          </div>
+        </div>
+        <div class="manager-sizes">
+          <div class="manager-sizes__header">
+            <h3 class="manager-sizes__title">Размеры и остатки</h3>
+            <button
+              type="button"
+              class="dialog-button dialog-button--ghost dialog-button--sm"
+              @click="addSizeRow(productForm.sizes)"
+              :disabled="productSaving"
+            >
+              Добавить размер
+            </button>
+          </div>
+          <div class="manager-sizes__list">
+            <div
+              v-for="(sizeRow, index) in productForm.sizes"
+              :key="sizeRow.id ?? `product-size-${index}`"
+              class="manager-sizes__row"
+            >
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`editProductSizeName-${index}`">Размер</label>
+                <input
+                  :id="`editProductSizeName-${index}`"
+                  v-model="sizeRow.size"
+                  type="text"
+                  class="form-input"
+                  placeholder="Например, M"
+                  maxlength="20"
+                  :disabled="productSaving"
+                />
+              </div>
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`editProductSizePrice-${index}`">Цена, ₽</label>
+                <input
+                  :id="`editProductSizePrice-${index}`"
+                  v-model="sizeRow.price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="form-input"
+                  placeholder="0.00"
+                  :disabled="productSaving"
+                />
+              </div>
+              <div class="manager-sizes__field">
+                <label class="form-field__label" :for="`editProductSizeStock-${index}`">Остаток</label>
+                <input
+                  :id="`editProductSizeStock-${index}`"
+                  v-model="sizeRow.stock"
+                  type="number"
+                  min="0"
+                  class="form-input"
+                  :disabled="productSaving"
+                />
+              </div>
+              <button
+                type="button"
+                class="dialog-button dialog-button--ghost dialog-button--danger manager-sizes__remove"
+                :disabled="productSaving"
+                @click="removeSizeRow(productForm.sizes, index)"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <footer class="form-dialog__footer">
+        <button
+          type="button"
+          class="dialog-button dialog-button--ghost"
+          :disabled="productSaving"
+          @click="closeEditProductModal"
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          class="dialog-button dialog-button--primary"
+          :disabled="productSaving"
+        >
+          <span v-if="productSaving">Сохранение...</span>
           <span v-else>Сохранить</span>
         </button>
       </footer>
@@ -732,7 +856,7 @@
 
 <script setup lang="ts">
 import { DialogTitle } from '@headlessui/vue';
-import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ClipboardDocumentListIcon, PlusCircleIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { computed, onMounted, reactive, ref } from 'vue';
 import GlassModal from '../components/GlassModal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
@@ -741,6 +865,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
   type ProductDto,
   type ProductSizePayload,
   type CreateProductPayload,
@@ -790,6 +915,14 @@ interface NewProductFormState {
   sizes: EditableProductSize[];
 }
 
+interface ImageSelectionState {
+  file: File | null;
+  previewUrl: string | null;
+  error: string | null;
+  width: number | null;
+  height: number | null;
+}
+
 interface OrderFormState {
   id: number;
   statusId: string;
@@ -816,6 +949,13 @@ const orderStatuses = ref<OrderStatusDto[]>([]);
 const orderCustomers = ref<OrderCustomerDto[]>([]);
 const shippingStatusOptions = ref<string[]>(['Готовится к отправке', 'В пути', 'Доставлен']);
 
+const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const PRODUCT_IMAGE_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PRODUCT_IMAGE_MIN_WIDTH = 600;
+const PRODUCT_IMAGE_MIN_HEIGHT = 600;
+const PRODUCT_IMAGE_MAX_WIDTH = 4000;
+const PRODUCT_IMAGE_MAX_HEIGHT = 4000;
+
 const initialLoading = ref(false);
 const productsLoading = ref(false);
 const ordersLoading = ref(false);
@@ -830,7 +970,27 @@ const successMessage = ref<string | null>(null);
 const productForm = ref<ProductFormState | null>(null);
 const orderForm = ref<OrderFormState | null>(null);
 const addProductModalVisible = ref(false);
+const editProductModalVisible = ref(false);
 const addOrderModalVisible = ref(false);
+
+const addImageInputRef = ref<HTMLInputElement | null>(null);
+const editImageInputRef = ref<HTMLInputElement | null>(null);
+
+const addProductImage = reactive<ImageSelectionState>({
+  file: null,
+  previewUrl: null,
+  error: null,
+  width: null,
+  height: null,
+});
+
+const editProductImage = reactive<ImageSelectionState>({
+  file: null,
+  previewUrl: null,
+  error: null,
+  width: null,
+  height: null,
+});
 
 const addProductForm = reactive<NewProductFormState>({
   title: '',
@@ -966,6 +1126,158 @@ const calculateBasePriceForSubmission = (
   return Number(normalizedPrice.toFixed(2));
 };
 
+const resetImageState = (state: ImageSelectionState) => {
+  state.file = null;
+  state.previewUrl = null;
+  state.error = null;
+  state.width = null;
+  state.height = null;
+};
+
+const resetFileInput = (input: HTMLInputElement | null) => {
+  if (input) {
+    input.value = '';
+  }
+};
+
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Не удалось получить превью изображения.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл изображения.'));
+    reader.readAsDataURL(file);
+  });
+
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      URL.revokeObjectURL(objectUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Не удалось определить размеры изображения.'));
+    };
+    image.src = objectUrl;
+  });
+
+const prepareImageSelection = async (
+  file: File,
+  state: ImageSelectionState,
+): Promise<boolean> => {
+  state.error = null;
+
+  if (!PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+    state.error = 'Поддерживаются только изображения JPEG, PNG или WebP.';
+    return false;
+  }
+
+  if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
+    state.error = 'Размер файла превышает допустимые 5 МБ.';
+    return false;
+  }
+
+  let dimensions: { width: number; height: number };
+  try {
+    dimensions = await getImageDimensions(file);
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : 'Не удалось обработать изображение.';
+    return false;
+  }
+
+  const { width, height } = dimensions;
+
+  if (width < PRODUCT_IMAGE_MIN_WIDTH || height < PRODUCT_IMAGE_MIN_HEIGHT) {
+    state.error = `Минимальное разрешение — ${PRODUCT_IMAGE_MIN_WIDTH}×${PRODUCT_IMAGE_MIN_HEIGHT} пикселей.`;
+    return false;
+  }
+
+  if (width > PRODUCT_IMAGE_MAX_WIDTH || height > PRODUCT_IMAGE_MAX_HEIGHT) {
+    state.error = `Максимальное разрешение — ${PRODUCT_IMAGE_MAX_WIDTH}×${PRODUCT_IMAGE_MAX_HEIGHT} пикселей.`;
+    return false;
+  }
+
+  let previewUrl: string;
+  try {
+    previewUrl = await readFileAsDataUrl(file);
+  } catch (error) {
+    state.error = error instanceof Error ? error.message : 'Не удалось подготовить превью.';
+    return false;
+  }
+
+  state.file = file;
+  state.previewUrl = previewUrl;
+  state.width = width;
+  state.height = height;
+  return true;
+};
+
+const onAddProductImageSelected = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  if (!file) {
+    clearAddProductImage();
+    return;
+  }
+
+  const success = await prepareImageSelection(file, addProductImage);
+  if (!success) {
+    resetFileInput(input);
+    return;
+  }
+
+  addProductForm.imageUrl = '';
+};
+
+const onEditProductImageSelected = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  if (!file) {
+    clearEditProductImage();
+    return;
+  }
+
+  const success = await prepareImageSelection(file, editProductImage);
+  if (!success) {
+    resetFileInput(input);
+    return;
+  }
+
+  if (productForm.value) {
+    productForm.value.imageUrl = '';
+  }
+};
+
+const clearAddProductImage = () => {
+  resetImageState(addProductImage);
+  resetFileInput(addImageInputRef.value);
+};
+
+const clearEditProductImage = () => {
+  resetImageState(editProductImage);
+  resetFileInput(editImageInputRef.value);
+};
+
+const removeExistingProductImage = () => {
+  if (!productForm.value) {
+    return;
+  }
+  productForm.value.imageUrl = '';
+  if (!editProductImage.file) {
+    clearEditProductImage();
+  }
+};
+
 const addSizeRow = (rows: EditableProductSize[]) => {
   rows.push({ id: null, size: '', price: '', stock: '' });
 };
@@ -1007,6 +1319,7 @@ const resetAddProductForm = () => {
     categoryId: '',
     sizes: [{ id: null, size: '', price: '', stock: '' }],
   });
+  clearAddProductImage();
 };
 
 const resetAddOrderForm = () => {
@@ -1024,8 +1337,16 @@ const resetAddOrderForm = () => {
 const toggleAddProductModal = (visible: boolean) => {
   if (visible) {
     resetAddProductForm();
+  } else {
+    clearAddProductImage();
   }
   addProductModalVisible.value = visible;
+};
+
+const closeEditProductModal = () => {
+  editProductModalVisible.value = false;
+  clearEditProductImage();
+  productForm.value = null;
 };
 
 const toggleAddOrderModal = (visible: boolean) => {
@@ -1130,10 +1451,8 @@ const startEditProduct = (product: ProductDto) => {
     categoryId: product.category ? String(product.category.id) : '',
     sizes: toEditableSizes(product.sizes),
   };
-};
-
-const cancelProductEdit = () => {
-  productForm.value = null;
+  clearEditProductImage();
+  editProductModalVisible.value = true;
 };
 
 const saveNewProduct = async () => {
@@ -1164,12 +1483,26 @@ const saveNewProduct = async () => {
 
   try {
     creatingProduct.value = true;
+    let imageUrl: string | undefined;
+
+    if (addProductImage.file) {
+      try {
+        const uploaded = await uploadProductImage(addProductImage.file);
+        imageUrl = uploaded.url;
+      } catch (error) {
+        showError(error);
+        return;
+      }
+    } else if (addProductForm.imageUrl.trim()) {
+      imageUrl = addProductForm.imageUrl.trim();
+    }
+
     const payload: CreateProductPayload = {
       title: addProductForm.title,
       description: addProductForm.description ? addProductForm.description : undefined,
       price: basePrice,
       sku: addProductForm.sku,
-      imageUrl: addProductForm.imageUrl ? addProductForm.imageUrl : undefined,
+      imageUrl,
       categoryId: Number(addProductForm.categoryId),
       sizes: sizePayload.length ? sizePayload : undefined,
     };
@@ -1185,12 +1518,13 @@ const saveNewProduct = async () => {
 };
 
 const saveProduct = async () => {
-  if (!productForm.value) {
+  const currentForm = productForm.value;
+  if (!currentForm) {
     return;
   }
   let sizePayload: ProductSizePayload[] = [];
   try {
-    sizePayload = buildSizePayload(productForm.value.sizes);
+    sizePayload = buildSizePayload(currentForm.sizes);
   } catch (error) {
     showError(error);
     return;
@@ -1198,30 +1532,45 @@ const saveProduct = async () => {
   let basePrice: number;
   try {
     basePrice = calculateBasePriceForSubmission(
-      productForm.value.price,
+      currentForm.price,
       sizePayload,
     );
   } catch (error) {
     showError(error);
     return;
   }
-  productForm.value.price = basePrice.toFixed(2);
+  currentForm.price = basePrice.toFixed(2);
   try {
     productSaving.value = true;
+    let imageUrl: string | undefined;
+
+    if (editProductImage.file) {
+      try {
+        const uploaded = await uploadProductImage(editProductImage.file);
+        imageUrl = uploaded.url;
+      } catch (error) {
+        showError(error);
+        return;
+      }
+    } else if (currentForm.imageUrl !== undefined) {
+      const trimmed = currentForm.imageUrl.trim();
+      imageUrl = trimmed ? trimmed : '';
+    }
+
     const payload: UpdateProductPayload = {
-      title: productForm.value.title,
-      description: productForm.value.description || undefined,
+      title: currentForm.title,
+      description: currentForm.description || undefined,
       price: basePrice,
-      sku: productForm.value.sku,
-      imageUrl: productForm.value.imageUrl || undefined,
-      categoryId: productForm.value.categoryId
-        ? Number(productForm.value.categoryId)
+      sku: currentForm.sku,
+      imageUrl,
+      categoryId: currentForm.categoryId
+        ? Number(currentForm.categoryId)
         : undefined,
       sizes: sizePayload,
     };
-    await updateProduct(productForm.value.id, payload);
+    await updateProduct(currentForm.id, payload);
     await refreshProducts();
-    productForm.value = null;
+    closeEditProductModal();
     showSuccess('Товар обновлён.');
   } catch (error) {
     showError(error);
@@ -1440,6 +1789,97 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.form-input--file {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md, 0.9rem);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, var(--color-surface-border));
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--transition-base), background-color var(--transition-base);
+}
+
+.form-input--file::file-selector-button {
+  margin-right: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: calc(var(--radius-md, 0.9rem) * 0.85);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, var(--color-surface-border));
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--transition-base), border-color var(--transition-base);
+}
+
+.form-input--file:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-surface-border));
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.form-input--file:hover::file-selector-button {
+  border-color: color-mix(in srgb, var(--color-accent) 65%, var(--color-surface-border));
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.image-upload {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.image-upload__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.image-upload__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.image-upload__preview {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-surface-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+}
+
+.image-upload__preview img {
+  width: min(260px, 100%);
+  border-radius: calc(var(--radius-lg) * 0.85);
+  object-fit: cover;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+.image-upload__preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.image-upload__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-text-muted) 85%, rgba(255, 255, 255, 0.4));
+}
+
+.image-upload__divider::before,
+.image-upload__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-surface-border) 55%, transparent);
 }
 
 .manager-form-grid {
