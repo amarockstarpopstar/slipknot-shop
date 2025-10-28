@@ -14,6 +14,7 @@ import { UserAddress } from '../../user-addresses/entities/user-address.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Cart } from '../../carts/entities/cart.entity';
 import { Wishlist } from '../../wishlists/entities/wishlist.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 // user entity
 @Entity({ name: 'users' })
@@ -33,6 +34,15 @@ export class User {
   @Column({ type: 'varchar', length: 30, nullable: true })
   phone?: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  country?: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  address?: string | null;
+
   @ManyToOne(() => Role, (role) => role.users, { eager: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;
@@ -48,6 +58,9 @@ export class User {
 
   @OneToOne(() => Wishlist, (wishlist) => wishlist.user)
   wishlist: Wishlist;
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

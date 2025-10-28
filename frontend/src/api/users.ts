@@ -10,6 +10,9 @@ export interface UserProfile {
   name: string;
   email: string;
   phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
   role: UserRole | null;
   createdAt: string;
   updatedAt: string;
@@ -20,8 +23,32 @@ export interface UserListItem extends UserProfile {}
 export interface UpdateUserPayload {
   name: string;
   email: string;
-  phone: string;
+  phone?: string | null;
   roleName: string;
+  country?: string;
+  city?: string;
+  address?: string;
+}
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  roleName?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+  phone?: string | null;
+  password?: string;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
 }
 
 export const fetchProfile = async (): Promise<UserProfile> => {
@@ -44,6 +71,16 @@ export const updateUser = async (id: number, payload: UpdateUserPayload): Promis
   return data;
 };
 
+export const createUser = async (payload: CreateUserPayload): Promise<UserListItem> => {
+  const { data } = await http.post<UserListItem>('/users', payload);
+  return data;
+};
+
 export const deleteUser = async (id: number): Promise<void> => {
   await http.delete(`/users/${id}`);
+};
+
+export const updateProfile = async (payload: UpdateProfilePayload): Promise<UserProfile> => {
+  const { data } = await http.put<UserProfile>('/users/me', payload);
+  return data;
 };

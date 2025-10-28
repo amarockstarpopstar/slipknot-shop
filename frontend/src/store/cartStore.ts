@@ -1,5 +1,5 @@
-import { defineStore, storeToRefs } from 'pinia';
-import { computed, ref } from 'vue';
+import { defineStore } from 'pinia';
+import { computed, ref, watch } from 'vue';
 import {
   addCartItem,
   checkoutCart,
@@ -20,7 +20,7 @@ export const CART_AUTH_MESSAGE = 'Авторизуйтесь, чтобы доб�
 // store managing cart state via backend api
 export const useCartStore = defineStore('cart', () => {
   const authStore = useAuthStore();
-  const { isAuthenticated } = storeToRefs(authStore);
+  const isAuthenticated = computed(() => authStore.isAuthenticated);
 
   const cartId = ref<number | null>(null);
   const items = ref<CartItemDto[]>([]);
@@ -49,7 +49,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const ensureAuthenticated = (): boolean => {
     if (!isAuthenticated.value) {
-      router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
+      void router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
       return false;
     }
     return true;
@@ -60,7 +60,7 @@ export const useCartStore = defineStore('cart', () => {
     resetCart();
     lastOrder.value = null;
     error.value = null;
-    router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
+    void router.push({ path: '/login', query: { message: CART_AUTH_MESSAGE } });
   };
 
   const withUpdate = async <T>(action: () => Promise<T>): Promise<T | null> => {
@@ -105,11 +105,17 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
-  const addProduct = async (productId: number, quantity = 1) => {
+  const addProduct = async (
+    productId: number,
+    quantity = 1,
+    productSizeId?: number | null,
+  ) => {
     if (!ensureAuthenticated()) {
       return;
     }
-    const cart = await withUpdate(() => addCartItem({ productId, quantity }));
+    const cart = await withUpdate(() =>
+      addCartItem({ productId, quantity, productSizeId }),
+    );
     if (cart) {
       setCartState(cart);
     }
@@ -147,9 +153,22 @@ export const useCartStore = defineStore('cart', () => {
     return result;
   };
 
-  if (localStorage.getItem('accessToken')) {
-    void loadCart();
-  }
+  const payOrder = async (): Promise<CheckoutResponse | null> => {
+    return checkout();
+  };
+
+  watch(
+    isAuthenticated,
+    (loggedIn) => {
+      if (loggedIn) {
+        void loadCart();
+        return;
+      }
+      resetCart();
+      lastOrder.value = null;
+    },
+    { immediate: true }
+  );
 
   return {
     cartId,
@@ -166,5 +185,6 @@ export const useCartStore = defineStore('cart', () => {
     changeItemQuantity,
     removeItem,
     checkout,
+    payOrder,
   };
 });

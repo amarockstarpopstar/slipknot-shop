@@ -1,0 +1,2 @@
+-- Placeholder backup file. It will be overwritten automatically when an administrator generates a database backup from the reports panel.
+-- The generated script contains SQL statements that recreate the data in the public schema.

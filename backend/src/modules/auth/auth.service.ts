@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -15,6 +15,7 @@ export class AuthService {
   private readonly refreshExpiresIn: string;
   private readonly accessSecret: string;
   private readonly refreshSecret: string;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly usersService: UsersService,
@@ -28,22 +29,44 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto) {
-    const createdUser = await this.usersService.create(createUserDto);
-    const user = await this.usersService.findEntityById(createdUser.id);
-    return this.buildAuthResponse(user, 'Регистрация прошла успешно');
+    this.logger.log(`Регистрация пользователя с email ${createUserDto.email}`);
+    try {
+      const createdUser = await this.usersService.create(createUserDto);
+      const user = await this.usersService.findEntityById(createdUser.id);
+      this.logger.log(`Пользователь ${user.email} успешно зарегистрирован`);
+      return this.buildAuthResponse(user, 'Регистрация прошла успешно');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Ошибка при регистрации пользователя ${createUserDto.email}: ${message}`, stack);
+      throw error;
+    }
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.validateCredentials(
-      loginDto.email,
-      loginDto.password,
-    );
+    this.logger.log(`Попытка входа пользователя ${loginDto.email}`);
+    try {
+      const user = await this.usersService.validateCredentials(
+        loginDto.email,
+        loginDto.password,
+      );
 
-    if (!user) {
-      throw new UnauthorizedException('Неверный email или пароль');
+      if (!user) {
+        this.logger.warn(`Неудачная попытка входа: ${loginDto.email}`);
+        throw new UnauthorizedException('Неверный email или пароль');
+      }
+
+      this.logger.log(`Пользователь ${user.email} успешно авторизован`);
+      return this.buildAuthResponse(user, 'Вход выполнен успешно');
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Ошибка при авторизации ${loginDto.email}: ${message}`, stack);
+      throw error;
     }
-
-    return this.buildAuthResponse(user, 'Вход выполнен успешно');
   }
 
   async refreshTokens(refreshTokenDto: RefreshTokenDto) {
@@ -59,6 +82,9 @@ export class AuthService {
       const user = await this.usersService.findEntityById(payload.sub);
       return this.buildAuthResponse(user, 'Токены обновлены');
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Ошибка обновления токенов: ${message}`, stack);
       throw new UnauthorizedException('Недействительный refresh токен');
     }
   }

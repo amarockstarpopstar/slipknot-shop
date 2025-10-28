@@ -12,6 +12,14 @@ export interface CartItemDto {
   quantity: number;
   unitPrice: number;
   product: CartProductDto;
+  size: CartItemSizeDto | null;
+}
+
+export interface CartItemSizeDto {
+  id: number;
+  size: string;
+  price: number;
+  stock: number;
 }
 
 export interface CartResponse {
@@ -24,6 +32,7 @@ export interface CartResponse {
 export interface AddCartItemPayload {
   productId: number;
   quantity?: number;
+  productSizeId?: number | null;
 }
 
 export interface UpdateCartItemPayload {
@@ -33,6 +42,9 @@ export interface UpdateCartItemPayload {
 export interface CheckoutResponse {
   orderId: number;
   totalAmount: number;
+  shippingStatus: string;
+  shippingUpdatedAt: string;
+  paidAt?: string | null;
 }
 
 export const fetchCart = async (): Promise<CartResponse> => {

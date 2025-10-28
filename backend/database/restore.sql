@@ -1,0 +1,3 @@
+-- Placeholder manual restore helper.
+-- The NestJS reports module now executes SQL scripts directly, so this file no longer runs psql commands.
+-- Keep schema.sql up to date; restore operations will fall back to it if no generated backup is found.

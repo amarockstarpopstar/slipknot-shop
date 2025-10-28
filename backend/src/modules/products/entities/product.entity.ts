@@ -13,7 +13,8 @@ import { ProductImage } from '../../product-images/entities/product-image.entity
 import { CartItem } from '../../cart-items/entities/cart-item.entity';
 import { OrderItem } from '../../order-items/entities/order-item.entity';
 import { WishlistItem } from '../../wishlist-items/entities/wishlist-item.entity';
-import { SizeEntity } from '../../sizes/entities/size.entity';
+import { ProductSize } from './product-size.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 // product entity
 @Entity({ name: 'products' })
@@ -34,18 +35,9 @@ export class Product {
   @Column({ type: 'numeric', precision: 10, scale: 2 })
   price: string;
 
-  // total quantity available for sale
-  @Column({ name: 'stock_count', type: 'integer', default: 0 })
-  stockCount: number;
-
   // url to the primary product image
   @Column({ name: 'image_url', type: 'text', nullable: true })
   imageUrl?: string | null;
-
-  // optional reference to a predefined size
-  @ManyToOne(() => SizeEntity, (size) => size.products, { nullable: true })
-  @JoinColumn({ name: 'size_id' })
-  size?: SizeEntity | null;
 
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })
@@ -53,6 +45,11 @@ export class Product {
 
   @OneToMany(() => ProductImage, (image) => image.product)
   images: ProductImage[];
+
+  @OneToMany(() => ProductSize, (productSize) => productSize.product, {
+    cascade: true,
+  })
+  productSizes: ProductSize[];
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.product)
   cartItems: CartItem[];
@@ -62,6 +59,9 @@ export class Product {
 
   @OneToMany(() => WishlistItem, (wishlistItem) => wishlistItem.product)
   wishlistItems: WishlistItem[];
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews: Review[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

@@ -5,6 +5,7 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  RelationId,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -19,6 +20,9 @@ export class Cart {
   @OneToOne(() => User, (user) => user.cart, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @RelationId((cart: Cart) => cart.user)
+  userId: number;
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
   items: CartItem[];

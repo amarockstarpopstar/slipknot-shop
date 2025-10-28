@@ -1,4 +1,7 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsInt,
   IsNumber,
   IsOptional,
@@ -6,31 +9,44 @@ import {
   IsString,
   Length,
   MaxLength,
-  Min,
+  ValidateNested,
 } from 'class-validator';
+import { ProductSizeWithStockDto } from './product-size.dto';
 
 // dto for creating product
 export class CreateProductDto {
+  @ApiProperty({
+    example: 'Футболка Slipknot Iowa',
+    description: 'Название товара',
+  })
   @IsString({ message: 'Название товара должно быть строкой' })
-  @Length(2, 200, { message: 'Название товара должно содержать от 2 до 200 символов' })
+  @Length(2, 200, {
+    message: 'Название товара должно содержать от 2 до 200 символов',
+  })
   title: string;
 
+  @ApiPropertyOptional({
+    example: 'Чёрная футболка с логотипом Slipknot',
+    description: 'Описание товара',
+  })
   @IsOptional()
   @IsString({ message: 'Описание должно быть строкой' })
   description?: string;
 
+  @ApiProperty({ example: 2990, description: 'Цена товара' })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Цена должна быть числом' })
   @IsPositive({ message: 'Цена должна быть больше нуля' })
   price: number;
 
+  @ApiProperty({ example: 'SLP-TS-002', description: 'Артикул товара' })
   @IsString({ message: 'Артикул должен быть строкой' })
   @Length(2, 100, { message: 'Артикул должен содержать от 2 до 100 символов' })
   sku: string;
 
-  @IsInt({ message: 'Количество на складе должно быть целым числом' })
-  @Min(0, { message: 'Количество на складе не может быть отрицательным' })
-  stockCount: number;
-
+  @ApiPropertyOptional({
+    example: 'https://example.com/images/shirt.jpg',
+    description: 'Ссылка на изображение товара',
+  })
   @IsOptional()
   @IsString({ message: 'Ссылка на изображение должна быть строкой' })
   @MaxLength(500, {
@@ -38,10 +54,18 @@ export class CreateProductDto {
   })
   imageUrl?: string;
 
+  @ApiProperty({ example: 3, description: 'Идентификатор категории' })
   @IsInt({ message: 'Идентификатор категории должен быть числом' })
   categoryId: number;
 
+  @ApiPropertyOptional({
+    type: () => ProductSizeWithStockDto,
+    isArray: true,
+    description: 'Размеры и остатки товара',
+  })
   @IsOptional()
-  @IsInt({ message: 'Идентификатор размера должен быть числом' })
-  sizeId?: number | null;
+  @IsArray({ message: 'Размеры должны быть массивом' })
+  @ValidateNested({ each: true })
+  @Type(() => ProductSizeWithStockDto)
+  sizes?: ProductSizeWithStockDto[];
 }

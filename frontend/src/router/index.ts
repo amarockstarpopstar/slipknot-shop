@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
-import { storeToRefs } from 'pinia';
+import type { RouteLocationNormalized, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '../store/authStore';
 
 const routes: RouteRecordRaw[] = [
@@ -22,15 +21,29 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/checkout/payment',
+    name: 'checkout-payment',
+    component: () => import('../pages/CheckoutPaymentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile',
     name: 'profile',
     component: () => import('../pages/ProfilePage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/orders',
+    name: 'orders-history',
+    component: () => import('../pages/OrdersHistoryPage.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
     name: 'login',
     component: () => import('../pages/AuthPage.vue'),
     alias: ['/auth'],
+    meta: { requiresGuest: true },
   },
   {
     path: '/manager',
@@ -39,40 +52,64 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, allowedRoles: ['Менеджер'] },
   },
   {
+    path: '/manager/reports',
+    name: 'reports',
+    component: () => import('../pages/ReportsPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Менеджер', 'Администратор'] },
+  },
+  {
     path: '/admin/users',
     name: 'admin-users',
     component: () => import('../pages/AdminUsersPage.vue'),
     meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
   },
+  {
+    path: '/admin/audit',
+    name: 'admin-audit',
+    component: () => import('../pages/AdminAuditPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
+  },
+  {
+    path: '/admin/reviews',
+    name: 'admin-reviews',
+    component: () => import('../pages/AdminReviewsPage.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['Администратор'] },
+  },
 ];
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior() {
     return { top: 0 };
   },
 });
 
-router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  const requiresAuth = to.matched.some((route) => route.meta?.requiresAuth);
-  if (!requiresAuth) {
-    return next();
-  }
+router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalizedLoaded) => {
+  console.log(`Navigating from ${from.fullPath} to ${to.fullPath}`);
 
   const authStore = useAuthStore();
-  const { isAuthenticated, user } = storeToRefs(authStore);
 
-  if (!isAuthenticated.value) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
+  if (to.matched.some((route) => route.meta?.requiresGuest) && authStore.isAuthenticated) {
+    const redirectTarget = typeof to.query.redirect === 'string' && to.query.redirect.startsWith('/') ? to.query.redirect : '/';
+    return { path: redirectTarget };
   }
 
-  if (!user.value) {
+  const requiresAuth = to.matched.some((route) => route.meta?.requiresAuth);
+  if (!requiresAuth) {
+    return true;
+  }
+
+  if (!authStore.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } };
+  }
+
+  if (!authStore.user) {
     try {
       await authStore.loadProfile();
     } catch (error) {
       authStore.logout();
-      return next({ name: 'login', query: { redirect: to.fullPath } });
+      return { name: 'login', query: { redirect: to.fullPath } };
     }
   }
 
@@ -81,11 +118,19 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     .flat();
 
   if (allowedRoles.length > 0) {
-    const roleName = user.value?.role?.name ?? null;
+    const roleName = authStore.user?.role?.name ?? null;
     if (!roleName || !allowedRoles.includes(roleName)) {
-      return next({ name: 'home' });
+      return { name: 'home' };
     }
   }
 
-  return next();
+  return true;
+});
+
+router.afterEach((to) => {
+  console.log('Navigated to:', to.fullPath);
+});
+
+router.onError((error) => {
+  console.error('Router error:', error);
 });

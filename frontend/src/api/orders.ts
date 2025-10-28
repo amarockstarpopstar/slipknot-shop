@@ -7,6 +7,10 @@ export interface OrderItemDto {
     title: string;
     sku: string;
   };
+  size: {
+    id: number;
+    size: string;
+  } | null;
   quantity: number;
   unitPrice: number;
 }
@@ -34,6 +38,8 @@ export interface OrderDto {
   } | null;
   items: OrderItemDto[];
   placedAt: string;
+  shippingStatus: string;
+  shippingUpdatedAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,11 +49,28 @@ export interface OrderStatusDto {
   name: string;
 }
 
+export interface OrderCustomerDto {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export interface UpdateOrderPayload {
   statusId?: number;
   totalAmount?: number;
   paymentMethod?: string;
   comment?: string;
+  shippingStatus?: string;
+}
+
+export interface CreateOrderPayload {
+  userId: number;
+  statusId: number;
+  totalAmount: number;
+  paymentMethod?: string;
+  comment?: string;
+  shippingStatus?: string;
+  addressId?: number;
 }
 
 export const fetchOrders = async (): Promise<OrderDto[]> => {
@@ -57,6 +80,16 @@ export const fetchOrders = async (): Promise<OrderDto[]> => {
 
 export const fetchOrderStatuses = async (): Promise<OrderStatusDto[]> => {
   const { data } = await http.get<OrderStatusDto[]>('/order-statuses');
+  return data;
+};
+
+export const fetchOrderCustomers = async (): Promise<OrderCustomerDto[]> => {
+  const { data } = await http.get<OrderCustomerDto[]>('/orders/customers');
+  return data;
+};
+
+export const createOrder = async (payload: CreateOrderPayload): Promise<OrderDto> => {
+  const { data } = await http.post<OrderDto>('/orders', payload);
   return data;
 };
 
