@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: slipknot_postgres
+    environment:
+      POSTGRES_DB: slipknot_db
+      POSTGRES_USER: slipknot_user
+      POSTGRES_PASSWORD: slipknot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+    networks:
+      - slipknot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slipknot_user -d slipknot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: slipknot_backend
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: slipknot_user
+      DATABASE_PASSWORD: slipknot_password
+      DATABASE_NAME: slipknot_db
+      JWT_ACCESS_SECRET: dev-access-secret
+      JWT_REFRESH_SECRET: dev-refresh-secret
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      PORT: 3000
+      HOST: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - slipknot_network
+    restart: unless-stopped
+    # Временно отключаем healthcheck для development режима
+    # healthcheck:
+    #   test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "http://localhost:3000"
+    container_name: slipknot_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - slipknot_network
+    restart: unless-stopped
+
+networks:
+  slipknot_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
